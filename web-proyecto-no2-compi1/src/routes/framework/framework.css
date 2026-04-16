@@ -1,0 +1,60 @@
+:root {
+        --bg-main: #1e1e1e;
+        --bg-sidebar: #252526;
+        --bg-dark: #333333;
+        --bg-editor: #1e1e1e;
+        --bg-console: #181818;
+        --border-color: #454545;
+        --accent-color: #0dcaf0;
+    }
+
+    .ide-container {
+        height: 100vh; /* Ocupa el 100% de la pantalla */
+        background-color: var(--bg-main);
+    }
+
+    .ide-toolbar { background-color: var(--bg-dark); border-color: var(--border-color) !important; }
+    
+    .ide-sidebar {
+        width: 260px;
+        background-color: var(--bg-sidebar);
+        border-color: var(--border-color) !important;
+    }
+
+    .bg-editor { background-color: var(--bg-editor); }
+    
+    .ide-tabs { background-color: var(--bg-sidebar); border-color: var(--border-color) !important; }
+    
+    .tab-item {
+        background-color: var(--bg-sidebar);
+        color: #999;
+        cursor: pointer;
+    }
+    
+    .tab-item.active {
+        background-color: var(--bg-editor);
+        color: #fff;
+        border-top: 2px solid var(--accent-color);
+    }
+
+    .file-item { transition: background 0.2s; }
+    .file-item:hover { background-color: rgba(255, 255, 255, 0.05); }
+    .file-item.active {
+        background-color: rgba(13, 202, 240, 0.1);
+        color: var(--accent-color);
+    }
+
+    .ide-console {
+        height: 250px;
+        background-color: var(--bg-console);
+        border-color: var(--border-color) !important;
+    }
+
+    .cursor-pointer { cursor: pointer; }
+    .hover-text-white:hover { color: white !important; }
+
+    textarea:focus {
+        box-shadow: none !important;
+        background-color: transparent !important;
+        color: white !important;
+    }
