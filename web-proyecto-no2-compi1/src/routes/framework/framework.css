@@ -297,7 +297,6 @@ button.menu-item:focus-visible {
     color: white;
 }
 
-
 .btn-preview {
     background: transparent;
     color: var(--slate-300);
@@ -316,4 +315,23 @@ button.menu-item:focus-visible {
     color: #1ea750 !important; 
     font-weight: bold;
     white-space: nowrap;
+}
+
+.close-tab-wrapper {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    padding: 2px;
+    transition: background 0.2s;
+}
+
+.close-tab-wrapper:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: var(--cyan-neon);
+}
+
+.close-tab {
+    font-size: 1.1rem;
+    line-height: 1;
 }

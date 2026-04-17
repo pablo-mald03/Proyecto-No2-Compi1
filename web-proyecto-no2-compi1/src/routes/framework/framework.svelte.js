@@ -21,6 +21,9 @@ export function createFrameworkState() {
     /*Estado reactivo del arbol de trabajo */
     let _files = $state([]);
 
+    /*Estado reactivo que detecta windows abiertas */
+    let _openFileIds = $state([]);
+
     /*Atributos para la logica de archivo seleccionado */
     let _activeFileId = $state(5);
     let _showSidebar = $state(true);
@@ -61,13 +64,64 @@ export function createFrameworkState() {
         get currentCommand() { return _currentCommand; },
         set currentCommand(val) { _currentCommand = val; },
 
+        /*Metodo que devuelve los objetos completos de los archivos abiertos */
+        get openFiles() {
+            return _openFileIds.map(id => _files.find(f => f.id === id)).filter(Boolean);
+        },
         //Marca el archivo activo
         get activeFile() {
             return _files.find(f => f.id === _activeFileId);
         },
+        /*Metodo que integra las windows/pestanias abiertas */
+        openTab(id) {
+            if (!_openFileIds.includes(id)) {
+                _openFileIds.push(id);
+            }
+            _activeFileId = id;
+        },
+        /*Metodo que integra el cierre de pestanias/windows */
+        closeTab(id, event) {
+            if (event) event.stopPropagation(); 
+            _openFileIds = _openFileIds.filter(fId => fId !== id);
+            
+            if (_activeFileId === id) {
+                _activeFileId = _openFileIds.length > 0 ? _openFileIds[_openFileIds.length - 1] : null;
+            }
+        },
         /*Metodo que permite seleccionar una archivo actual */
         selectFile(id) {
-            _activeFileId = id;
+            const file = _files.find(f => f.id === id);
+            if (file && file.type === 'file') {
+                this.openTab(id);
+            } else if (file && file.type === 'folder') {
+                this.systemLog(`> Seleccionaste carpeta: ${file.name}`);
+            }
+        },
+
+        /*Metodo integrado para poder crear un archivo o folder*/
+        async createFile(rawName, extension, icon, type = 'file', content = '') {
+            //Sanitizador de dash-case NO TIENE NADA QUE VER EN LO ABSOLUTO CON EL MANEJO DE LAS GRAMATICAS
+            let safeName = rawName
+                .trim()
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-') 
+                .replace(/^-+|-+$/g, '');    
+
+            const finalName = type === 'folder' ? safeName : `${safeName}${extension}`;
+
+            const parentId = 1; 
+
+            try {
+                const newId = await db.files.add({ parentId, name: finalName, type, icon, content });
+                await this.loadWorkspace(); 
+                
+                if (type === 'file') {
+                    this.openTab(newId);
+                }
+                this.systemLog(`> Creado exitosamente: ${finalName}`);
+            } catch (error) {
+                this.systemLog(`> Error al crear: ${error.message}`);
+            }
         },
         // Método mejorado para recibir contenido inicial
         addFile(name, icon, content = '') {
@@ -85,9 +139,7 @@ export function createFrameworkState() {
         //Metodo que carga los archivos desde IndexedDB al iniciar la app
         async loadWorkspace() {
             try {
-                const allFiles = await db.files.toArray();
-                _files = allFiles;
-                this.systemLog('> Workspace cargado exitosamente.');
+                _files = await db.files.toArray();
             } catch (error) {
                 this.systemLog(`> Error cargando workspace: ${error.message}`);
             }
