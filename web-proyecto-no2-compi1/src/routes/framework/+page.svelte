@@ -4,7 +4,15 @@
 	import { slide } from 'svelte/transition';
 
 	let isResizing = false;
+	let consoleBodyRef = $state(null);
 
+	$effect(() => {
+		if (fs.commandHistory && consoleBodyRef) {
+			consoleBodyRef.scrollTop = consoleBodyRef.scrollHeight;
+		}
+	});
+
+	// --- Logica del Resizer ---
 	function startResizing(e) {
 		isResizing = true;
 		window.addEventListener('mousemove', handleMouseMove);
@@ -104,7 +112,7 @@
 					style="height: {fs.consoleHeight}px;"
 					transition:slide={{ axis: 'y' }}
 				>
-					<div class="console-header px-3 py-1 d-flex justify-content-between">
+					<div class="console-header px-3 py-1 d-flex justify-content-between fw-bold">
 						<small>TERMINAL</small>
 						<button
 							class="btn-icon"
@@ -114,8 +122,32 @@
 							<i class="bi bi-chevron-down"></i>
 						</button>
 					</div>
-					<div class="console-body p-3">
-						<div class="text-cyan">YFERA Core v1.0 initialized...</div>
+
+					<div class="console-body p-3" bind:this={consoleBodyRef}>
+						{#each fs.commandHistory as line}
+							<div class="terminal-line">
+								{#if line.type === 'input'}
+									<span class="prompt">yfera@workspace:~$</span>
+									<span class="text-white">{line.text}</span>
+								{:else if line.type === 'system'}
+									<span class="text-cyan">{line.text}</span>
+								{:else}
+									<span class="text-slate-300">{line.text}</span>
+								{/if}
+							</div>
+						{/each}
+
+						<div class="terminal-line active-input">
+							<span class="prompt">yfera@workspace:~$</span>
+							<input
+								type="text"
+								class="terminal-input"
+								bind:value={fs.currentCommand}
+								onkeydown={(e) => fs.handleCommand(e)}
+								spellcheck="false"
+								autocomplete="off"
+							/>
+						</div>
 					</div>
 				</section>
 			{/if}

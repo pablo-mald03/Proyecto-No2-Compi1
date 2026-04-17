@@ -12,6 +12,14 @@ export function createFrameworkState() {
     let _showConsole = $state(true);
     let _consoleHeight = $state(200);
 
+
+    let _commandHistory = $state([
+        { type: 'system', text: 'YFERA Core v1.0 initialized...' },
+        { type: 'system', text: 'Escribe "help" para ver los comandos.' }
+    ]);
+
+    let _currentCommand = $state('');
+
     return {
         get files() { return _files; },
         get activeFileId() { return _activeFileId; },
@@ -26,6 +34,13 @@ export function createFrameworkState() {
         get consoleHeight() { return _consoleHeight; },
         set consoleHeight(val) { _consoleHeight = val; },
 
+        /*Getters de la terminal de comandos*/
+        get commandHistory() { return _commandHistory; },
+        set commandHistory(val) { _commandHistory = val; },
+
+        get currentCommand() { return _currentCommand; },
+        set currentCommand(val) { _currentCommand = val; },
+
         //Marca el archivo activo
         get activeFile() {
             return _files.find(f => f.id === _activeFileId);
@@ -39,6 +54,29 @@ export function createFrameworkState() {
 
         selectFile(id) {
             _activeFileId = id;
+        },
+        //----METODOS DE LA TERMINAL DE COMANDOS----
+        handleCommand(event) {
+            if (event.key === 'Enter') {
+                const cmd = _currentCommand.trim();
+                
+                if (cmd) {
+                    _commandHistory.push({ type: 'input', text: cmd });
+                    
+                    let response = `Comando no reconocido: ${cmd}`;
+                    if (cmd === 'help') response = 'Comandos disponibles: help, clear, compile';
+                    
+                    if (cmd === 'clear') {
+                        _commandHistory = []; 
+                        _currentCommand = ''; 
+                        return;
+                    }
+                    
+                    _commandHistory.push({ type: 'output', text: response });
+                }
+                
+                _currentCommand = '';
+            }
         }
     };
 }
