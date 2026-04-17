@@ -2,12 +2,14 @@
 export function createFrameworkState() {
 
     let _files = $state([
-        { id: 1, name: 'gramatica.jison', type: 'file', icon: 'bi-file-earmark-code', content: '// Gramática Jison' },
-        { id: 2, name: 'index.html', type: 'file', icon: 'bi-filetype-html', content: '' },
-        { id: 3, name: 'script.js', type: 'file', icon: 'bi-filetype-js', content: '// JS Logic' }
+        { id: 1, parentId: null, name: 'src', type: 'folder', icon: 'bi-folder-fill' },
+        { id: 2, parentId: 1, name: 'logica.y', type: 'file', icon: 'bi-braces', content: '// Lógica YFERA' },
+        { id: 3, parentId: 1, name: 'boton.comp', type: 'file', icon: 'bi-box', content: '' },
+        { id: 4, parentId: null, name: 'tema.styles', type: 'file', icon: 'bi-palette', content: '/* Estilos CSS */' },
+        { id: 5, parentId: null, name: 'gramatica.jison', type: 'file', icon: 'bi-file-earmark-code', content: '// Gramática Jison' }
     ]);
 
-    let _activeFileId = $state(1);
+    let _activeFileId = $state(5);
     let _showSidebar = $state(true);
     let _showConsole = $state(true);
     let _consoleHeight = $state(200);
@@ -22,22 +24,27 @@ export function createFrameworkState() {
 
     return {
         get files() { return _files; },
+
         get activeFileId() { return _activeFileId; },
+        
         set activeFileId(val) { _activeFileId = val; },
         
         get showSidebar() { return _showSidebar; },
+        
         set showSidebar(val) { _showSidebar = val; },
         
         get showConsole() { return _showConsole; },
+        
         set showConsole(val) { _showConsole = val; },
-
+        
         get consoleHeight() { return _consoleHeight; },
+        
         set consoleHeight(val) { _consoleHeight = val; },
-
-        /*Getters de la terminal de comandos*/
+        
         get commandHistory() { return _commandHistory; },
+        
         set commandHistory(val) { _commandHistory = val; },
-
+        
         get currentCommand() { return _currentCommand; },
         set currentCommand(val) { _currentCommand = val; },
 
@@ -46,35 +53,46 @@ export function createFrameworkState() {
             return _files.find(f => f.id === _activeFileId);
         },
 
-        //Metodo de accion para poder agregar mas archivos
-        addFile(name, icon) {
-            const id = Math.max(..._files.map(f => f.id)) + 1;
-            _files.push({ id, name, icon, content: '' });
-        },
-
         selectFile(id) {
             _activeFileId = id;
         },
-        //----METODOS DE LA TERMINAL DE COMANDOS----
+
+
+        // Método mejorado para recibir contenido inicial
+        addFile(name, icon, content = '') {
+            const id = Math.max(..._files.map(f => f.id), 0) + 1;
+            _files.push({ id, parentId: null, name, type: 'file', icon, content });
+        },
+
+        clearConsole() {
+            _commandHistory = [];
+        },
+
+        systemLog(message) {
+            _commandHistory.push({ type: 'system', text: message });
+        },
+
+        // Simulación de acciones de Menú
+        triggerMenuAction(action) {
+            this.systemLog(`> Ejecutando acción: ${action}...`);
+            this.showConsole = true;
+        },
+
+        /*Metodo que permite ejecutar un comando en la consola*/ 
         handleCommand(event) {
             if (event.key === 'Enter') {
                 const cmd = _currentCommand.trim();
-                
                 if (cmd) {
                     _commandHistory.push({ type: 'input', text: cmd });
                     
-                    let response = `Comando no reconocido: ${cmd}`;
-                    if (cmd === 'help') response = 'Comandos disponibles: help, clear, compile';
-                    
                     if (cmd === 'clear') {
-                        _commandHistory = []; 
-                        _currentCommand = ''; 
+                        this.clearConsole();
+                        _currentCommand = '';
                         return;
                     }
-                    
-                    _commandHistory.push({ type: 'output', text: response });
+
+                    _commandHistory.push({ type: 'output', text: `Comando ejecutado: ${cmd}` });
                 }
-                
                 _currentCommand = '';
             }
         }
