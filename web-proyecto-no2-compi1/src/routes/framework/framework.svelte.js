@@ -1,14 +1,27 @@
+import Dexie from "dexie";
+
+/*Inicializar instancia de dixie (Se comunica con la base de datos) */
+export const db = new Dexie('YferaWorkspace');
+
+/*Definicion de la base de datos que se utilizara para definir el storage donde se mantendra la persistencia temporal del proyecto */
+/*
+ * Detalles: 
+ * 
+ * ++id es la integracion de ID autoincremental
+ * parentId utiliza la misma tecnica de tener una tabla que en sus atributos hace referencia a si misma
+ */
+db.version(1).stores({
+    files: '++id, parentId, name, type'
+});
+
+
 //Clase delegada para trabajar con esa interaccion por detras para poder dar las funcionalidades a la UI
 export function createFrameworkState() {
 
-    let _files = $state([
-        { id: 1, parentId: null, name: 'src', type: 'folder', icon: 'bi-folder-fill' },
-        { id: 2, parentId: 1, name: 'logica.y', type: 'file', icon: 'bi-braces', content: '// Lógica YFERA' },
-        { id: 3, parentId: 1, name: 'boton.comp', type: 'file', icon: 'bi-box', content: '' },
-        { id: 4, parentId: null, name: 'tema.styles', type: 'file', icon: 'bi-palette', content: '/* Estilos CSS */' },
-        { id: 5, parentId: null, name: 'gramatica.jison', type: 'file', icon: 'bi-file-earmark-code', content: '// Gramática Jison' }
-    ]);
+    /*Estado reactivo del arbol de trabajo */
+    let _files = $state([]);
 
+    /*Atributos para la logica de archivo seleccionado */
     let _activeFileId = $state(5);
     let _showSidebar = $state(true);
     let _showConsole = $state(true);
@@ -16,7 +29,7 @@ export function createFrameworkState() {
 
 
     let _commandHistory = $state([
-        { type: 'system', text: 'YFERA Core v1.0 initialized...' },
+        { type: 'system', text: 'YFERA Terminal initialized...' },
         { type: 'system', text: 'Escribe "help" para ver los comandos.' }
     ]);
 
@@ -52,32 +65,71 @@ export function createFrameworkState() {
         get activeFile() {
             return _files.find(f => f.id === _activeFileId);
         },
-
+        /*Metodo que permite seleccionar una archivo actual */
         selectFile(id) {
             _activeFileId = id;
         },
-
-
         // Método mejorado para recibir contenido inicial
         addFile(name, icon, content = '') {
             const id = Math.max(..._files.map(f => f.id), 0) + 1;
             _files.push({ id, parentId: null, name, type: 'file', icon, content });
         },
-
+        /*Metodo que permite limpiar la consola */
         clearConsole() {
             _commandHistory = [];
         },
-
+        /*Log de los mensajes dentro de la consola */
         systemLog(message) {
             _commandHistory.push({ type: 'system', text: message });
         },
-
-        // Simulación de acciones de Menú
-        triggerMenuAction(action) {
-            this.systemLog(`> Ejecutando acción: ${action}...`);
-            this.showConsole = true;
+        //Metodo que carga los archivos desde IndexedDB al iniciar la app
+        async loadWorkspace() {
+            try {
+                const allFiles = await db.files.toArray();
+                _files = allFiles;
+                this.systemLog('> Workspace cargado exitosamente.');
+            } catch (error) {
+                this.systemLog(`> Error cargando workspace: ${error.message}`);
+            }
         },
+        //Metodo que crea la estructura inicial de un Nuevo Proyecto
+        async createNewProject() {
+            this.systemLog('> Creando nuevo proyecto...');
+            
+            try {
+                await db.files.clear();
+                _files = [];
+                _activeFileId = null;
 
+                //Archivo raiz sql
+                await db.files.add({ parentId: null, name: 'database.sqlite', type: 'file', icon: 'bi-database', content: '' });
+                
+                //Carpeta src
+                const srcId = await db.files.add({ parentId: null, name: 'src', type: 'folder', icon: 'bi-folder-fill' });
+
+                //Archivos iniciales en src
+                await db.files.add({ parentId: srcId, name: 'main.y', type: 'file', icon: 'bi-braces', content: '// Lógica YFERA' });
+                await db.files.add({ parentId: srcId, name: 'main.comp', type: 'file', icon: 'bi-box', content: '' });
+                await db.files.add({ parentId: srcId, name: 'main.styles', type: 'file', icon: 'bi-palette', content: '/* Estilos CSS */' });
+
+                //Se recarga la ui
+                await this.loadWorkspace();
+                this.systemLog('> Estructura creada con exito.');
+                
+            } catch (error) {
+                this.systemLog(`> Error al crear proyecto: ${error.message}`);
+            }
+        },
+        //Metodo que permite tener el controlador central de las acciones del menu
+        triggerMenuAction(action) {
+            this.showConsole = true;
+            
+            if (action === 'Nuevo Proyecto') {
+                this.createNewProject();
+            } else {
+                this.systemLog(`> Acción "${action}" no implementada aún.`);
+            }
+        },
         /*Metodo que permite ejecutar un comando en la consola*/ 
         handleCommand(event) {
             if (event.key === 'Enter') {

@@ -3,8 +3,19 @@
 	import { frameworkState as fs } from './framework.svelte.js';
 	import { slide } from 'svelte/transition';
 
+    /*Metodo para hacer el onLoad*/
+    import { onMount } from 'svelte';
+
 	let isResizing = false;
 	let consoleBodyRef = $state(null);
+
+    /*Estado reactivo del menu de archivo*/
+    let fileMenuOpen = $state(false);
+
+    /*Carga la base de datos*/
+    onMount(() => {
+        fs.loadWorkspace();
+    });
 
 	$effect(() => {
 		if (fs.commandHistory && consoleBodyRef) {
@@ -18,6 +29,11 @@
 		window.addEventListener('mousemove', handleMouseMove);
 		window.addEventListener('mouseup', stopResizing);
 	}
+    //Funcion par ejecutar la accion del menu
+    function handleMenuAction(action) {
+        fs.triggerMenuAction(action);
+        fileMenuOpen = false;
+    }
 
 	function handleMouseMove(e) {
 		if (!isResizing) return;
@@ -37,18 +53,23 @@
 <div class="ide-container d-flex flex-column">
     
     <nav class="ide-menu-bar px-3 py-1 d-flex gap-3 fs-7 align-items-center">
-        <div class="dropdown">
-            <span class="menu-item cursor-pointer" data-bs-toggle="dropdown">Archivo</span>
-            <ul class="dropdown-menu dropdown-menu-dark custom-dropdown">
-                <li><button class="dropdown-item" onclick={() => fs.triggerMenuAction('Nuevo Proyecto')}>Nuevo Proyecto</button></li>
-                <li><button class="dropdown-item" onclick={() => fs.triggerMenuAction('Abrir Proyecto')}>Abrir Proyecto...</button></li>
-                <li><hr class="dropdown-divider"></li>
-                <li><button class="dropdown-item" onclick={() => fs.triggerMenuAction('Exportar Workspace')}>Exportar Workspace</button></li>
-            </ul>
+        <div class="dropdown" style="position: relative;">
+            <button class="menu-item cursor-pointer" onclick={() => fileMenuOpen = !fileMenuOpen} aria-label = "Menu archivo">
+                Archivo
+            </button>
+            
+            {#if fileMenuOpen}
+                <ul class="dropdown-menu dropdown-menu-dark custom-dropdown show" 
+                    style="display: block; position: absolute; top: 100%; left: 0; margin-top: 4px;">
+                    <li><button class="dropdown-item" onclick={() => handleMenuAction('Nuevo Proyecto')}>Nuevo Proyecto</button></li>
+                    <li><button class="dropdown-item" onclick={() => handleMenuAction('Abrir Proyecto')}>Abrir Proyecto...</button></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><button class="dropdown-item" onclick={() => handleMenuAction('Exportar Workspace')}>Exportar Workspace</button></li>
+                </ul>
+            {/if}
         </div>
-        <span class="menu-item cursor-pointer">Editar</span>
-        <span class="menu-item cursor-pointer">Vista</span>
-        <span class="menu-item cursor-pointer">Ayuda</span>
+        <button class="menu-item cursor-pointer">Vista</button>
+        <button class="menu-item cursor-pointer">Ayuda</button>
     </nav>
 
     <header class="ide-header d-flex align-items-center px-4 py-2 justify-content-between">
@@ -155,3 +176,12 @@
         </main>
     </div>
 </div>
+
+{#if fileMenuOpen}
+    <button 
+        class="menu-backdrop" 
+        style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1040; background: transparent; border: none; padding: 0; margin: 0; cursor: default;" 
+        onclick={() => fileMenuOpen = false}
+        aria-label="Cerrar menú">
+    </button>
+{/if}

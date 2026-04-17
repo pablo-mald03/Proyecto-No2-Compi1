@@ -232,18 +232,29 @@
 .ide-menu-bar {
     background-color: #020617; 
     border-bottom: 1px solid var(--border-color);
+    
+    position: relative; 
+    z-index: 1050; 
+    flex-shrink: 0; 
 }
 
-.menu-item {
+button.menu-item {
+    all: unset;
     color: var(--slate-400);
     padding: 2px 8px;
     border-radius: 4px;
     transition: 0.2s;
+    cursor: pointer;
+    font-size: inherit;
 }
 
-.menu-item:hover {
+button.menu-item:hover {
     color: white;
-    background-color: rgba(255,255,255,0.1);
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+button.menu-item:focus-visible {
+    outline: 1px solid var(--cyan-neon); 
 }
 
 .custom-dropdown {
