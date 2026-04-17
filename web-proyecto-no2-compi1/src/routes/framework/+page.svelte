@@ -25,13 +25,42 @@
 		type: 'file',
 		content: ''
 	});
+
+	/*Atributos que permiten redimensionar el arbol de archivos del proyecto*/
+	let isResizingX = false;
+	let sidebarWidth = $state(250);
+
+	/*Funcion de redimensionado del apartado del arbol de trabajo*/
+	function startResizingSidebar(e) {
+		isResizingX = true;
+		window.addEventListener('mousemove', handleMouseMoveSidebar);
+		window.addEventListener('mouseup', stopResizingSidebar);
+		document.body.style.cursor = 'ew-resize';
+	}
+
+	//Funcion que permite manejar el estado de mantener estirando el arbol de trabajo
+	function handleMouseMoveSidebar(e) {
+		if (!isResizingX) return;
+		if (e.clientX > 150 && e.clientX < window.innerWidth * 0.4) {
+			sidebarWidth = e.clientX;
+		}
+	}
+
+	/*Funcion que permite parar el estado reactivo de redimensionamiento del arbol*/
+	function stopResizingSidebar() {
+		isResizingX = false;
+		window.removeEventListener('mousemove', handleMouseMoveSidebar);
+		window.removeEventListener('mouseup', stopResizingSidebar);
+		document.body.style.cursor = 'default';
+	}
+
 	// Funcion para invocar el modal con diferentes configuraciones
 	function triggerCreateModal(typeInfo, ext, icon, defaultContent) {
 		modalConfig.titulo = `NUEVO ${typeInfo.toUpperCase()}`;
 		modalConfig.mensaje =
 			typeInfo === 'carpeta'
 				? 'Ingresa el nombre del nuevo directorio.'
-				: `Ingresa el nombre. La extensión ${ext} se añadirá automáticamente.`;
+				: `Ingresa el nombre. La extensión ${ext} se agregara automaticamente. NO COLOCAR EXTENSION`;
 		modalConfig.type = typeInfo === 'carpeta' ? 'folder' : 'file';
 		modalConfig.ext = ext;
 		modalConfig.icon = icon;
@@ -176,7 +205,11 @@
 
 	<div class="d-flex flex-grow-1 overflow-hidden">
 		{#if fs.showSidebar}
-			<aside class="ide-sidebar" transition:slide={{ axis: 'x' }}>
+			<aside
+				class="ide-sidebar d-flex flex-column"
+				style="width: {sidebarWidth}px; flex-shrink: 0;"
+				transition:slide={{ axis: 'x' }}
+			>
 				<div class="sidebar-header p-2 d-flex flex-column gap-2">
 					<div class="d-flex justify-content-between align-items-center px-1">
 						<small class="fw-bold">EXPLORADOR</small>
@@ -215,20 +248,57 @@
 					</div>
 				</div>
 
-				<div class="file-tree p-2">
-					{#each fs.files as file}
-						<button
-							class="file-item {fs.activeFileId === file.id ? 'active' : ''}"
-							onclick={() => fs.selectFile(file.id)}
-						>
-							<i class="bi {file.icon}"></i> <span>{file.name}</span>
-						</button>
+				{#snippet renderTree(parentId, depth)}
+					{#each fs.files.filter((f) => f.parentId === parentId) as file}
+						{#if file.type === 'folder'}
+							<button
+								class="file-item w-100 text-start {fs.selectedFolderId === file.id
+									? 'active-folder'
+									: ''}"
+								style="padding-left: {0.5 + depth * 1}rem;"
+								onclick={() => fs.toggleFolder(file.id)}
+							>
+								<i
+									class="bi {fs.expandedFolders.includes(file.id)
+										? 'bi-chevron-down'
+										: 'bi-chevron-right'} me-1"
+									style="font-size: 0.7rem; color: var(--slate-400);"
+								></i>
+								<i class="bi {file.icon} text-info"></i> <span>{file.name}</span>
+							</button>
+
+							{#if fs.expandedFolders.includes(file.id)}
+								{@render renderTree(file.id, depth + 1)}
+							{/if}
+						{:else}
+							<button
+								class="file-item w-100 text-start {fs.activeFileId === file.id ? 'active' : ''}"
+								style="padding-left: {1.8 + depth * 1}rem;"
+								onclick={() => fs.selectFile(file.id)}
+							>
+								<i class="bi {file.icon}"></i> <span>{file.name}</span>
+							</button>
+						{/if}
 					{/each}
+				{/snippet}
+
+				<div
+					class="file-tree flex-grow-1 overflow-auto p-2"
+					onclick={() => (fs.selectedFolderId = null)}
+					aria-hidden="true"
+				>
+					{@render renderTree(null, 0)}
 				</div>
 			</aside>
+
+			<div
+				class="resizer-x"
+				onmousedown={startResizingSidebar}
+				aria-label="Ajustar ancho del explorador"
+			></div>
 		{/if}
 
-		<main class="editor-area d-flex flex-column flex-grow-1">
+		<main class="editor-area d-flex flex-column flex-grow-1" style="min-width: 0;">
 			<div class="tabs-container d-flex">
 				{#each fs.openFiles as file}
 					<button
@@ -237,7 +307,7 @@
 						onclick={() => fs.selectFile(file.id)}
 						onauxclick={(e) => {
 							if (e.button === 1) {
-								e.preventDefault(); 
+								e.preventDefault();
 								fs.closeTab(file.id, e);
 							}
 						}}

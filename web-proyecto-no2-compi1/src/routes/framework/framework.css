@@ -86,7 +86,7 @@
 }
 
 .tab {
-    all: unset; 
+    all: unset;
     padding: 10px 20px;
     background: var(--dark-bg);
     border-right: 1px solid var(--border-color);
@@ -134,7 +134,8 @@
     transition: background 0.2s;
 }
 
-.resizer-y:hover, .resizer-y:active {
+.resizer-y:hover,
+.resizer-y:active {
     background: var(--cyan-neon);
 }
 
@@ -159,7 +160,7 @@
     font-family: 'Fira Code', monospace;
     font-size: 0.85rem;
     display: flex;
-    flex-direction: column; 
+    flex-direction: column;
 }
 
 .btn-icon {
@@ -188,9 +189,17 @@
     color: var(--cyan-neon);
 }
 
-.text-cyan { color: var(--cyan-neon); }
-.text-slate-300 { color: #cbd5e1; }
-.text-white { color: #ffffff; } 
+.text-cyan {
+    color: var(--cyan-neon);
+}
+
+.text-slate-300 {
+    color: #cbd5e1;
+}
+
+.text-white {
+    color: #ffffff;
+}
 
 .glow-element {
     position: absolute;
@@ -230,12 +239,12 @@
 }
 
 .ide-menu-bar {
-    background-color: #020617; 
+    background-color: #020617;
     border-bottom: 1px solid var(--border-color);
-    
-    position: relative; 
-    z-index: 1050; 
-    flex-shrink: 0; 
+
+    position: relative;
+    z-index: 1050;
+    flex-shrink: 0;
 }
 
 button.menu-item {
@@ -254,13 +263,13 @@ button.menu-item:hover {
 }
 
 button.menu-item:focus-visible {
-    outline: 1px solid var(--cyan-neon); 
+    outline: 1px solid var(--cyan-neon);
 }
 
 .custom-dropdown {
     background-color: var(--sidebar-bg);
     border: 1px solid var(--border-color);
-    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
     font-size: 0.85rem;
 }
 
@@ -293,7 +302,7 @@ button.menu-item:focus-visible {
 }
 
 .btn-action-file:hover {
-    background-color: rgba(255,255,255,0.05);
+    background-color: rgba(255, 255, 255, 0.05);
     color: white;
 }
 
@@ -306,13 +315,13 @@ button.menu-item:focus-visible {
 }
 
 .btn-preview:hover {
-    border-color: #22c55e; 
+    border-color: #22c55e;
     color: #22c55e;
 }
 
 
 .prompt {
-    color: #1ea750 !important; 
+    color: #1ea750 !important;
     font-weight: bold;
     white-space: nowrap;
 }
@@ -334,4 +343,20 @@ button.menu-item:focus-visible {
 .close-tab {
     font-size: 1.1rem;
     line-height: 1;
+}
+
+.resizer-x {
+    width: 4px;
+    cursor: ew-resize;
+    background: transparent;
+    transition: 0.2s;
+}
+
+.resizer-x:hover {
+    background: var(--cyan-neon);
+}
+
+.active-folder {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-left: 2px solid var(--slate-400);
 }

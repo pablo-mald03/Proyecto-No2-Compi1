@@ -41,7 +41,7 @@
 							type="text"
 							id="nombreArchivo"
 							class="custom-input"
-							placeholder="ej. mi_logica"
+							placeholder="ej. mi-archivo"
 							bind:value={nombreInput}
 							autocomplete="off"
 						/>

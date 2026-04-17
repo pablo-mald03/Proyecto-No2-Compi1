@@ -30,6 +30,9 @@ export function createFrameworkState() {
     let _showConsole = $state(true);
     let _consoleHeight = $state(200);
 
+    /*Atributos reactivos para la implementacion del colapso de carpetas */
+    let _expandedFolders = $state([]);
+    let _selectedFolderId = $state(null);
 
     let _commandHistory = $state([
         { type: 'system', text: 'YFERA Terminal initialized...' },
@@ -42,27 +45,32 @@ export function createFrameworkState() {
         get files() { return _files; },
 
         get activeFileId() { return _activeFileId; },
-        
+
         set activeFileId(val) { _activeFileId = val; },
-        
+
         get showSidebar() { return _showSidebar; },
-        
+
         set showSidebar(val) { _showSidebar = val; },
-        
+
         get showConsole() { return _showConsole; },
-        
+
         set showConsole(val) { _showConsole = val; },
-        
+
         get consoleHeight() { return _consoleHeight; },
-        
+
         set consoleHeight(val) { _consoleHeight = val; },
-        
+
         get commandHistory() { return _commandHistory; },
-        
+
         set commandHistory(val) { _commandHistory = val; },
-        
+
         get currentCommand() { return _currentCommand; },
         set currentCommand(val) { _currentCommand = val; },
+
+        /*Getters y Stters de los estados reactivos de expansion del arbol de trabajo */
+        get expandedFolders() { return _expandedFolders; },
+        get selectedFolderId() { return _selectedFolderId; },
+        set selectedFolderId(val) { _selectedFolderId = val; },
 
         /*Metodo que devuelve los objetos completos de los archivos abiertos */
         get openFiles() {
@@ -71,6 +79,15 @@ export function createFrameworkState() {
         //Marca el archivo activo
         get activeFile() {
             return _files.find(f => f.id === _activeFileId);
+        },
+        /*Metodo que permite elegir el  folder o directorio actual*/
+        toggleFolder(id) {
+            _selectedFolderId = id;
+            if (_expandedFolders.includes(id)) {
+                _expandedFolders = _expandedFolders.filter(fId => fId !== id);
+            } else {
+                _expandedFolders.push(id);
+            }
         },
         /*Metodo que integra las windows/pestanias abiertas */
         openTab(id) {
@@ -81,9 +98,9 @@ export function createFrameworkState() {
         },
         /*Metodo que integra el cierre de pestanias/windows */
         closeTab(id, event) {
-            if (event) event.stopPropagation(); 
+            if (event) event.stopPropagation();
             _openFileIds = _openFileIds.filter(fId => fId !== id);
-            
+
             if (_activeFileId === id) {
                 _activeFileId = _openFileIds.length > 0 ? _openFileIds[_openFileIds.length - 1] : null;
             }
@@ -100,24 +117,29 @@ export function createFrameworkState() {
 
         /*Metodo integrado para poder crear un archivo o folder*/
         async createFile(rawName, extension, icon, type = 'file', content = '') {
-            //Sanitizador de dash-case NO TIENE NADA QUE VER EN LO ABSOLUTO CON EL MANEJO DE LAS GRAMATICAS
             let safeName = rawName
                 .trim()
                 .toLowerCase()
-                .replace(/[^a-z0-9]+/g, '-') 
-                .replace(/^-+|-+$/g, '');    
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '');
 
             const finalName = type === 'folder' ? safeName : `${safeName}${extension}`;
 
-            const parentId = 1; 
+            const parentId = _selectedFolderId;
 
             try {
                 const newId = await db.files.add({ parentId, name: finalName, type, icon, content });
-                await this.loadWorkspace(); 
-                
+                await this.loadWorkspace();
+
                 if (type === 'file') {
                     this.openTab(newId);
                 }
+
+                //Si se crea una carpeta se hace el focus directamente a esa nueva carpeta
+                if (type === 'folder') {
+                    this.toggleFolder(newId);
+                }
+
                 this.systemLog(`> Creado exitosamente: ${finalName}`);
             } catch (error) {
                 this.systemLog(`> Error al crear: ${error.message}`);
@@ -147,7 +169,7 @@ export function createFrameworkState() {
         //Metodo que crea la estructura inicial de un Nuevo Proyecto
         async createNewProject() {
             this.systemLog('> Creando nuevo proyecto...');
-            
+
             try {
                 await db.files.clear();
                 _files = [];
@@ -155,7 +177,7 @@ export function createFrameworkState() {
 
                 //Archivo raiz sql
                 await db.files.add({ parentId: null, name: 'database.sqlite', type: 'file', icon: 'bi-database', content: '' });
-                
+
                 //Carpeta src
                 const srcId = await db.files.add({ parentId: null, name: 'src', type: 'folder', icon: 'bi-folder-fill' });
 
@@ -167,7 +189,7 @@ export function createFrameworkState() {
                 //Se recarga la ui
                 await this.loadWorkspace();
                 this.systemLog('> Estructura creada con exito.');
-                
+
             } catch (error) {
                 this.systemLog(`> Error al crear proyecto: ${error.message}`);
             }
@@ -175,20 +197,20 @@ export function createFrameworkState() {
         //Metodo que permite tener el controlador central de las acciones del menu
         triggerMenuAction(action) {
             this.showConsole = true;
-            
+
             if (action === 'Nuevo Proyecto') {
                 this.createNewProject();
             } else {
                 this.systemLog(`> Acción "${action}" no implementada aún.`);
             }
         },
-        /*Metodo que permite ejecutar un comando en la consola*/ 
+        /*Metodo que permite ejecutar un comando en la consola*/
         handleCommand(event) {
             if (event.key === 'Enter') {
                 const cmd = _currentCommand.trim();
                 if (cmd) {
                     _commandHistory.push({ type: 'input', text: cmd });
-                    
+
                     if (cmd === 'clear') {
                         this.clearConsole();
                         _currentCommand = '';
