@@ -9,6 +9,9 @@
 	/*Modal de confirmacion*/
 	import ModalConfirmar from './componentes/ModalConfirmar.svelte';
 
+	/*Modal de mensajes*/
+	import ModalMensaje from './componentes/ModalMensaje.svelte';
+
 	/*Metodo para hacer el onLoad*/
 	import { onMount } from 'svelte';
 
@@ -62,6 +65,15 @@
 
 	// Funcion para invocar el modal con diferentes configuraciones
 	function triggerCreateModal(typeInfo, ext, icon, defaultContent) {
+		if (fs.files.length === 0) {
+			fs.infoModalConfig.titulo = 'CREACION DENEGADA';
+			fs.infoModalConfig.mensaje =
+				'Debes crear o abrir un proyecto primero para poder crear archivos o carpetas.';
+			fs.infoModalConfig.tipo = 'error';
+			fs.infoModalConfig.show = true;
+			return; 
+		}
+
 		modalConfig.titulo = `NUEVO ${typeInfo.toUpperCase()}`;
 		modalConfig.mensaje =
 			typeInfo === 'carpeta'
@@ -147,6 +159,14 @@
 	textoConfirmar={fs.confirmModalConfig.textoConfirmar}
 	onConfirmar={fs.confirmModalConfig.onConfirmar}
 	onCancelar={() => fs.closeConfirmModal()}
+/>
+
+<ModalMensaje
+	show={fs.infoModalConfig.show}
+	tipo={fs.infoModalConfig.tipo}
+	titulo={fs.infoModalConfig.titulo}
+	mensaje={fs.infoModalConfig.mensaje}
+	onAceptar={() => fs.closeInfoModal()}
 />
 
 <div class="ide-container d-flex flex-column">

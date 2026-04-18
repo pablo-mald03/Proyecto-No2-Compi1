@@ -51,6 +51,14 @@ export function createFrameworkState() {
         onConfirmar: () => { }
     });
 
+    /*Atributo del modal informativo */
+    let _infoModalConfig = $state({
+        show: false,
+        tipo: 'exito',
+        titulo: '',
+        mensaje: ''
+    });
+
     return {
         get files() { return _files; },
 
@@ -80,6 +88,9 @@ export function createFrameworkState() {
         /*Getter del estado del modal de confirmacion */
         get confirmModalConfig() { return _confirmModalConfig; },
 
+        /*Getter del modal de informacion */
+        get infoModalConfig() { return _infoModalConfig; },
+
         /*Getters y Stters de los estados reactivos de expansion del arbol de trabajo */
         get expandedFolders() { return _expandedFolders; },
         get selectedFolderId() { return _selectedFolderId; },
@@ -92,6 +103,10 @@ export function createFrameworkState() {
         //Marca el archivo activo
         get activeFile() {
             return _files.find(f => f.id === _activeFileId);
+        },
+        /*Metodo para cerrar el modal de informacion */
+        closeInfoModal() {
+            _infoModalConfig.show = false;
         },
         /*Metodo principal que permite reiniciar la base de datos */
         async resetDatabase() {
@@ -150,8 +165,6 @@ export function createFrameworkState() {
                 if (targetFolderId !== null && !_expandedFolders.includes(targetFolderId)) {
                     _expandedFolders.push(targetFolderId);
                 }
-
-                this.systemLog(`> Elemento movido con éxito.`);
             } catch (error) {
                 this.systemLog(`> Error al mover elemento: ${error.message}`);
             }
@@ -203,8 +216,8 @@ export function createFrameworkState() {
                 _files = [];
                 _openFileIds = [];
                 _activeFileId = null;
-                _selectedFolderId = null; 
-                _expandedFolders = [];  
+                _selectedFolderId = null;
+                _expandedFolders = [];
 
                 _commandHistory = [
                     { type: 'system', text: 'YFERA Terminal initialized...' },
@@ -231,7 +244,7 @@ export function createFrameworkState() {
             try {
                 _files = await db.files.toArray();
             } catch (error) {
-                this.systemLog(`> Error cargando workspace: ${error.message}`);
+                this.systemLog(`> Error cargando area de trabajo: ${error.message}`);
             }
         },
         //Metodo que crea la estructura inicial de un Nuevo Proyecto
@@ -272,17 +285,28 @@ export function createFrameworkState() {
                 this.createNewProject();
             }
             else if (action === 'Cerrar_Proyecto') {
-                _confirmModalConfig = {
-                    show: true,
-                    titulo: 'Cerrar Proyecto',
-                    mensaje: '¿Estas seguro de que deseas cerrar el proyecto?',
-                    tipo: 'danger',
-                    textoConfirmar: 'Si, Cerrar',
-                    onConfirmar: async () => {
-                        await this.resetDatabase();
-                        _confirmModalConfig.show = false;
-                    }
-                };
+                if (_files.length === 0) {
+                    // Si no hay archivos se muestra alerta
+                    _infoModalConfig = {
+                        show: true,
+                        tipo: 'error',
+                        titulo: 'ERROR DE ACCION',
+                        mensaje: 'No se puede cerrar el proyecto porque el area de trabajo ya esta vacia.'
+                    };
+                } else {
+                    //Si hay archivos se pide confirmacion
+                    _confirmModalConfig = {
+                        show: true,
+                        titulo: 'Cerrar Proyecto',
+                        mensaje: '¿Estás seguro de que deseas cerrar el proyecto? Se borrarán todos los archivos de la memoria local.',
+                        tipo: 'danger',
+                        textoConfirmar: 'Sí, cerrar todo',
+                        onConfirmar: async () => {
+                            await this.resetDatabase();
+                            _confirmModalConfig.show = false;
+                        }
+                    };
+                }
             }
             else {
                 this.systemLog(`> Acción "${action}" no implementada aún.`);
