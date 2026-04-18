@@ -181,13 +181,7 @@ export function createFrameworkState() {
             const finalName = type === 'folder' ? safeName : `${safeName}${extension}`;
 
             /*LOGICA DE DIRECTORIO DEFAULT*/
-            let targetParentId = _selectedFolderId;
-            if (targetParentId === null) {
-                const srcFolder = _files.find(f => f.name === 'src' && f.type === 'folder');
-                targetParentId = srcFolder ? srcFolder.id : null;
-            }
-
-            const parentId = targetParentId;
+            let parentId = _selectedFolderId;
 
             try {
                 const newId = await db.files.add({ parentId, name: finalName, type, icon, content });
@@ -204,7 +198,7 @@ export function createFrameworkState() {
                     _expandedFolders.push(parentId);
                 }
 
-                this.systemLog(`> Creado exitosamente: ${finalName}`);
+                this.systemLog(`> Se ha creado exitosamente: ${finalName}`);
             } catch (error) {
                 this.systemLog(`> Error al crear: ${error.message}`);
             }
@@ -255,23 +249,24 @@ export function createFrameworkState() {
                 await db.files.clear();
                 _files = [];
                 _activeFileId = null;
+                _openFileIds = [];
 
                 //Archivo raiz sql
-                await db.files.add({ parentId: null, name: 'database.sqlite', type: 'file', icon: 'bi-database', content: '' });
+                await db.files.add({ parentId: null, name: 'database.sqlite', type: 'file', icon: 'bi-database text-white', content: '' });
 
                 //Carpeta src
                 const srcId = await db.files.add({ parentId: null, name: 'src', type: 'folder', icon: 'bi-folder-fill' });
 
                 //Archivos iniciales en src
-                await db.files.add({ parentId: srcId, name: 'main.y', type: 'file', icon: 'bi-braces', content: '// Lógica YFERA' });
-                await db.files.add({ parentId: srcId, name: 'main.comp', type: 'file', icon: 'bi-box', content: '' });
-                await db.files.add({ parentId: srcId, name: 'main.styles', type: 'file', icon: 'bi-palette', content: '/* Estilos CSS */' });
+                await db.files.add({ parentId: srcId, name: 'main.y', type: 'file', icon: 'bi-braces text-warning', content: '// Logica YFERA' });
+                await db.files.add({ parentId: srcId, name: 'main.comp', type: 'file', icon: 'bi-box text-info', content: ' /*Compontentes del proyecto*/' });
+                await db.files.add({ parentId: srcId, name: 'main.styles', type: 'file', icon: 'bi-palette text-danger', content: '/* Estilos del componente */' });
                 //Se recarga la ui
                 await this.loadWorkspace();
 
                 _expandedFolders = [srcId];
                 _selectedFolderId = srcId;
-                this.systemLog('> Estructura creada con exito.');
+                this.systemLog('> Estructura inicial creada con exito.');
 
             } catch (error) {
                 this.systemLog(`> Error al crear proyecto: ${error.message}`);
@@ -283,6 +278,25 @@ export function createFrameworkState() {
 
             if (action === 'Nuevo_Proyecto') {
                 this.createNewProject();
+            }
+            else if (action === 'Abrir_Proyecto') {
+                /*Si hay un proyecto abierto se avisa para evitar que se pierda informacion */
+                if (_files.length > 0) {
+                    _confirmModalConfig = {
+                        show: true,
+                        titulo: 'SOBREESCRIBIR AREA DE TRABAJO',
+                        mensaje: 'Ya hay un proyecto abierto. Si abres uno nuevo, perderas los cambios no exportados. ¿Deseas continuar?',
+                        tipo: 'warning',
+                        textoConfirmar: 'Sí, abrir proyecto',
+                        onConfirmar: async () => {
+                            _confirmModalConfig.show = false;
+                            await this.openLocalProject();
+                        }
+                    };
+                } else {
+                    /*Area de trabajo vacio */
+                    this.openLocalProject();
+                }
             }
             else if (action === 'Cerrar_Proyecto') {
                 if (_files.length === 0) {
@@ -329,6 +343,223 @@ export function createFrameworkState() {
                 }
                 _currentCommand = '';
             }
+        },
+        /*Metodo para poder notificar mensajes al usuario */
+        notifyMessages(titulo, mensaje, tipo = 'exito') {
+            _infoModalConfig = {
+                show: true,
+                titulo,
+                mensaje,
+                tipo
+            };
+        },
+
+        /*===========Apartado de metodos utilizados para poder leer un arbol de trabajo===========*/
+        /*Metodo que permite validar los datos importados (IMPORTANTE: PRIMERO SE CARGA PARA CERRAR LO MAS RAPIDO POSIBLE LA LECTURA)*/
+        async _validarWorkSpaceImportado() {
+            await this.loadWorkspace();
+
+            /*Busqueda de archivo sqlite en la raiz */
+            const rootSqlites = _files.filter(f => f.parentId === null && f.name.endsWith('.sqlite'));
+
+            if (rootSqlites.length === 0) {
+                await this.resetDatabase();
+                this.notifyMessages('PROYECTO INVALIDO', 'El directorio seleccionado debe contener exactamente un archivo .sqlite en la raiz.', 'error');
+                return false; 
+            }
+
+            /*Permite saber si hay mas de una base de datos por proyecto */
+            if (rootSqlites.length > 1) {
+                const toDelete = rootSqlites.slice(1);
+
+                for (const file of toDelete) {
+                    await db.files.delete(file.id);
+                }
+
+                await this.loadWorkspace();
+            }
+
+            return true; 
+        },
+
+        /*Metodo que permite leer un arbol de trabajo cargado (METODO RECURSIVO)*/
+        async _procesarDirectorio(dirHandle, currentParentId = null) {
+
+            for await (const entry of dirHandle.values()) {
+
+                // Se ignoran ciertos archivos pesados posibles
+                if (entry.name === '.git' || entry.name === 'node_modules') continue;
+
+                if (entry.kind === 'directory') {
+                    // Si es una carpeta se agrega directamente.
+                    const newFolderId = await db.files.add({
+                        parentId: currentParentId,
+                        name: entry.name,
+                        type: 'folder',
+                        icon: 'bi-folder-fill',
+                        content: ''
+                    });
+
+                    await this._procesarDirectorio(entry, newFolderId);
+
+                } else if (entry.kind === 'file') {
+                    /* FILTRO DE ARCHIVOS ACEPTADOS*/
+                    const validExtensions = ['.y', '.comp', '.styles', '.sqlite'];
+                    const isValid = validExtensions.some(ext => entry.name.endsWith(ext));
+
+                    if (!isValid) continue;
+
+                    /* Reconocimiento recursivo de archivos */
+                    const fileHandle = await entry.getFile();
+                    let content = '';
+
+                    try {
+                        content = await fileHandle.text();
+                    } catch (e) {
+                        content = '// Archivo binario o no legible por texto';
+                    }
+
+                    let icon = 'bi-file-earmark-code';
+                    if (entry.name.endsWith('.y')) icon = 'bi-braces text-warning';
+                    else if (entry.name.endsWith('.comp')) icon = 'bi-box text-info';
+                    else if (entry.name.endsWith('.styles')) icon = 'bi-palette text-danger';
+                    else if (entry.name.endsWith('.sqlite')) icon = 'bi-database text-white';
+
+                    await db.files.add({
+                        parentId: currentParentId,
+                        name: entry.name,
+                        type: 'file',
+                        icon: icon,
+                        content: content
+                    });
+                }
+            }
+        },
+
+        /* Metodo que permite abrir el gestor de archivos local para poder cargar un proyecto */
+        async openLocalProject() {
+            try {
+                if (window.showDirectoryPicker) {
+                    // Se le pide al usuario la carpeta raiz
+                    const directoryHandle = await window.showDirectoryPicker();
+
+                    // Se limpia el espacio de trabajo actual
+                    await this.resetDatabase();
+
+                    // Se arranca el buscador recursivo
+                    await this._procesarDirectorio(directoryHandle, null);
+
+                    //VALIDACION DESPUES DE IMPORTAR TODO EL PROYECTO
+                    const isValid = await this._validarWorkSpaceImportado();
+
+                    if (isValid) {
+                        this.notifyMessages('PROYECTO CARGADO', `Se ha importado el proyecto con exito.`, 'exito');
+                    }
+                } else {
+                    /* Caso en el que no se soporta la API del navegador */
+                    await this._importUsingFallback();
+                }
+
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    this.systemLog('> Importacion cancelada por el usuario.');
+                } else {
+                    this.systemLog(`> Error al leer archivos: ${error.message}`);
+                    this.notifyMessages('ERROR DE LECTURA', 'Ocurrio un error al intentar leer el arbol de directorios.', 'error');
+                }
+            }
+        },
+
+        /* Metodo en el caso de que no se pueda importar con la API MODERNA de archivos de JS.*/
+        async _importUsingFallback() {
+            return new Promise((resolve, reject) => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.webkitdirectory = true;
+                input.directory = true;
+                input.multiple = true;
+
+                input.onchange = async (e) => {
+                    const files = e.target.files;
+                    if (!files || files.length === 0) return resolve();
+
+                    try {
+                        await this.resetDatabase();
+
+                        const folderMap = new Map();
+
+                        for (const file of files) {
+                            if (file.webkitRelativePath.includes('/node_modules/') ||
+                                file.webkitRelativePath.includes('/.git/')) {
+                                continue;
+                            }
+
+                            const pathParts = file.webkitRelativePath.split('/');
+                            const fileName = pathParts[pathParts.length - 1];
+
+                            /*FILTROS DE ACEPTACION DE EXTENSIONES*/
+                            const validExtensions = ['.y', '.comp', '.styles', '.sqlite'];
+                            const isValid = validExtensions.some(ext => fileName.endsWith(ext));
+                            if (!isValid) continue;
+
+                            let currentPath = '';
+                            let parentId = null;
+
+                            for (let i = 1; i < pathParts.length - 1; i++) {
+                                const folderName = pathParts[i];
+                                currentPath = currentPath ? `${currentPath}/${folderName}` : folderName;
+
+                                if (!folderMap.has(currentPath)) {
+                                    const newFolderId = await db.files.add({
+                                        parentId: parentId,
+                                        name: folderName,
+                                        type: 'folder',
+                                        icon: 'bi-folder-fill',
+                                        content: ''
+                                    });
+                                    folderMap.set(currentPath, newFolderId);
+                                }
+                                parentId = folderMap.get(currentPath);
+                            }
+
+                            let content = '';
+                            try {
+                                content = await file.text();
+                            } catch (err) {
+                                content = '// Archivo binario o no legible';
+                            }
+
+                            let icon = 'bi-file-earmark-code';
+                            if (fileName.endsWith('.y')) icon = 'bi-braces text-warning';
+                            else if (fileName.endsWith('.comp')) icon = 'bi-box text-info';
+                            else if (fileName.endsWith('.styles')) icon = 'bi-palette text-danger';
+                            else if (fileName.endsWith('.sqlite')) icon = 'bi-database text-white';
+
+                            await db.files.add({
+                                parentId: parentId,
+                                name: fileName,
+                                type: 'file',
+                                icon: icon,
+                                content: content
+                            });
+                        }
+
+                        //VALIDACION DESPUES DE IMPORTAR TODO EL PROYECTO
+                        const isProjectValid = await this._validarWorkSpaceImportado();
+
+                        if (isProjectValid) {
+                            this.notifyMessages('PROYECTO CARGADO', `Se ha importado el proyecto con exito.`, 'exito');
+                        }
+
+                        resolve();
+
+                    } catch (err) {
+                        reject(err);
+                    }
+                };
+
+                input.click();
+            });
         }
     };
 }

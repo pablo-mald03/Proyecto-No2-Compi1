@@ -65,14 +65,11 @@
 
 	// Funcion para invocar el modal con diferentes configuraciones
 	function triggerCreateModal(typeInfo, ext, icon, defaultContent) {
+
 		if (fs.files.length === 0) {
-			fs.infoModalConfig.titulo = 'CREACION DENEGADA';
-			fs.infoModalConfig.mensaje =
-				'Debes crear o abrir un proyecto primero para poder crear archivos o carpetas.';
-			fs.infoModalConfig.tipo = 'error';
-			fs.infoModalConfig.show = true;
-			return; 
-		}
+            fs.notifyMessages('CREACION DENEGADA', 'Debes crear o abrir un proyecto primero para poder crear archivos o carpetas.', 'error');
+            return;
+        }
 
 		modalConfig.titulo = `NUEVO ${typeInfo.toUpperCase()}`;
 		modalConfig.mensaje =
@@ -202,8 +199,8 @@
 					</li>
 					<li><hr class="dropdown-divider" /></li>
 					<li>
-						<button class="dropdown-item" onclick={() => handleMenuAction('Exportar Workspace')}
-							>Exportar Workspace</button
+						<button class="dropdown-item" onclick={() => handleMenuAction('Exportar_Proyecto')}
+							>Exportar Proyecto</button
 						>
 					</li>
 				</ul>
@@ -268,21 +265,21 @@
 							class="btn-action-file"
 							title="Nueva Lógica (.y)"
 							onclick={() =>
-								triggerCreateModal('archivo YFERA', '.y', 'bi-braces', '// Lógica YFERA')}
+								triggerCreateModal('archivo YFERA', '.y', 'bi-braces text-warning', '// Lógica YFERA')}
 						>
 							<i class="bi bi-braces text-warning"></i> .y
 						</button>
 						<button
 							class="btn-action-file"
 							title="Nuevo Componente (.comp)"
-							onclick={() => triggerCreateModal('componente', '.comp', 'bi-box', '')}
+							onclick={() => triggerCreateModal('componente', '.comp', 'bi-box text-info', '')}
 						>
 							<i class="bi bi-box text-info"></i> .comp
 						</button>
 						<button
 							class="btn-action-file"
 							title="Nuevos Estilos (.styles)"
-							onclick={() => triggerCreateModal('estilo', '.styles', 'bi-palette', '/* Estilos */')}
+							onclick={() => triggerCreateModal('estilo', '.styles', 'bi-palette text-danger', '/* Estilos */')}
 						>
 							<i class="bi bi-palette text-danger"></i> .styles
 						</button>
