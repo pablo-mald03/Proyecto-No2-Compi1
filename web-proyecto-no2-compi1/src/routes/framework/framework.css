@@ -356,6 +356,17 @@ button.menu-item:focus-visible {
     background: var(--cyan-neon);
 }
 
+.drag-over-active {
+    background-color: rgba(0, 255, 255, 0.15) !important;
+    border: 1px dashed var(--cyan-neon) !important;
+    border-radius: 4px;
+}
+
+.root-drag-over {
+    background-color: rgba(255, 255, 255, 0.02) !important;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+}
+
 .active-folder {
     background-color: rgba(255, 255, 255, 0.05);
     border-left: 2px solid var(--slate-400);

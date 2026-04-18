@@ -30,6 +30,9 @@
 	let isResizingX = false;
 	let sidebarWidth = $state(250);
 
+	// Atributo que mantiene el estado visual para el Drag and Drop
+	let dragOverId = $state(null);
+
 	/*Funcion de redimensionado del apartado del arbol de trabajo*/
 	function startResizingSidebar(e) {
 		isResizingX = true;
@@ -252,11 +255,31 @@
 					{#each fs.files.filter((f) => f.parentId === parentId) as file}
 						{#if file.type === 'folder'}
 							<button
+								draggable="true"
+								ondragstart={(e) => e.dataTransfer.setData('itemId', file.id.toString())}
+								ondragover={(e) => e.preventDefault()}
+								ondragenter={(e) => {
+									e.preventDefault();
+									dragOverId = file.id;
+								}}
+								ondragleave={() => {
+									dragOverId = null;
+								}}
+								ondrop={(e) => {
+									e.preventDefault();
+									e.stopPropagation();
+									dragOverId = null;
+									const draggedId = parseInt(e.dataTransfer.getData('itemId'));
+									if (!isNaN(draggedId)) fs.moveItem(draggedId, file.id);
+								}}
 								class="file-item w-100 text-start {fs.selectedFolderId === file.id
 									? 'active-folder'
-									: ''}"
+									: ''} {dragOverId === file.id ? 'drag-over-active' : ''}"
 								style="padding-left: {0.5 + depth * 1}rem;"
-								onclick={() => fs.toggleFolder(file.id)}
+								onclick={(e) => {
+									e.stopPropagation();
+									fs.toggleFolder(file.id);
+								}}
 							>
 								<i
 									class="bi {fs.expandedFolders.includes(file.id)
@@ -272,9 +295,15 @@
 							{/if}
 						{:else}
 							<button
+								draggable="true"
+								ondragstart={(e) => e.dataTransfer.setData('itemId', file.id.toString())}
 								class="file-item w-100 text-start {fs.activeFileId === file.id ? 'active' : ''}"
 								style="padding-left: {1.8 + depth * 1}rem;"
-								onclick={() => fs.selectFile(file.id)}
+								onclick={(e) => {
+									e.stopPropagation();
+									fs.selectedFolderId = file.parentId;
+									fs.selectFile(file.id);
+								}}
 							>
 								<i class="bi {file.icon}"></i> <span>{file.name}</span>
 							</button>
@@ -283,8 +312,24 @@
 				{/snippet}
 
 				<div
-					class="file-tree flex-grow-1 overflow-auto p-2"
+					class="file-tree flex-grow-1 overflow-auto p-2 {dragOverId === 'root'
+						? 'root-drag-over'
+						: ''}"
 					onclick={() => (fs.selectedFolderId = null)}
+					ondragover={(e) => e.preventDefault()}
+					ondragenter={(e) => {
+						e.preventDefault();
+						dragOverId = 'root';
+					}}
+					ondragleave={() => {
+						dragOverId = null;
+					}}
+					ondrop={(e) => {
+						e.preventDefault();
+						dragOverId = null;
+						const draggedId = parseInt(e.dataTransfer.getData('itemId'));
+						if (!isNaN(draggedId)) fs.moveItem(draggedId, null);
+					}}
 					aria-hidden="true"
 				>
 					{@render renderTree(null, 0)}
@@ -292,6 +337,8 @@
 			</aside>
 
 			<div
+				role="button"
+				tabindex="-1"
 				class="resizer-x"
 				onmousedown={startResizingSidebar}
 				aria-label="Ajustar ancho del explorador"
@@ -351,7 +398,13 @@
 			</div>
 
 			{#if fs.showConsole}
-				<button class="resizer-y" onmousedown={startResizing} aria-label="Ajustar consola"></button>
+				<div
+					role="button"
+					tabindex="-1"
+					class="resizer-y"
+					onmousedown={startResizing}
+					aria-label="Ajustar consola"
+				></div>
 				<section
 					class="console-panel"
 					style="height: {fs.consoleHeight}px;"

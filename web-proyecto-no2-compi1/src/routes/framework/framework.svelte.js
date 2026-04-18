@@ -114,6 +114,23 @@ export function createFrameworkState() {
                 this.systemLog(`> Seleccionaste carpeta: ${file.name}`);
             }
         },
+        /*Metodo que permite generar la respuesta drag para poder arrastrar y soltar carpetas dentro de otras */
+        async moveItem(draggedId, targetFolderId) {
+            if (draggedId === targetFolderId) return;
+
+            try {
+                await db.files.update(draggedId, { parentId: targetFolderId });
+                await this.loadWorkspace();
+
+                if (targetFolderId !== null && !_expandedFolders.includes(targetFolderId)) {
+                    _expandedFolders.push(targetFolderId);
+                }
+
+                this.systemLog(`> Elemento movido con éxito.`);
+            } catch (error) {
+                this.systemLog(`> Error al mover elemento: ${error.message}`);
+            }
+        },
 
         /*Metodo integrado para poder crear un archivo o folder*/
         async createFile(rawName, extension, icon, type = 'file', content = '') {
@@ -125,7 +142,14 @@ export function createFrameworkState() {
 
             const finalName = type === 'folder' ? safeName : `${safeName}${extension}`;
 
-            const parentId = _selectedFolderId;
+            /*LOGICA DE DIRECTORIO DEFAULT*/
+            let targetParentId = _selectedFolderId;
+            if (targetParentId === null) {
+                const srcFolder = _files.find(f => f.name === 'src' && f.type === 'folder');
+                targetParentId = srcFolder ? srcFolder.id : null;
+            }
+
+            const parentId = targetParentId;
 
             try {
                 const newId = await db.files.add({ parentId, name: finalName, type, icon, content });
@@ -133,11 +157,13 @@ export function createFrameworkState() {
 
                 if (type === 'file') {
                     this.openTab(newId);
+                } else if (type === 'folder') {
+                    this.toggleFolder(newId);
                 }
 
-                //Si se crea una carpeta se hace el focus directamente a esa nueva carpeta
-                if (type === 'folder') {
-                    this.toggleFolder(newId);
+                // Si lo creamos en una carpeta, asegurarnos de que esté expandida para verlo
+                if (parentId !== null && !_expandedFolders.includes(parentId)) {
+                    _expandedFolders.push(parentId);
                 }
 
                 this.systemLog(`> Creado exitosamente: ${finalName}`);
@@ -185,9 +211,11 @@ export function createFrameworkState() {
                 await db.files.add({ parentId: srcId, name: 'main.y', type: 'file', icon: 'bi-braces', content: '// Lógica YFERA' });
                 await db.files.add({ parentId: srcId, name: 'main.comp', type: 'file', icon: 'bi-box', content: '' });
                 await db.files.add({ parentId: srcId, name: 'main.styles', type: 'file', icon: 'bi-palette', content: '/* Estilos CSS */' });
-
                 //Se recarga la ui
                 await this.loadWorkspace();
+
+                _expandedFolders = [srcId];
+                _selectedFolderId = srcId;
                 this.systemLog('> Estructura creada con exito.');
 
             } catch (error) {
