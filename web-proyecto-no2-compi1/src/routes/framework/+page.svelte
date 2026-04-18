@@ -6,6 +6,9 @@
 	/*Modal de nombres*/
 	import ModalCrear from './componentes/ModalCrear.svelte';
 
+	/*Modal de confirmacion*/
+	import ModalConfirmar from './componentes/ModalConfirmar.svelte';
+
 	/*Metodo para hacer el onLoad*/
 	import { onMount } from 'svelte';
 
@@ -15,7 +18,7 @@
 	/*Estado reactivo del menu de archivo*/
 	let fileMenuOpen = $state(false);
 
-	/*Estado del modal*/
+	/*Estado del modal de confirmacion*/
 	let modalConfig = $state({
 		show: false,
 		titulo: '',
@@ -136,6 +139,16 @@
 	onGuardar={handleModalGuardar}
 />
 
+<ModalConfirmar
+	show={fs.confirmModalConfig.show}
+	titulo={fs.confirmModalConfig.titulo}
+	mensaje={fs.confirmModalConfig.mensaje}
+	tipo={fs.confirmModalConfig.tipo}
+	textoConfirmar={fs.confirmModalConfig.textoConfirmar}
+	onConfirmar={fs.confirmModalConfig.onConfirmar}
+	onCancelar={() => fs.closeConfirmModal()}
+/>
+
 <div class="ide-container d-flex flex-column">
 	<nav class="ide-menu-bar px-3 py-1 d-flex gap-3 fs-7 align-items-center">
 		<div class="dropdown" style="position: relative;">
@@ -153,13 +166,18 @@
 					style="display: block; position: absolute; top: 100%; left: 0; margin-top: 4px;"
 				>
 					<li>
-						<button class="dropdown-item" onclick={() => handleMenuAction('Nuevo Proyecto')}
+						<button class="dropdown-item" onclick={() => handleMenuAction('Nuevo_Proyecto')}
 							>Nuevo Proyecto</button
 						>
 					</li>
 					<li>
-						<button class="dropdown-item" onclick={() => handleMenuAction('Abrir Proyecto')}
+						<button class="dropdown-item" onclick={() => handleMenuAction('Abrir_Proyecto')}
 							>Abrir Proyecto...</button
+						>
+					</li>
+					<li>
+						<button class="dropdown-item" onclick={() => handleMenuAction('Cerrar_Proyecto')}
+							>Cerrar Proyecto...</button
 						>
 					</li>
 					<li><hr class="dropdown-divider" /></li>

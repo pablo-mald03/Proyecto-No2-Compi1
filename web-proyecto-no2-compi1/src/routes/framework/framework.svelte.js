@@ -41,6 +41,16 @@ export function createFrameworkState() {
 
     let _currentCommand = $state('');
 
+    /*Estado inicial del modal de confirmacion*/
+    let _confirmModalConfig = $state({
+        show: false,
+        titulo: '',
+        mensaje: '',
+        tipo: 'danger',
+        textoConfirmar: 'Confirmar',
+        onConfirmar: () => { }
+    });
+
     return {
         get files() { return _files; },
 
@@ -67,6 +77,9 @@ export function createFrameworkState() {
         get currentCommand() { return _currentCommand; },
         set currentCommand(val) { _currentCommand = val; },
 
+        /*Getter del estado del modal de confirmacion */
+        get confirmModalConfig() { return _confirmModalConfig; },
+
         /*Getters y Stters de los estados reactivos de expansion del arbol de trabajo */
         get expandedFolders() { return _expandedFolders; },
         get selectedFolderId() { return _selectedFolderId; },
@@ -79,6 +92,18 @@ export function createFrameworkState() {
         //Marca el archivo activo
         get activeFile() {
             return _files.find(f => f.id === _activeFileId);
+        },
+        /*Metodo principal que permite reiniciar la base de datos */
+        async resetDatabase() {
+            await db.delete();
+            await db.open();
+            _files = [];
+            _openFileIds = [];
+            _activeFileId = null;
+        },
+        // Metodo para cerrar el modal desde fuera
+        closeConfirmModal() {
+            _confirmModalConfig.show = false;
         },
         /*Metodo que permite elegir el  folder o directorio actual*/
         toggleFolder(id) {
@@ -171,6 +196,23 @@ export function createFrameworkState() {
                 this.systemLog(`> Error al crear: ${error.message}`);
             }
         },
+        /* Metodo para reiniciar por completo el Framework (Cerrar Proyecto) */
+        async resetDatabase() {
+            try {
+                await db.files.clear();
+                _files = [];
+                _openFileIds = [];
+                _activeFileId = null;
+                _selectedFolderId = null; 
+                _expandedFolders = [];  
+
+                _commandHistory = [
+                    { type: 'system', text: 'YFERA Terminal initialized...' },
+                ];
+            } catch (error) {
+                this.systemLog(`> Error al cerrar el proyecto: ${error.message}`);
+            }
+        },
         // Método mejorado para recibir contenido inicial
         addFile(name, icon, content = '') {
             const id = Math.max(..._files.map(f => f.id), 0) + 1;
@@ -226,9 +268,23 @@ export function createFrameworkState() {
         triggerMenuAction(action) {
             this.showConsole = true;
 
-            if (action === 'Nuevo Proyecto') {
+            if (action === 'Nuevo_Proyecto') {
                 this.createNewProject();
-            } else {
+            }
+            else if (action === 'Cerrar_Proyecto') {
+                _confirmModalConfig = {
+                    show: true,
+                    titulo: 'Cerrar Proyecto',
+                    mensaje: '¿Estas seguro de que deseas cerrar el proyecto?',
+                    tipo: 'danger',
+                    textoConfirmar: 'Si, Cerrar',
+                    onConfirmar: async () => {
+                        await this.resetDatabase();
+                        _confirmModalConfig.show = false;
+                    }
+                };
+            }
+            else {
                 this.systemLog(`> Acción "${action}" no implementada aún.`);
             }
         },
