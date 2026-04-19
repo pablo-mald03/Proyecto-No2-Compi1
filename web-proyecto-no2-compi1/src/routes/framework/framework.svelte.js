@@ -7,6 +7,9 @@ import JSZip from "jszip";
 /*Inicializar instancia de dixie (Se comunica con la base de datos) */
 export const db = new Dexie('YferaWorkspace');
 
+/*Manejador de la base de datos sqlite */
+import { dbManejador } from "$lib/modules/SqliteManager";
+
 /*Definicion de la base de datos que se utilizara para definir el storage donde se mantendra la persistencia temporal del proyecto */
 /*
  * Detalles: 
@@ -63,6 +66,9 @@ export function createFrameworkState() {
         mensaje: ''
     });
 
+    /*Atributo que permite manejar a la base de datos */
+    let _activeDB = null;
+
     return {
         get files() { return _files; },
 
@@ -99,6 +105,15 @@ export function createFrameworkState() {
         get expandedFolders() { return _expandedFolders; },
         get selectedFolderId() { return _selectedFolderId; },
         set selectedFolderId(val) { _selectedFolderId = val; },
+
+        /*Metodo que permite inicializar la aplicacion */
+        async iniciarFramework(){
+            await this.loadWorkspace();
+
+            if (_files && _files.length > 0) {
+                await this.iniciarBaseDeDatos();
+            }
+        },
 
         /*Metodo que devuelve los objetos completos de los archivos abiertos */
         get openFiles() {
@@ -242,6 +257,7 @@ export function createFrameworkState() {
         async loadWorkspace() {
             try {
                 _files = await db.files.toArray();
+
             } catch (error) {
                 this.systemLog(`> Error cargando area de trabajo: ${error.message}`);
             }
@@ -268,6 +284,7 @@ export function createFrameworkState() {
                 await db.files.add({ parentId: srcId, name: 'main.styles', type: 'file', icon: 'bi-palette text-danger', content: '/* Estilos del componente */' });
                 //Se recarga la ui
                 await this.loadWorkspace();
+                await this.iniciarBaseDeDatos();
 
                 _expandedFolders = [srcId];
                 _selectedFolderId = srcId;
@@ -381,6 +398,7 @@ export function createFrameworkState() {
                 }
 
                 await this.loadWorkspace();
+                await this.iniciarBaseDeDatos();
             }
 
             return true;
@@ -584,7 +602,7 @@ export function createFrameworkState() {
         async exportarWorkspaceZip(projectName) {
             try {
                 this.systemLog(`> Comprimiendo archivos del proyecto ${projectName}.zip...`);
-                
+
                 //Objeto zip
                 const zip = new JSZip();
 
@@ -596,11 +614,11 @@ export function createFrameworkState() {
                 const downloadUrl = window.URL.createObjectURL(zipContent);
                 const a = document.createElement('a');
                 a.href = downloadUrl;
-                a.download = `${projectName}.zip`; 
-                
+                a.download = `${projectName}.zip`;
+
                 document.body.appendChild(a);
                 a.click();
-                
+
                 //Flush de la memoria
                 window.URL.revokeObjectURL(downloadUrl);
                 document.body.removeChild(a);
@@ -611,6 +629,36 @@ export function createFrameworkState() {
 
             } catch (error) {
                 this.notifyMessages('ERROR AL COMPRIMIR', 'Ocurrio un error al intentar generar el archivo .zip', 'error');
+            }
+        },
+        /*METODO ENCARGADO DE INICIALIZAR LA BASE DE DATOS DEL PROYECTO*/
+        async iniciarBaseDeDatos() {
+            try {
+                const dbFile = _files.find(f => f.parentId === null && f.name.endsWith('.sqlite'));
+
+                if (!dbFile) {
+                    this.notifyMessages('BASE DE DATOS NO ENCONTRADA', 'El proyecto no contiene una base de datos .sqlite en la raiz.', 'error');
+                    return;
+                }
+
+                await dbManejador.init(dbFile.content);
+
+                if (!dbFile.content || dbFile.content.length === 0) {
+                    await this.guardarBaseDeDatos();
+                }
+            } catch (error) {
+                 this.notifyMessages('ERROR EN BASE DE DATOS', `Ha ocurrido un error. ${error.message}`, 'error');
+            }
+        },
+        /*Metodo que permite guardar la base de datos cargada */
+        async guardarBaseDeDatos() {
+            const binario = dbManejador.exportData();
+            if (!binario) return;
+
+            const dbFile = _files.find(f => f.parentId === null && f.name.endsWith('.sqlite'));
+            if (dbFile) {
+                dbFile.content = binario;
+                await db.files.update(dbFile.id, { content: binario });
             }
         }
 

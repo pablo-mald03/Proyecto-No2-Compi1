@@ -110,9 +110,9 @@
 		modalConfig.show = false;
 	}
 
-	/*Carga la base de datos*/
+	/*Metodo que permite cargar al iniciar todo lo necesario del framework*/
 	onMount(() => {
-		fs.loadWorkspace();
+		fs.iniciarFramework();
 	});
 
 	$effect(() => {
