@@ -10,58 +10,72 @@
 
 	//Funcion que permite manejar el cierre con la tecla Escape
 	function handleKeyDown(e) {
-		if (e.key === 'Escape') onCancelar();
-		if (e.key === 'Enter' && nombreInput.trim() !== '') onGuardar(nombreInput);
+		if (!show) {
+			return;
+		}
+
+		if (e.key === 'Escape') {
+			onCancelar();
+		}
+
+		if (e.key === 'Enter' && nombreInput.trim() !== '') {
+			e.preventDefault();
+			e.stopPropagation();
+			onGuardar(nombreInput);
+		}
 	}
 </script>
 
 <svelte:window onkeydown={handleKeyDown} />
+
 {#if show}
-	<div
-		class="modal-overlay position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
-	>
-		<div class="custom-modal-card shadow-lg" style="width: 420px;">
-			<div class="modal-header-custom p-3 d-flex align-items-center justify-content-between">
-				<div class="d-flex align-items-center gap-2">
-					<i class="bi bi-file-earmark-plus-fill text-cyan"></i>
-					<h6 class="mb-0 fw-bold text-uppercase letter-spacing-1">{titulo}</h6>
-				</div>
-				<button class="btn-close-modal" onclick={onCancelar} aria-label="Boton cancelar"
-					><i class="bi bi-x-lg"></i></button
-				>
-			</div>
+    <div
+        class="modal-overlay position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
+    >
+        <div class="custom-modal-card shadow-lg" style="width: 420px;">
+            <div class="modal-header-custom p-3 d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-file-earmark-plus-fill text-cyan"></i>
+                    <h6 class="mb-0 fw-bold text-uppercase letter-spacing-1">{titulo}</h6>
+                </div>
+                <button class="btn-close-modal" onclick={onCancelar} aria-label="Boton cancelar">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
 
-			<div class="modal-body-custom p-4">
-				<p class="small text-slate-400 mb-4">{mensaje}</p>
+            <div class="modal-body-custom p-4">
+                <p class="small text-slate-400 mb-4">{mensaje}</p>
 
-				<div class="input-wrapper">
-					<label for="nombreArchivo" class="input-label">NOMBRE DEL ELEMENTO</label>
-					<div class="input-group-custom">
-						<input
-							type="text"
-							id="nombreArchivo"
-							class="custom-input"
-							placeholder="ej. mi-archivo"
-							bind:value={nombreInput}
-							autocomplete="off"
-						/>
-						<div class="input-focus-border"></div>
-					</div>
-				</div>
-			</div>
+                <div class="input-wrapper">
+                    <label for="nombreArchivo" class="input-label">NOMBRE DEL ELEMENTO</label>
+                    <div class="input-group-custom">
+                        <!-- svelte-ignore a11y_autofocus -->
+                        <input
+                            type="text"
+                            id="nombreArchivo"
+                            class="custom-input"
+                            placeholder="ej. mi-archivo"
+                            bind:value={nombreInput}
+                            autocomplete="off"
+                            autofocus
+                        />
+                        <div class="input-focus-border"></div>
+                    </div>
+                </div>
+            </div>
 
-			<div class="modal-footer-custom p-3 d-flex justify-content-end gap-2">
-				<button class="btn-modal-secondary" onclick={onCancelar}> CANCELAR </button>
-				<button
-					class="btn-modal-primary"
-					onclick={() => onGuardar(nombreInput)}
-					disabled={nombreInput.trim() === ''}
-				>
-					<i class="bi bi-plus-lg me-1"></i> CREAR ARCHIVO
-				</button>
-			</div>
-		</div>
-	</div>
+            <div class="modal-footer-custom p-3 d-flex justify-content-end gap-2">
+                <button class="btn-modal-secondary" onclick={onCancelar}> CANCELAR </button>
+                <button
+                    class="btn-modal-primary"
+                    onclick={() => onGuardar(nombreInput)}
+                    disabled={nombreInput.trim() === ''}
+                >
+                    <i class="bi bi-plus-lg me-1"></i> CONTINUAR
+                </button>
+            </div>
+        </div>
+    </div>
 {/if}
 
 <style>
