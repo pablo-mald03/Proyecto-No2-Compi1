@@ -15,6 +15,9 @@
 	/*Terminal del framework*/
 	import Terminal from './componentes/Terminal.svelte';
 
+	/*Area edicion de texto*/
+	import EditorCodigo from './componentes/EditorCodigo.svelte';
+
 	/*Metodo para hacer el onLoad*/
 	import { onMount } from 'svelte';
 
@@ -468,18 +471,7 @@
 				{/each}
 			</div>
 
-			<div class="editor-wrapper flex-grow-1 p-3">
-				{#if fs.activeFile}
-					<textarea class="code-input" bind:value={fs.activeFile.content}></textarea>
-				{:else}
-					<div class="d-flex h-100 justify-content-center align-items-center text-slate-500">
-						<div class="text-center">
-							<i class="bi bi-code-slash fs-1"></i>
-							<h5 class="mt-2 text-uppercase letter-spacing-1">YFERA FRAMEWORK</h5>
-						</div>
-					</div>
-				{/if}
-			</div>
+			<EditorCodigo {fs} />
 
 			{#if fs.showConsole}
 				<Terminal {fs} {startResizing} />
