@@ -91,7 +91,6 @@
 
 	/*Funcion que permite mantener el modal abierto y enviar el nombre al backend*/
 	function handleModalGuardar(nombre) {
-
 		const safeName = nombre.trim().replace(/[^a-zA-Z0-9_-]/g, '_') || 'yfera_project';
 
 		if (modalConfig.type === 'export') {
@@ -99,7 +98,13 @@
 			fs.exportarWorkspaceZip(safeName);
 		} else {
 			// Comportamiento normal de crear archivos/carpetas
-			fs.createFile(nombre, modalConfig.ext, modalConfig.icon, modalConfig.type, modalConfig.content);
+			fs.createFile(
+				nombre,
+				modalConfig.ext,
+				modalConfig.icon,
+				modalConfig.type,
+				modalConfig.content
+			);
 		}
 
 		modalConfig.show = false;
@@ -202,7 +207,7 @@
 />
 
 <div class="ide-container d-flex flex-column">
-	<nav class="ide-menu-bar px-3 py-1 d-flex gap-3 fs-7 align-items-center">
+	<nav class="ide-menu-bar px-3 py-1 d-flex gap-3 fs-7 align-items-center" style="flex-shrink: 0;">
 		<div class="dropdown" style="position: relative;">
 			<button
 				class="menu-item cursor-pointer"
@@ -245,7 +250,10 @@
 		<button class="menu-item cursor-pointer">Ayuda</button>
 	</nav>
 
-	<header class="ide-header d-flex align-items-center px-4 py-2 justify-content-between">
+	<header
+		class="ide-header d-flex align-items-center px-4 py-2 justify-content-between"
+		style="flex-shrink: 0;"
+	>
 		<div class="d-flex align-items-center gap-3">
 			<button
 				class="btn-icon"
@@ -276,7 +284,7 @@
 		</div>
 	</header>
 
-	<div class="d-flex flex-grow-1 overflow-hidden">
+	<div class="d-flex flex-grow-1 overflow-hidden" style="min-height: 0;">
 		{#if fs.showSidebar}
 			<aside
 				class="ide-sidebar d-flex flex-column"
@@ -421,7 +429,7 @@
 			></div>
 		{/if}
 
-		<main class="editor-area d-flex flex-column flex-grow-1" style="min-width: 0;">
+		<main class="editor-area d-flex flex-column flex-grow-1" style="min-width: 0; min-height: 0;">
 			<div class="tabs-container d-flex">
 				{#each fs.openFiles as file}
 					<button

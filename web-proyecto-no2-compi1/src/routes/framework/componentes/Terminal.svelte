@@ -1,14 +1,14 @@
 <script>
     import { slide } from 'svelte/transition';
-    import { tick } from 'svelte'; // <--- Importamos tick
+    import { tick } from 'svelte';
 
-    // Atributos del el estado global (fs) y la función de resize del padre
+    /*Atributos de interaccion con el JS del framework*/
     let { fs, startResizing } = $props();
 
-    // Referencia al contenedor de los mensajes para el auto-scroll
+    /*Atributos de interaccion con el JS del framework*/
     let consoleBodyRef = $state();
 
-    /*Efecto que permite generar el scroll*/
+    /*Atributos de interaccion con el JS del framework*/
     $effect(() => {
         if (fs.commandHistory.length && consoleBodyRef) {
             tick().then(() => {
@@ -16,7 +16,7 @@
             });
         }
     });
-
+    
 </script>
 
 <div
@@ -29,10 +29,10 @@
 
 <section
     class="console-panel"
-    style="height: {fs.consoleHeight}px;"
+    style="height: {fs.consoleHeight}px; flex-shrink: 0; display: flex; flex-direction: column; overflow: hidden;"
     transition:slide={{ axis: 'y' }}
 >
-    <div class="console-header px-3 py-1 d-flex justify-content-between align-items-center fw-bold">
+    <div class="console-header px-3 py-1 d-flex justify-content-between align-items-center fw-bold" style="flex-shrink: 0;">
         <small>YFERA TERMINAL</small>
         <div class="d-flex gap-2">
             <button class="btn-icon" onclick={() => fs.clearConsole()} title="Limpiar Consola">
@@ -48,7 +48,11 @@
         </div>
     </div>
 
-    <div class="console-body p-3" bind:this={consoleBodyRef}>
+    <div 
+        class="console-body p-3" 
+        bind:this={consoleBodyRef}
+        style="flex-grow: 1; overflow-y: auto; min-height: 0;"
+    >
         {#each fs.commandHistory as line}
             <div class="terminal-line">
                 {#if line.type === 'input'}

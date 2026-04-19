@@ -11,7 +11,10 @@
 }
 
 .ide-container {
-    height: 100vh;
+    height: calc(100vh - 65px); 
+    max-height: calc(100vh - 65px);
+    
+    overflow: hidden;
     background-color: var(--dark-bg);
     color: var(--text-main);
     font-family: 'Inter', sans-serif;
