@@ -1,4 +1,8 @@
+/*Libreria de indexedDb */
 import Dexie from "dexie";
+
+/*Libreria de zips */
+import JSZip from "jszip";
 
 /*Inicializar instancia de dixie (Se comunica con la base de datos) */
 export const db = new Dexie('YferaWorkspace');
@@ -171,6 +175,7 @@ export function createFrameworkState() {
         },
 
         /*Metodo integrado para poder crear un archivo o folder*/
+        /*LA ER NO TIENE NADA QUE VER CON HERRAMIENTAS LEXICAS Y SINTACTICAS */
         async createFile(rawName, extension, icon, type = 'file', content = '') {
             let safeName = rawName
                 .trim()
@@ -323,7 +328,7 @@ export function createFrameworkState() {
                 }
             }
             else {
-                this.systemLog(`> Acción "${action}" no implementada aún.`);
+                this.systemLog(`> Acción "${action}" no implementada.`);
             }
         },
         /*Metodo que permite ejecutar un comando en la consola*/
@@ -353,7 +358,6 @@ export function createFrameworkState() {
                 tipo
             };
         },
-
         /*===========Apartado de metodos utilizados para poder leer un arbol de trabajo===========*/
         /*Metodo que permite validar los datos importados (IMPORTANTE: PRIMERO SE CARGA PARA CERRAR LO MAS RAPIDO POSIBLE LA LECTURA)*/
         async _validarWorkSpaceImportado() {
@@ -365,7 +369,7 @@ export function createFrameworkState() {
             if (rootSqlites.length === 0) {
                 await this.resetDatabase();
                 this.notifyMessages('PROYECTO INVALIDO', 'El directorio seleccionado debe contener exactamente un archivo .sqlite en la raiz.', 'error');
-                return false; 
+                return false;
             }
 
             /*Permite saber si hay mas de una base de datos por proyecto */
@@ -379,7 +383,7 @@ export function createFrameworkState() {
                 await this.loadWorkspace();
             }
 
-            return true; 
+            return true;
         },
 
         /*Metodo que permite leer un arbol de trabajo cargado (METODO RECURSIVO)*/
@@ -560,7 +564,56 @@ export function createFrameworkState() {
 
                 input.click();
             });
+        },
+        /*===========Apartado de metodos utilizados para poder exportar un arbol de trabajo===========*/
+        /* Motor recursivo que lee de IndexedDB y mete los archivos al ZIP */
+        async _construirZipFolder(parentId, currentZipFolder) {
+
+            const children = _files.filter(f => f.parentId === parentId);
+
+            for (const child of children) {
+                if (child.type === 'folder') {
+                    const newZipFolder = currentZipFolder.folder(child.name);
+                    await this._construirZipFolder(child.id, newZipFolder);
+                } else if (child.type === 'file') {
+                    currentZipFolder.file(child.name, child.content);
+                }
+            }
+        },
+        /*Metodo que permite exportar el area de trabajo como un zip */
+        async exportarWorkspaceZip(projectName) {
+            try {
+                this.systemLog(`> Comprimiendo archivos del proyecto ${projectName}.zip...`);
+                
+                //Objeto zip
+                const zip = new JSZip();
+
+                await this._construirZipFolder(null, zip);
+
+                //Generacion de formato zip como blob
+                const zipContent = await zip.generateAsync({ type: 'blob' });
+
+                const downloadUrl = window.URL.createObjectURL(zipContent);
+                const a = document.createElement('a');
+                a.href = downloadUrl;
+                a.download = `${projectName}.zip`; 
+                
+                document.body.appendChild(a);
+                a.click();
+                
+                //Flush de la memoria
+                window.URL.revokeObjectURL(downloadUrl);
+                document.body.removeChild(a);
+
+                this.notifyMessages('EXPORTACION EXITOSA', `Tu proyecto ha sido exportado correctamente como: ${projectName}.zip`, 'exito');
+
+                this.systemLog(`> Proyecto ${projectName}.zip exportado correctamente`);
+
+            } catch (error) {
+                this.notifyMessages('ERROR AL COMPRIMIR', 'Ocurrio un error al intentar generar el archivo .zip', 'error');
+            }
         }
+
     };
 }
 

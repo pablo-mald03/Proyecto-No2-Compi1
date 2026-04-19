@@ -65,11 +65,14 @@
 
 	// Funcion para invocar el modal con diferentes configuraciones
 	function triggerCreateModal(typeInfo, ext, icon, defaultContent) {
-
 		if (fs.files.length === 0) {
-            fs.notifyMessages('CREACION DENEGADA', 'Debes crear o abrir un proyecto primero para poder crear archivos o carpetas.', 'error');
-            return;
-        }
+			fs.notifyMessages(
+				'CREACION DENEGADA',
+				'Debes crear o abrir un proyecto primero para poder crear archivos o carpetas.',
+				'error'
+			);
+			return;
+		}
 
 		modalConfig.titulo = `NUEVO ${typeInfo.toUpperCase()}`;
 		modalConfig.mensaje =
@@ -85,7 +88,17 @@
 
 	/*Funcion que permite mantener el modal abierto y enviar el nombre al backend*/
 	function handleModalGuardar(nombre) {
-		fs.createFile(nombre, modalConfig.ext, modalConfig.icon, modalConfig.type, modalConfig.content);
+
+		const safeName = nombre.trim().replace(/[^a-zA-Z0-9_-]/g, '_') || 'yfera_project';
+
+		if (modalConfig.type === 'export') {
+			//Modal en modo exportar
+			fs.exportarWorkspaceZip(safeName);
+		} else {
+			// Comportamiento normal de crear archivos/carpetas
+			fs.createFile(nombre, modalConfig.ext, modalConfig.icon, modalConfig.type, modalConfig.content);
+		}
+
 		modalConfig.show = false;
 	}
 
@@ -106,9 +119,28 @@
 		window.addEventListener('mousemove', handleMouseMove);
 		window.addEventListener('mouseup', stopResizing);
 	}
-	//Funcion par ejecutar la accion del menu
+	//Funcion par ejecutar la accion del menu de opciones
 	function handleMenuAction(action) {
-		fs.triggerMenuAction(action);
+		if (action === 'Exportar_Proyecto') {
+			if (fs.files.length === 0) {
+				fs.notifyMessages(
+					'ERROR DE EXPORTACION',
+					'El area de trabajo esta vacio. No hay ningun proyecto para exportar.',
+					'error'
+				);
+			} else {
+				modalConfig.titulo = 'EXPORTAR PROYECTO';
+				modalConfig.mensaje = 'Ingresa el nombre de tu proyecto a exportar.';
+				modalConfig.type = 'export';
+				modalConfig.ext = '';
+				modalConfig.icon = 'bi-file-zip';
+				modalConfig.content = '';
+				modalConfig.show = true;
+			}
+		} else {
+			fs.triggerMenuAction(action);
+		}
+
 		fileMenuOpen = false;
 	}
 
@@ -265,7 +297,12 @@
 							class="btn-action-file"
 							title="Nueva Lógica (.y)"
 							onclick={() =>
-								triggerCreateModal('archivo YFERA', '.y', 'bi-braces text-warning', '// Lógica YFERA')}
+								triggerCreateModal(
+									'archivo YFERA',
+									'.y',
+									'bi-braces text-warning',
+									'// Lógica YFERA'
+								)}
 						>
 							<i class="bi bi-braces text-warning"></i> .y
 						</button>
@@ -279,7 +316,8 @@
 						<button
 							class="btn-action-file"
 							title="Nuevos Estilos (.styles)"
-							onclick={() => triggerCreateModal('estilo', '.styles', 'bi-palette text-danger', '/* Estilos */')}
+							onclick={() =>
+								triggerCreateModal('estilo', '.styles', 'bi-palette text-danger', '/* Estilos */')}
 						>
 							<i class="bi bi-palette text-danger"></i> .styles
 						</button>
