@@ -383,6 +383,47 @@ export function createFrameworkState() {
                 _currentCommand = '';
             }
         },
+        /* Metodo encargado de correr los comandos sql e irlos registrando directamente en el archivo sql*/
+        async _ejecutarComandoSQL(query) {
+            try {
+                const result = dbManejador.execute(query);
+
+                //Verificacion de instrucciones que modifican
+                const upperQuery = query.toUpperCase();
+                const esMutacion = upperQuery.startsWith('CREATE') || 
+                                   upperQuery.startsWith('INSERT') || 
+                                   upperQuery.startsWith('UPDATE') || 
+                                   upperQuery.startsWith('DELETE') || 
+                                   upperQuery.startsWith('DROP')   || 
+                                   upperQuery.startsWith('ALTER');
+
+                //Si cambio la base de datos se actualiza
+                if (esMutacion) {
+                    await this.guardarBaseDeDatos();
+                    _commandHistory.push({ type: 'system', text: `> Comando ejecutado correctamente.` });
+                }
+
+                //Implementacion del select base
+                if (result && result.length > 0) {
+                    const { columns, values } = result[0];
+                    
+                    _commandHistory.push({ type: 'system', text: `> Resultados:` });
+                    
+                    _commandHistory.push({ type: 'output', text: `| ${columns.join(' | ')} |` });
+                    _commandHistory.push({ type: 'output', text: `|` + columns.map(() => '---').join('|') + `|` });
+
+                    values.forEach(row => {
+                        _commandHistory.push({ type: 'output', text: `| ${row.join(' | ')} |` });
+                    });
+
+                } else if (!esMutacion) {
+                    _commandHistory.push({ type: 'system', text: `> Resultado vacio. (0 filas devueltas)` });
+                }
+
+            } catch (error) {
+                _commandHistory.push({ type: 'error', text: `> Error ejecucion de comando SQL: ${error.message}` });
+            }
+        },
         /*Metodo para poder notificar mensajes al usuario */
         notifyMessages(titulo, mensaje, tipo = 'exito') {
             _infoModalConfig = {
