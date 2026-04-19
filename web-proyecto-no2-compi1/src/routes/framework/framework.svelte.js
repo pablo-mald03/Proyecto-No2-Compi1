@@ -43,7 +43,7 @@ export function createFrameworkState() {
 
     let _commandHistory = $state([
         { type: 'system', text: 'YFERA Terminal initialized...' },
-        { type: 'system', text: 'Escribe "help" para ver los comandos.' }
+        { type: 'advise', text: 'Escribe "manual" para ver lista de comandos.' }
     ]);
 
     let _currentCommand = $state('');
@@ -107,7 +107,7 @@ export function createFrameworkState() {
         set selectedFolderId(val) { _selectedFolderId = val; },
 
         /*Metodo que permite inicializar la aplicacion */
-        async iniciarFramework(){
+        async iniciarFramework() {
             await this.loadWorkspace();
 
             if (_files && _files.length > 0) {
@@ -349,7 +349,7 @@ export function createFrameworkState() {
             }
         },
         /*Metodo que permite ejecutar un comando en la consola*/
-        handleCommand(event) {
+        async handleCommand(event) {
             if (event.key === 'Enter') {
                 const cmd = _currentCommand.trim();
                 if (cmd) {
@@ -361,7 +361,24 @@ export function createFrameworkState() {
                         return;
                     }
 
-                    _commandHistory.push({ type: 'output', text: `Comando ejecutado: ${cmd}` });
+                    if (cmd === 'db-status') {
+                        try {
+                            const res = dbManejador.execute("SELECT sqlite_version();");
+                            this.systemLog(`> Base de datos SQLite Activa. Version: ${res[0].values[0][0]}`);
+                        } catch (e) {
+                            _commandHistory.push({ type: 'error', text: `> Base de datos inactiva: ${e.message}` });
+                        }
+                        _currentCommand = '';
+                        return;
+                    }
+                    //PENDIENTE INTEGRAR LA RESPUESTA REAL DEL PARSER 'yfera run'
+                    if (cmd.toLowerCase().startsWith('sql ')) {
+                        //Extraccion del prefijo
+                        const query = cmd.substring(4).trim();
+                        await this._ejecutarComandoSQL(query);
+                    } else {
+                        _commandHistory.push({ type: 'advise', text: `Comando no reconocido: '${cmd}'. Escribe 'manual' para ver lista de comandos.` });
+                    }
                 }
                 _currentCommand = '';
             }
@@ -647,7 +664,7 @@ export function createFrameworkState() {
                     await this.guardarBaseDeDatos();
                 }
             } catch (error) {
-                 this.notifyMessages('ERROR EN BASE DE DATOS', `Ha ocurrido un error. ${error.message}`, 'error');
+                this.notifyMessages('ERROR EN BASE DE DATOS', `Ha ocurrido un error. ${error.message}`, 'error');
             }
         },
         /*Metodo que permite guardar la base de datos cargada */
