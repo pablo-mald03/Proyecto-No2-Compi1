@@ -288,23 +288,36 @@
 				class="btn-icon"
 				disabled={!fs.activeFile || fs.activeFile.name.endsWith('.sqlite')}
 				onclick={() => (showColorPicker = true)}
-				aria-label = "Selector de colores"
+				aria-label="Selector de colores"
 			>
-				<i class="bi bi-palette text-danger"></i>
+				<i class="bi bi-palette text-warning"></i>
 			</button>
 
 			<button
-                class="btn-icon ms-1 me-2"
-                disabled={!fs.activeFile}
-                onclick={() => fs.saveActiveFile()}
-                aria-label="Guardar archivo"
-                title="Guardar archivo"
-            >
-                <i class="bi bi-floppy text-success"></i>
-                {#if fs.saveStatus === 'saved'}
-                    <span class="position-absolute top-0 start-100 translate-middle p-1 bg-success border border-light rounded-circle" style="width: 8px; height: 8px;"></span>
-                {/if}
-            </button>
+				class="btn-icon ms-1 me-2"
+				disabled={!fs.activeFile}
+				onclick={() => fs.saveActiveFile()}
+				aria-label="Guardar archivo"
+				title="Guardar archivo"
+			>
+				<i class="bi bi-floppy text-success"></i>
+				{#if fs.saveStatus === 'saved'}
+					<span
+						class="position-absolute top-0 start-100 translate-middle p-1 bg-success border border-light rounded-circle"
+						style="width: 8px; height: 8px;"
+					></span>
+				{/if}
+			</button>
+
+			<button
+				class="btn-icon me-2 text-danger"
+				disabled={!fs.activeFile || fs.activeFile.name === 'database.sqlite'}
+				onclick={() => fs.requestEliminar(fs.activeFile.id)}
+				aria-label="Eliminar archivo"
+				title="Eliminar archivo"
+			>
+				<i class="bi bi-trash3 text-slate-400"></i>
+			</button>
 
 			<button
 				class="btn-preview fw-bold px-3"

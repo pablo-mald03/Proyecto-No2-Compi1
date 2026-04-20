@@ -11,9 +11,9 @@
 }
 
 .ide-container {
-    height: calc(100vh - 65px); 
+    height: calc(100vh - 65px);
     max-height: calc(100vh - 65px);
-    
+
     overflow: hidden;
     background-color: var(--dark-bg);
     color: var(--text-main);
@@ -373,4 +373,44 @@ button.menu-item:focus-visible {
 .active-folder {
     background-color: rgba(255, 255, 255, 0.05);
     border-left: 2px solid var(--slate-400);
+}
+
+
+.tree-item-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+
+.btn-delete-item {
+    background: transparent;
+    border: none;
+    color: var(--slate-500);
+    padding: 0 4px;
+    border-radius: 4px;
+    opacity: 0;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+
+.file-item:hover .btn-delete-item {
+    opacity: 1;
+}
+
+.btn-delete-item:hover {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+}
+
+
+.text-truncate {
+    flex-grow: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-right: 4px;
 }

@@ -127,7 +127,7 @@ export function createFrameworkState() {
         /*Metodo que permite guardar el estado de los archivos */
         async saveActiveFile() {
             if (!_activeFileId) {
-                this.systemLog('> No hay ningún archivo abierto para guardar.');
+                this.systemLog('> No hay ningun archivo abierto para guardar.');
                 return;
             }
 
@@ -138,7 +138,7 @@ export function createFrameworkState() {
             try {
                 await db.files.update(_activeFileId, { content: currentFile.content });
                 
-                this.systemLog(`> Archivo guardado con éxito: ${currentFile.name}`);
+                this.systemLog(`> Archivo guardado con exito: ${currentFile.name}`);
                 
             } catch (error) {
                 this.systemLog(`> Error al guardar archivo: ${error.message}`);
@@ -738,6 +738,62 @@ export function createFrameworkState() {
             if (dbFile) {
                 dbFile.content = binario;
                 await db.files.update(dbFile.id, { content: binario });
+            }
+        },
+        /* Metodo para solicitar la eliminación y abrir el modal */
+        requestEliminar(id) {
+            const item = _files.find(f => f.id === id);
+            if (!item) return;
+
+            if (item.name === 'database.sqlite') {
+                this.notifyMessages('PERMISO DENEGADO', 'No puedes eliminar la base de datos del proyecto.', 'error');
+                return;
+            }
+
+            const esCarpeta = item.type === 'folder';
+            const advertencia = esCarpeta ? ' Se eliminara todo su contenido de forma irreversible.' : '';
+
+            _confirmModalConfig = {
+                show: true,
+                titulo: `ELIMINAR ${esCarpeta ? 'CARPETA' : 'ARCHIVO'}`,
+                mensaje: `¿Estas seguro que quieres eliminar "${item.name}"?${advertencia}`,
+                tipo: 'danger',
+                textoConfirmar: 'Si',
+                onConfirmar: async () => {
+                    await this.ejecutarEliminacion(id);
+                    _confirmModalConfig.show = false;
+                }
+            };
+        },
+
+        /* Metodo interno que ejecuta la eliminacion en cascada de archivos */
+        async ejecutarEliminacion(id) {
+            try {
+                let idsToDelete = [id];
+                
+                const findChildren = (parentId) => {
+                    const children = _files.filter(f => f.parentId === parentId);
+                    for (const child of children) {
+                        idsToDelete.push(child.id);
+                        if (child.type === 'folder') {
+                            findChildren(child.id);
+                        }
+                    }
+                };
+                findChildren(id);
+
+                await db.files.bulkDelete(idsToDelete);
+
+                _openFileIds = _openFileIds.filter(tabId => !idsToDelete.includes(tabId));
+                
+                if (idsToDelete.includes(_activeFileId)) {
+                    _activeFileId = _openFileIds.length > 0 ? _openFileIds[_openFileIds.length - 1] : null;
+                }
+                await this.loadWorkspace();
+                
+                this.systemLog(`> Elemento eliminado correctamente.`);
+            } catch (error) {
+                this.systemLog(`> Error fatal al eliminar: ${error.message}`);
             }
         }
 
