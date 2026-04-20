@@ -69,7 +69,16 @@ export function createFrameworkState() {
     /*Atributo que permite manejar a la base de datos */
     let _activeDB = null;
 
+    /*Atributos reactivos para la implementacion de errores */
+    let _errores = $state([]);
+    let _showErrores = $state(false);
+    let _toast = $state(null);
+
     return {
+        get errores() { return _errores; },
+        get showErrores() { return _showErrores; },
+        set showErrores(value) { _showErrores = value; },
+        get toast() { return _toast; },
         get files() { return _files; },
 
         get activeFileId() { return _activeFileId; },
@@ -132,14 +141,14 @@ export function createFrameworkState() {
             }
 
             const currentFile = _files.find(f => f.id === _activeFileId);
-            
+
             if (!currentFile) return;
 
             try {
                 await db.files.update(_activeFileId, { content: currentFile.content });
-                
+
                 this.systemLog(`> Archivo guardado con exito: ${currentFile.name}`);
-                
+
             } catch (error) {
                 this.systemLog(`> Error al guardar archivo: ${error.message}`);
             }
@@ -411,12 +420,12 @@ export function createFrameworkState() {
 
                 //Verificacion de instrucciones que modifican
                 const upperQuery = query.toUpperCase();
-                const esMutacion = upperQuery.startsWith('CREATE') || 
-                                   upperQuery.startsWith('INSERT') || 
-                                   upperQuery.startsWith('UPDATE') || 
-                                   upperQuery.startsWith('DELETE') || 
-                                   upperQuery.startsWith('DROP')   || 
-                                   upperQuery.startsWith('ALTER');
+                const esMutacion = upperQuery.startsWith('CREATE') ||
+                    upperQuery.startsWith('INSERT') ||
+                    upperQuery.startsWith('UPDATE') ||
+                    upperQuery.startsWith('DELETE') ||
+                    upperQuery.startsWith('DROP') ||
+                    upperQuery.startsWith('ALTER');
 
                 //Si cambio la base de datos se actualiza
                 if (esMutacion) {
@@ -427,9 +436,9 @@ export function createFrameworkState() {
                 //Implementacion del select base
                 if (result && result.length > 0) {
                     const { columns, values } = result[0];
-                    
+
                     _commandHistory.push({ type: 'system', text: `> Resultados:` });
-                    
+
                     _commandHistory.push({ type: 'output', text: `| ${columns.join(' | ')} |` });
                     _commandHistory.push({ type: 'output', text: `|` + columns.map(() => '---').join('|') + `|` });
 
@@ -770,7 +779,7 @@ export function createFrameworkState() {
         async ejecutarEliminacion(id) {
             try {
                 let idsToDelete = [id];
-                
+
                 const findChildren = (parentId) => {
                     const children = _files.filter(f => f.parentId === parentId);
                     for (const child of children) {
@@ -785,18 +794,48 @@ export function createFrameworkState() {
                 await db.files.bulkDelete(idsToDelete);
 
                 _openFileIds = _openFileIds.filter(tabId => !idsToDelete.includes(tabId));
-                
+
                 if (idsToDelete.includes(_activeFileId)) {
                     _activeFileId = _openFileIds.length > 0 ? _openFileIds[_openFileIds.length - 1] : null;
                 }
                 await this.loadWorkspace();
-                
+
                 this.systemLog(`> Elemento eliminado correctamente.`);
             } catch (error) {
                 this.systemLog(`> Error fatal al eliminar: ${error.message}`);
             }
+        },
+        /*Metodo para lanzar la notificacion emergente */
+        notificarErrores(nuevosErrores) {
+            _errores = nuevosErrores; 
+            
+            if (nuevosErrores.length > 0) {
+                _toast = { 
+                    mensaje: `Se encontraron ${nuevosErrores.length} errores. Click para ver.`, 
+                    visible: true 
+                };
+                
+                setTimeout(() => {
+                    if (_toast) _toast.visible = false;
+                }, 3000);
+            } else {
+                _showErrores = false;
+            }
+        },
+        /*Metodo para intercalar paneles entre terminal y consola*/
+        togglePanelErrores() {
+            _showErrores = !_showErrores;
+            if (_showErrores) {
+                this.showConsole = false;
+            }
+        },
+        /*Metodo para intercambiar por la consola */
+        toggleConsole() {
+            this.showConsole = !this.showConsole;
+            if (this.showConsole) {
+                _showErrores = false;
+            }
         }
-
     };
 }
 

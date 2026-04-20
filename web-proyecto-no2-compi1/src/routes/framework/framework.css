@@ -414,3 +414,41 @@ button.menu-item:focus-visible {
     text-overflow: ellipsis;
     margin-right: 4px;
 }
+
+.ide-error-toast {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #7f1d1d;
+    color: #fca5a5;
+    border: 1px solid #b91c1c;
+    padding: 10px 20px;
+    border-radius: 8px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    z-index: 9999;
+    font-weight: bold;
+    font-size: 0.85rem;
+    animation: slideDown 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.ide-error-toast:hover {
+    background: #991b1b;
+    transform: translateX(-50%) scale(1.05);
+    transition: 0.2s;
+}
+
+@keyframes slideDown {
+    from {
+        top: -50px;
+        opacity: 0;
+    }
+
+    to {
+        top: 20px;
+        opacity: 1;
+    }
+}

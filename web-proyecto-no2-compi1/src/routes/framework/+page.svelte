@@ -326,14 +326,52 @@
 				<i class="bi bi-play-fill"></i> PREVIEW
 			</button>
 
-			<button class="btn-compile fw-bold px-4" onclick={() => fs.triggerMenuAction('Compilando')}
+			<!-- <button class="btn-compile fw-bold px-4" onclick={() => fs.triggerMenuAction('Compilando')}
 				>COMPILAR</button
-			>
+			>-->
+
 			<button
-				class="btn-icon ms-2"
-				onclick={() => (fs.showConsole = !fs.showConsole)}
-				aria-label="Abrir terminal"
+				class="btn-compile fw-bold px-4"
+				onclick={() => {
+					fs.triggerMenuAction('Compilando');
+					fs.notificarErrores([
+						{
+							lexema: 'intt',
+							linea: 5,
+							columna: 12,
+							tipo: 'Léxico',
+							descripcion: 'Palabra reservada mal escrita'
+						},
+						{
+							lexema: ';',
+							linea: 10,
+							columna: 1,
+							tipo: 'Sintáctico',
+							descripcion: 'Se esperaba un ; al final de la sentencia'
+						}
+					]);
+				}}
 			>
+				COMPILAR
+			</button>
+
+			<button
+				class="btn-icon ms-2 position-relative {fs.errores.length > 0 ? 'text-danger' : ''}"
+				onclick={() => fs.togglePanelErrores()}
+				aria-label="Ver Errores"
+			>
+				<i class="bi bi-bug"></i>
+				{#if fs.errores.length > 0}
+					<span
+						class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+						style="font-size: 0.5rem;"
+					>
+						{fs.errores.length}
+					</span>
+				{/if}
+			</button>
+
+			<button class="btn-icon ms-2" onclick={() => fs.toggleConsole()} aria-label="Abrir terminal">
 				<i class="bi bi-terminal"></i>
 			</button>
 		</div>
@@ -481,6 +519,23 @@
 		{/if}
 
 		<main class="editor-area d-flex flex-column flex-grow-1" style="min-width: 0; min-height: 0;">
+			{#if fs.toast?.visible}
+				<!-- svelte-ignore a11y_click_events_have_key_events -->
+				<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+				<div
+					class="ide-error-toast"
+					role="alert"
+					onclick={() => {
+						fs.toast.visible = false;
+						fs.showErrores = true;
+						fs.showConsole = false;
+					}}
+				>
+					<i class="bi bi-exclamation-octagon-fill me-2"></i>
+					<span>{fs.toast.mensaje}</span>
+				</div>
+			{/if}
+
 			<div class="tabs-container d-flex">
 				{#each fs.openFiles as file}
 					<button
