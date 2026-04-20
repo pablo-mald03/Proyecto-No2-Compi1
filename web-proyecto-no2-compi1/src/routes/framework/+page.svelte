@@ -21,6 +21,9 @@
 	/*Modal del picker de colores*/
 	import ColorPickerModal from './componentes/ColorPickerModal.svelte';
 
+	/*Tabla de errores*/
+	import TablaErrores from './componentes/TablaErrores.svelte';
+
 	/*Metodo para hacer el onLoad*/
 	import { onMount } from 'svelte';
 
@@ -579,6 +582,13 @@
 			{#if fs.showConsole}
 				<Terminal {fs} {startResizing} />
 			{/if}
+
+			{#if fs.showErrores}
+                <div class="bottom-panel-wrapper" style="height: {fs.consoleHeight}px;">
+                    <TablaErrores {fs} {startResizing} />
+                </div>
+            {/if}
+
 		</main>
 
 		{#if showColorPicker}
