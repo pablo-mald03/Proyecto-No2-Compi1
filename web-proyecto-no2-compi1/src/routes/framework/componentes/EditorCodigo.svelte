@@ -47,6 +47,12 @@
             return;
         }
 
+		if (e.shiftKey && e.altKey && (e.key === 'f' || e.key === 'F')) {
+            e.preventDefault();
+            fs.formatearArchivo();
+            return;
+        }
+
 		if (isSqlite) {
 			const allowedKeys = [
 				'ArrowUp',

@@ -835,6 +835,29 @@ export function createFrameworkState() {
             if (this.showConsole) {
                 _showErrores = false;
             }
+        },
+        /* Método para dar formato al código del archivo activo */
+        formatearArchivo() {
+            if (!_activeFileId) return;
+
+            const currentFile = _files.find(f => f.id === _activeFileId);
+            
+            // Protegemos archivos de solo lectura
+            if (!currentFile || currentFile.name.endsWith('.sqlite')) {
+                this.notifyMessages('FORMATEO DENEGADO', 'No se puede dar formato a la base de datos', 'error');
+                return;
+            }
+
+
+            // PENDIENTE LA INTEGRACION REAL DE FORMATEO QUEMADO
+            // let codigo = currentFile.content;
+            // let codigoFormateado = tuLogicaMagica(codigo);
+            // currentFile.content = codigoFormateado;
+
+            this.systemLog(`> Formato aplicado correctamente (HARDCODEADO)`);
+            
+            //PENDIENTE DECIDIR SI GUARDAR
+            // this.saveActiveFile(); 
         }
     };
 }

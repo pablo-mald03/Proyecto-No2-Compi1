@@ -297,6 +297,16 @@
 			</button>
 
 			<button
+				class="btn-icon ms-1"
+				disabled={!fs.activeFile || fs.activeFile.name.endsWith('.sqlite')}
+				onclick={() => fs.formatearArchivo()}
+				aria-label="Dar formato al documento"
+				title="Dar Formato"
+			>
+				<i class="bi bi-magic text-info"></i>
+			</button>
+
+			<button
 				class="btn-icon ms-1 me-2"
 				disabled={!fs.activeFile}
 				onclick={() => fs.saveActiveFile()}
@@ -584,11 +594,10 @@
 			{/if}
 
 			{#if fs.showErrores}
-                <div class="bottom-panel-wrapper" style="height: {fs.consoleHeight}px;">
-                    <TablaErrores {fs} {startResizing} />
-                </div>
-            {/if}
-
+				<div class="bottom-panel-wrapper" style="height: {fs.consoleHeight}px;">
+					<TablaErrores {fs} {startResizing} />
+				</div>
+			{/if}
 		</main>
 
 		{#if showColorPicker}
