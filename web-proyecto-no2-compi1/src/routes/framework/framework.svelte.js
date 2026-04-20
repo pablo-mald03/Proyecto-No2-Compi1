@@ -279,7 +279,7 @@ export function createFrameworkState() {
                 const srcId = await db.files.add({ parentId: null, name: 'src', type: 'folder', icon: 'bi-folder-fill' });
 
                 //Archivos iniciales en src
-                await db.files.add({ parentId: srcId, name: 'main.y', type: 'file', icon: 'bi-braces text-warning', content: '// Logica YFERA' });
+                await db.files.add({ parentId: srcId, name: 'main.y', type: 'file', icon: 'bi-braces text-warning', content: '// Logica .y' });
                 await db.files.add({ parentId: srcId, name: 'main.comp', type: 'file', icon: 'bi-box text-info', content: ' /*Compontentes del proyecto*/' });
                 await db.files.add({ parentId: srcId, name: 'main.styles', type: 'file', icon: 'bi-palette text-danger', content: '/* Estilos del componente */' });
                 //Se recarga la ui

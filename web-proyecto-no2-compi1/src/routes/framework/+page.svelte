@@ -18,6 +18,9 @@
 	/*Area edicion de texto*/
 	import EditorCodigo from './componentes/EditorCodigo.svelte';
 
+	/*Modal del picker de colores*/
+	import ColorPickerModal from './componentes/ColorPickerModal.svelte';
+
 	/*Metodo para hacer el onLoad*/
 	import { onMount } from 'svelte';
 
@@ -26,6 +29,12 @@
 
 	/*Estado reactivo del menu de archivo*/
 	let fileMenuOpen = $state(false);
+
+	/*Estado del modal del picker*/
+	let showColorPicker = $state(false);
+
+	/*Referencia al editor de texto*/
+	let editorRef = $state();
 
 	/*Estado del modal de confirmacion*/
 	let modalConfig = $state({
@@ -170,6 +179,13 @@
 		window.removeEventListener('mousemove', handleMouseMove);
 		window.removeEventListener('mouseup', stopResizing);
 	}
+
+	/*Estado cuando el modal de color picker retorne un valor*/
+	function handleColorInsert(colorResult) {
+		if (editorRef) {
+			editorRef.insertarEnCaret(colorResult);
+		}
+	}
 </script>
 
 {#if fileMenuOpen}
@@ -269,11 +285,21 @@
 		</div>
 		<div class="d-flex gap-2 align-items-center">
 			<button
+				class="btn-icon"
+				disabled={!fs.activeFile || fs.activeFile.name.endsWith('.sqlite')}
+				onclick={() => (showColorPicker = true)}
+				aria-label = "Selector de colores"
+			>
+				<i class="bi bi-palette text-danger"></i>
+			</button>
+
+			<button
 				class="btn-preview fw-bold px-3"
 				onclick={() => fs.triggerMenuAction('Iniciando Preview')}
 			>
 				<i class="bi bi-play-fill"></i> PREVIEW
 			</button>
+
 			<button class="btn-compile fw-bold px-4" onclick={() => fs.triggerMenuAction('Compilando')}
 				>COMPILAR</button
 			>
@@ -311,19 +337,15 @@
 							class="btn-action-file"
 							title="Nueva Lógica (.y)"
 							onclick={() =>
-								triggerCreateModal(
-									'archivo YFERA',
-									'.y',
-									'bi-braces text-warning',
-									'// Lógica YFERA'
-								)}
+								triggerCreateModal('archivo YFERA', '.y', 'bi-braces text-warning', '// Logica .y')}
 						>
 							<i class="bi bi-braces text-warning"></i> .y
 						</button>
 						<button
 							class="btn-action-file"
 							title="Nuevo Componente (.comp)"
-							onclick={() => triggerCreateModal('componente', '.comp', 'bi-box text-info', '')}
+							onclick={() =>
+								triggerCreateModal('componente', '.comp', 'bi-box text-info', '/*Componentes*/')}
 						>
 							<i class="bi bi-box text-info"></i> .comp
 						</button>
@@ -471,11 +493,15 @@
 				{/each}
 			</div>
 
-			<EditorCodigo {fs} />
+			<EditorCodigo bind:this={editorRef} {fs} />
 
 			{#if fs.showConsole}
 				<Terminal {fs} {startResizing} />
 			{/if}
 		</main>
+
+		{#if showColorPicker}
+			<ColorPickerModal onInsert={handleColorInsert} onClose={() => (showColorPicker = false)} />
+		{/if}
 	</div>
 </div>

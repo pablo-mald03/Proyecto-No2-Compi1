@@ -69,6 +69,31 @@
 		}
 		updateCursor();
 	}
+
+	/*Funcion que permite que el padre pueda modificar cosas dentro del texto actual*/
+	export function insertarEnCaret(textoAInsertar) {
+		if (!textareaRef || !fs.activeFile || isSqlite) {
+			return;
+		}
+
+		const posCaret = textareaRef.selectionStart;
+		const contenidoOriginal = String(fs.activeFile.content || '');
+
+		const nuevoContenido =
+			contenidoOriginal.substring(0, posCaret) +
+			textoAInsertar +
+			contenidoOriginal.substring(textareaRef.selectionEnd);
+
+		fs.activeFile.content = nuevoContenido;
+
+		setTimeout(() => {
+			textareaRef.focus();
+			const nuevaPos = posCaret + textoAInsertar.length;
+			textareaRef.setSelectionRange(nuevaPos, nuevaPos);
+			updateCursor();
+		}, 0);
+	}
+	
 </script>
 
 <div class="editor-main-container">
@@ -101,8 +126,7 @@
 		<div class="editor-footer">
 			<div class="footer-info">
 				{#if isSqlite}
-					<span class="readonly-tag"><i class="bi bi-lock-fill"></i> MODO SOLO LECTURA</span
-					>
+					<span class="readonly-tag"><i class="bi bi-lock-fill"></i> MODO SOLO LECTURA</span>
 				{/if}
 				<span>Ln {cursorRow}, Col {cursorCol}</span>
 				<span class="file-type">{fs.activeFile.name.split('.').pop().toUpperCase()}</span>
