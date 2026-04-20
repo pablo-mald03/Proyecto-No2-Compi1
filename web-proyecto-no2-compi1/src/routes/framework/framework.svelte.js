@@ -123,6 +123,27 @@ export function createFrameworkState() {
         get activeFile() {
             return _files.find(f => f.id === _activeFileId);
         },
+
+        /*Metodo que permite guardar el estado de los archivos */
+        async saveActiveFile() {
+            if (!_activeFileId) {
+                this.systemLog('> No hay ningún archivo abierto para guardar.');
+                return;
+            }
+
+            const currentFile = _files.find(f => f.id === _activeFileId);
+            
+            if (!currentFile) return;
+
+            try {
+                await db.files.update(_activeFileId, { content: currentFile.content });
+                
+                this.systemLog(`> Archivo guardado con éxito: ${currentFile.name}`);
+                
+            } catch (error) {
+                this.systemLog(`> Error al guardar archivo: ${error.message}`);
+            }
+        },
         /*Metodo para cerrar el modal de informacion */
         closeInfoModal() {
             _infoModalConfig.show = false;

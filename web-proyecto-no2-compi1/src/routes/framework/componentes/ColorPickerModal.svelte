@@ -62,11 +62,11 @@
 						oninput={() => (selectedPreset = '')}
 						class="pro-native-input"
 					/>
-					<div class="input-label">Manual</div>
+					<div class="input-label">Picker</div>
 				</div>
 
 				<div class="preview-display" style="border-bottom-color: {colorHex};">
-					<div class="preview-label">Salida actual:</div>
+					<div class="preview-label">Salida:</div>
 					<div class="preview-value">
 						{selectedPreset && presets[selectedPreset] === colorHex
 							? selectedPreset.toUpperCase()
@@ -275,7 +275,6 @@
 		font-family: 'Fira Code', monospace;
 	}
 
-	/* Footer Controls */
 	.footer-controls {
 		margin-top: 30px;
 		padding-top: 20px;

@@ -40,6 +40,13 @@
 
 	/*Funcion que bloquea cualquier opcion para afectar el codigo de la bd*/
 	function handleKeyDown(e) {
+
+		if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
+            e.preventDefault(); 
+            fs.saveActiveFile();
+            return;
+        }
+
 		if (isSqlite) {
 			const allowedKeys = [
 				'ArrowUp',
@@ -93,7 +100,7 @@
 			updateCursor();
 		}, 0);
 	}
-	
+
 </script>
 
 <div class="editor-main-container">

@@ -294,6 +294,19 @@
 			</button>
 
 			<button
+                class="btn-icon ms-1 me-2"
+                disabled={!fs.activeFile}
+                onclick={() => fs.saveActiveFile()}
+                aria-label="Guardar archivo"
+                title="Guardar archivo"
+            >
+                <i class="bi bi-floppy text-success"></i>
+                {#if fs.saveStatus === 'saved'}
+                    <span class="position-absolute top-0 start-100 translate-middle p-1 bg-success border border-light rounded-circle" style="width: 8px; height: 8px;"></span>
+                {/if}
+            </button>
+
+			<button
 				class="btn-preview fw-bold px-3"
 				onclick={() => fs.triggerMenuAction('Iniciando Preview')}
 			>
