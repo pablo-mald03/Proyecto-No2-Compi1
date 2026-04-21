@@ -842,7 +842,6 @@ export function createFrameworkState() {
 
             const currentFile = _files.find(f => f.id === _activeFileId);
             
-            // Protegemos archivos de solo lectura
             if (!currentFile || currentFile.name.endsWith('.sqlite')) {
                 this.notifyMessages('FORMATEO DENEGADO', 'No se puede dar formato a la base de datos', 'error');
                 return;
@@ -856,8 +855,6 @@ export function createFrameworkState() {
 
             this.systemLog(`> Formato aplicado correctamente (HARDCODEADO)`);
             
-            //PENDIENTE DECIDIR SI GUARDAR
-            // this.saveActiveFile(); 
         }
     };
 }
