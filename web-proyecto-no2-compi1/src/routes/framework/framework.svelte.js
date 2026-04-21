@@ -243,7 +243,7 @@ export function createFrameworkState() {
                     this.toggleFolder(newId);
                 }
 
-                // Si lo creamos en una carpeta, asegurarnos de que esté expandida para verlo
+                // Si lo creamos en una carpeta, se expande la carpeta visualmente
                 if (parentId !== null && !_expandedFolders.includes(parentId)) {
                     _expandedFolders.push(parentId);
                 }
