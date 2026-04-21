@@ -22,10 +22,13 @@
 "/*"([^*]|\*+[^*/])*(\*+"/")           /*Ignorar comentario multilinea*/ 
 
 
-/*------***---Reconocimiento de presets de direcciones---***------*/
+/*------***---Reconocimiento de presets de direcciones y redondeo---***------*/
 
 
 "CENTER"|"RIGHT"|"LEFT"         return 'DIRECTION';
+
+"DOTTED"|"LINE"|"DOUBLE"         return 'MARGIN_TIPO';
+
 
 
 /*------***---Reconocimiento de presets de tipos de fuente---***------*/
@@ -363,23 +366,23 @@ cuerpo_declaracion_for      : cuerpo_declaracion_for propiedad_estilo_for
 propiedad_estilo_for      : HEIGHT IGUAL expresion_ciclos PUNTO_COMA
                             {{
                                 $$ = {
-                                        tipo: 'PROPIEDAD_ESTILO',
-                                        nombre: 'height',
-                                        valor: { 
-                                            tipo: 'OPERACION', 
-                                            valor: $3 
-                                        }
+                                    tipo: 'PROPIEDAD_ESTILO',
+                                    nombre: 'height',
+                                    valor: { 
+                                        tipo: 'OPERACION', 
+                                        valor: $3 
+                                    }
                                 };
                             }}
                             | WIDTH IGUAL expresion_ciclos PUNTO_COMA
                             {{
                                 $$ = {
-                                        tipo: 'PROPIEDAD_ESTILO',
-                                        nombre: 'width',
-                                        valor: { 
-                                            tipo: 'OPERACION', 
-                                            valor: $3 
-                                        }
+                                    tipo: 'PROPIEDAD_ESTILO',
+                                    nombre: 'width',
+                                    valor: { 
+                                        tipo: 'OPERACION', 
+                                        valor: $3 
+                                    }
                                 };
 
                             }}
@@ -444,7 +447,7 @@ propiedad_estilo_for      : HEIGHT IGUAL expresion_ciclos PUNTO_COMA
                                     tipo: 'PROPIEDAD_ESTILO',
                                     nombre: 'text-align',
                                     valor: { 
-                                        tipo: 'VALOR_LITERAL', 
+                                        tipo: 'LITERAL', 
                                         valor: $4 
                                     }
                                 };
@@ -455,18 +458,114 @@ propiedad_estilo_for      : HEIGHT IGUAL expresion_ciclos PUNTO_COMA
                                     tipo: 'PROPIEDAD_ESTILO',
                                     nombre: 'font-family',
                                     valor: { 
-                                        tipo: 'VALOR_LITERAL', 
+                                        tipo: 'LITERAL', 
                                         valor: $4 
                                     } 
                                 };
                             }}
                             | BACKGROUND COLOR IGUAL color_config_for PUNTO_COMA
                             {{
-                               
+                                $$ = {
+                                    tipo: 'PROPIEDAD_ESTILO',
+                                    nombre: 'background-color',
+                                    valor: $4
+                                };
                             }}
                             | COLOR IGUAL color_config_for PUNTO_COMA
                             {{
-                               
+                                $$ = {
+                                    tipo: 'PROPIEDAD_ESTILO',
+                                    nombre: 'color',
+                                    valor: $3
+                                };
+                            }}
+                            | MARGIN IGUAL expresion_ciclos PUNTO_COMA
+                            {{
+                                $$ = {
+                                    tipo: 'PROPIEDAD_ESTILO',
+                                    nombre: 'margin',
+                                    valor: { 
+                                        tipo: 'OPERACION', 
+                                        valor: $3 
+                                    } 
+                                };
+                            }}
+                            | MARGIN POSITION IGUAL expresion_ciclos PUNTO_COMA
+                            {{
+                                $$ = {
+                                    tipo: 'PROPIEDAD_ESTILO',
+                                    nombre: 'margin-' + $2.toLowerCase(),
+                                    valor: { 
+                                        tipo: 'OPERACION', 
+                                        valores: $4 
+                                    } 
+                                };
+                            }}
+                            | PADDING IGUAL expresion_ciclos PUNTO_COMA
+                            {{
+                                $$ = {
+                                    tipo: 'PROPIEDAD_ESTILO',
+                                    nombre: 'padding',
+                                    valor: { 
+                                        tipo: 'OPERACION', 
+                                        valores: $3 
+                                    } 
+                                };
+                            }}
+                            | PADDING POSITION IGUAL expresion_ciclos PUNTO_COMA
+                            {{
+                                $$ = {
+                                    tipo: 'PROPIEDAD_ESTILO',
+                                    nombre: 'padding-' + $2.toLowerCase(),
+                                    valor: { 
+                                        tipo: 'OPERACION', 
+                                        valores: $4 
+                                    } 
+                                };
+                            }}
+                            | BORDER RADIUS IGUAL expresion_ciclos PUNTO_COMA
+                            {{
+                                $$ = {
+                                    tipo: 'PROPIEDAD_ESTILO',
+                                    nombre: 'border-radius',
+                                    valor: { 
+                                        tipo: 'OPERACION', 
+                                        valores: $4 
+                                    } 
+                                };
+                            }}
+                            | BORDER STYLE IGUAL MARGIN_TIPO PUNTO_COMA
+                            {{
+                                $$ = {
+                                    tipo: 'PROPIEDAD_ESTILO',
+                                    nombre: 'border-style',
+                                    valor: { 
+                                        tipo: 'LITERAL', 
+                                        valores: $4 
+                                    } 
+                                };
+                            }}
+                            | BORDER WIDTH IGUAL expresion_ciclos PUNTO_COMA
+                            {{
+                                $$ = {
+                                    tipo: 'PROPIEDAD_ESTILO',
+                                    nombre: 'border-width',
+                                    valor: { 
+                                        tipo: 'OPERACION', 
+                                        valores: $4 
+                                    } 
+                                };
+                            }}
+                            | BORDER COLOR IGUAL color_config_for PUNTO_COMA
+                            {{
+                                $$ = {
+                                    tipo: 'PROPIEDAD_ESTILO',
+                                    nombre: 'border-width',
+                                    valor: { 
+                                        tipo: 'OPERACION', 
+                                        valores: $4 
+                                    } 
+                                };
                             }}
                             ;
 
@@ -475,14 +574,28 @@ propiedad_estilo_for      : HEIGHT IGUAL expresion_ciclos PUNTO_COMA
 
 color_config_for        : RGB PARENT_APERTURA expresion_ciclos COMA expresion_ciclos COMA expresion_ciclos PARENT_CIERRE
                         {{
-                            
+                            $$ = {
+                                tipo: 'COLOR_RGB',
+                                r: $3, 
+                                g: $5, 
+                                b: $7  
+                            };
                         }}
                         | HEX_COLOR
                         {{
-
+                            $$ = {
+                                tipo: 'VALOR_LITERAL',
+                                subtipo: 'COLOR_HEX',
+                                valor: $1
+                            };
                         }}
                         | COLOR_PRESET
                         {{
+                            $$ = {
+                                tipo: 'VALOR_LITERAL',
+                                subtipo: 'COLOR_PRESET',
+                                valor: $1
+                            };
 
                         }}
                         ;
@@ -622,7 +735,6 @@ declaracion_estilo      : declaracion_estilo
                             
                         }}
                         ;
-
 
 
 /*-----=====-----Producciones para definir las tipografias-----=====-----*/
