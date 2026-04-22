@@ -278,19 +278,11 @@ definicion_estilos      : definicion_estilos cuerpo
                         {{
                             $$ = [$1];
                         }}
-                        | error 
-                        { 
-                            reportarError(yy, { 
-                                descripcion: 'Error de sintaxis cerca de: ' + yytext, 
-                                loc: @1 
-                            });
-                            $$ = []; 
-                        }
                         ;
 
 /*-----=====-----Produccion del cuerpo general de cuerpo de estilos-----=====-----*/
 
-cuerpo      : declaracion_estilo
+cuerpo      : clase
             {{
                 $$  = $1;
             }}
@@ -657,7 +649,7 @@ parte_selector      : IDENTIFICADOR
                     | VARIABLE_DOLAR
                     {{ 
                         $$ = { 
-                            tipo: 'VARIABLE_REF', 
+                            tipo: 'VARIABLE_REF',  
                             nombre: $1 
                         }; 
                     }}
@@ -773,19 +765,6 @@ expresion_ciclos        : expresion_ciclos MAS expresion_ciclos
                         }}
                         ;
 
-
-/*-----=====-----Produccion del cuerpo general de estilos en variables-----=====-----*/
-
-declaracion_estilo      : declaracion_estilo clase
-                        {{
-                            $1.push($2);
-                            $$ = $1;
-                        }}
-                        | clase
-                        {{
-                            $$ = [$1];
-                        }}
-                        ;
 
 /*-----=====-----Produccion que define el cuerpo de un id utilizado-----=====-----*/
 
