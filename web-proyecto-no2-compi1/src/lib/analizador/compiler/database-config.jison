@@ -75,6 +75,59 @@
 
 /*---****===== Seccion del analizador Sintactico =====****---*/
 
+%{
+    /* Diccionario para traducir tokens tecnicos a nombres amigables */
+    const diccionarioTokens = {
+        "PUNTO_COMA": "';'",
+        "COMA": "' , '",
+        "CORCHETE_APERTURA": "'['",
+        "CORCHETE_CIERRE": "']'",
+        "DELETE": "DELETE",
+        "TABLE": "TABLE",
+        "IN": "IN",
+        "COLUMNS": "COLUMNS",
+        "IGUAL": "'='",
+        "EOF": "el fin del archivo"
+    };
+
+    /* Función auxiliar para reportar errores al arreglo global */
+    function reportarError(yy, info) {
+        const nuevoError = {
+            tipo: 'ERROR_SINTACTICO',
+            descripcion: info.descripcion,
+            fila: info.loc.first_line,
+            columna: info.loc.first_column + 1
+        };
+    
+        yy.errores.push({
+            lexema: info.texto || "N/A",
+            tipo: "Sintactico",
+            fila: nuevoError.fila,
+            columna: nuevoError.columna,
+            descripcion: nuevoError.descripcion
+        });
+    
+        return nuevoError;
+    } 
+
+    /* Funcion auxiliar para traducir los tokens esperados que Jison provee */
+    function traducirEsperados(esperados) {
+
+        if (!esperados || esperados.length === 0) return "algo diferente";
+
+        const traducidos = esperados.map(token => {
+            const tokenLimpio = token.replace(/'/g, "");
+            return diccionarioTokens[tokenLimpio] || tokenLimpio;
+        });
+
+        if (traducidos.length > 1) {
+            const ultimo = traducidos.pop();
+            return traducidos.join(", ") + " o " + ultimo;
+        }
+        return traducidos[0];
+    }
+%}
+
 
 /*----Simbolo inicial----*/
 
@@ -91,7 +144,7 @@ inicio  : instrucciones EOF
         | error EOF 
         {
             reportarError(yy, {
-                descripcion: 'Error en la estructura del archivo de yfera',
+                descripcion: 'Error en la estructura del comando sql',
                 loc: @1,
                 texto: yytext
             });
@@ -135,6 +188,16 @@ instruccion     : creacion_tabla PUNTO_COMA
                 {{ 
                     $$ = $1; 
                 }}
+                | error PUNTO_COMA 
+                { 
+                    reportarError(yy, {
+                        descripcion: 'Error en la estructura cerca del punto y coma',
+                        loc: @1,
+                        texto: yytext
+                    });
+
+                    return null; 
+                }
                 ;
 
 /*-----=====-----Produccion para la estructura de la creacion de una tabla-----=====-----*/
@@ -144,7 +207,9 @@ creacion_tabla          : TABLE IDENTIFICADOR COLUMNS lista_definiciones
                             $$ = { 
                                 accion: 'CREATE', 
                                 tabla: $2, 
-                                columnas: $4 
+                                columnas: $4, 
+                                loc_linea: @1.first_line,
+                                loc_columna: @1.first_column + 1 
                             }; 
                         }}
                         ;
@@ -168,7 +233,9 @@ definicion          : IDENTIFICADOR IGUAL TIPO
                     {{ 
                         $$ = { 
                             id: $1, 
-                            tipo: $3 
+                            tipo: $3, 
+                            loc_linea: @1.first_line,
+                            loc_columna: @1.first_column + 1 
                         }; 
                     }}
                     ;
@@ -181,7 +248,9 @@ acceso_columna      : IDENTIFICADOR PUNTO IDENTIFICADOR
                         $$ = { 
                             accion: 'SELECT_COL', 
                             tabla: $1, 
-                            columna: $3 
+                            columna: $3, 
+                            loc_linea: @1.first_line,
+                            loc_columna: @1.first_column + 1 
                         }; 
                     }}
                     ;
@@ -193,7 +262,9 @@ insercion_registro      : IDENTIFICADOR CORCHETE_APERTURA lista_asignaciones COR
                             $$ = { 
                                 accion: 'INSERT', 
                                 tabla: $1, 
-                                valores: $3 
+                                valores: $3, 
+                                loc_linea: @1.first_line,
+                                loc_columna: @1.first_column + 1
                             }; 
                         }}
                         ;
@@ -215,7 +286,9 @@ eliminacion_registro            : IDENTIFICADOR R_DELETE NUMERO
                                     $$ = { 
                                         accion: 'DELETE', 
                                         tabla: $1, 
-                                        id: $3 
+                                        id: Number($3),
+                                        loc_linea: @1.first_line,
+                                        loc_columna: @1.first_column + 1
                                     }; 
                                 }}
                                 ;
@@ -239,7 +312,9 @@ asignacion          : IDENTIFICADOR IGUAL expresion
                     {{ 
                         $$ = { 
                             col: $1, 
-                            valor: $3 
+                            valor: $3,
+                            loc_linea: @1.first_line, 
+                            loc_columna: @1.first_column + 1
                         }; 
                     }}
                     ;
