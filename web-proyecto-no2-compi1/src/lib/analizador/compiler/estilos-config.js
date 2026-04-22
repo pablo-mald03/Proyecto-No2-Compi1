@@ -197,70 +197,84 @@ case 16:
                                 this.$ = [];
                             
 break;
-case 17: case 66:
+case 17:
 
                                     this.$ = { 
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'height', 
-                                        valor: $$[$0-1] 
+                                        valor: $$[$0-1],
+                                        linea: _$[$0-3].first_line, 
+                                        columna: _$[$0-3].first_column + 1
                                     };
                                 
 break;
-case 18: case 67:
+case 18:
 
                                     this.$ = { 
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'width', 
-                                        valor: $$[$0-1] 
+                                        valor: $$[$0-1],
+                                        linea: _$[$0-3].first_line, 
+                                        columna: _$[$0-3].first_column +1
                                     };
                                 
 break;
-case 19: case 68:
+case 19:
 
                                     this.$ = { 
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'min-width', 
-                                        valor: $$[$0-1] 
+                                        valor: $$[$0-1],
+                                        linea: _$[$0-3].first_line, 
+                                        columna: _$[$0-3].first_column +1 
                                     };
                                 
 break;
-case 20: case 69:
+case 20:
 
                                     this.$ = { 
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'max-width', 
-                                        valor: $$[$0-1] 
+                                        valor: $$[$0-1],
+                                        linea: _$[$0-3].first_line, 
+                                        columna: _$[$0-3].first_column +1 
                                     };
                                 
 break;
-case 21: case 70:
+case 21:
 
                                     this.$ = { 
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'min-height', 
-                                        valor: $$[$0-1] 
+                                        valor: $$[$0-1],
+                                        linea: _$[$0-3].first_line, 
+                                        columna: _$[$0-3].first_column +1 
                                     };
                                 
 break;
-case 22: case 71:
+case 22:
 
                                     this.$ = { 
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'max-height', 
-                                        valor: $$[$0-1] 
+                                        valor: $$[$0-1],
+                                        linea: _$[$0-3].first_line, 
+                                        columna: _$[$0-3].first_column +1 
                                     };
                                 
 break;
-case 23: case 72:
+case 23:
 
                                     this.$ = { 
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'font-size', 
-                                        valor: $$[$0-1] 
+                                        valor: $$[$0-1],
+                                        linea: _$[$0-4].first_line, 
+                                        columna: _$[$0-4].first_column +1 
                                     };
                                 
 break;
-case 24: case 73:
+case 24:
 
                                     this.$ = { 
                                         tipo: 'PROPIEDAD_ESTILO', 
@@ -268,11 +282,13 @@ case 24: case 73:
                                         valor: { 
                                             tipo: 'VALOR_LITERAL', 
                                             valor: $$[$0-1] 
-                                        } 
+                                        },
+                                        linea: _$[$0-4].first_line, 
+                                        columna: _$[$0-4].first_column +1 
                                     };
                                 
 break;
-case 25: case 74:
+case 25:
 
                                     this.$ = { 
                                         tipo: 'PROPIEDAD_ESTILO', 
@@ -280,74 +296,90 @@ case 25: case 74:
                                         valor: { 
                                             tipo: 'VALOR_LITERAL', 
                                             valor: $$[$0-1] 
-                                        } 
+                                        },
+                                        linea: _$[$0-4].first_line, 
+                                        columna: _$[$0-4].first_column +1 
                                     };
                                 
 break;
-case 26: case 75:
+case 26:
 
                                     this.$ = { 
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'background-color', 
-                                        valor: $$[$0-1] 
+                                        valor: $$[$0-1],
+                                        linea: _$[$0-4].first_line, 
+                                        columna: _$[$0-4].first_column +1 
                                     };
                                 
 break;
-case 27: case 76:
+case 27:
 
                                     this.$ = { 
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'color', 
-                                        valor: $$[$0-1] 
+                                        valor: $$[$0-1],
+                                        linea: _$[$0-3].first_line, 
+                                        columna: _$[$0-3].first_column +1 
                                     };
                                 
 break;
-case 28: case 77:
+case 28:
 
                                     this.$ = { 
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'margin', 
-                                        valor: $$[$0-1] 
+                                        valor: $$[$0-1],
+                                        linea: _$[$0-3].first_line, 
+                                        columna: _$[$0-3].first_column +1 
                                     };
                                 
 break;
-case 29: case 78:
+case 29:
 
                                     this.$ = { 
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'margin-' + $$[$0-3].toLowerCase(), 
-                                        valor: $$[$0-1] 
+                                        valor: $$[$0-1],
+                                        linea: _$[$0-4].first_line, 
+                                        columna: _$[$0-4].first_column +1 
                                     };
                                 
 break;
-case 30: case 79:
+case 30:
 
                                     this.$ = { 
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'padding', 
-                                        valor: $$[$0-1] 
+                                        valor: $$[$0-1],
+                                        linea: _$[$0-3].first_line, 
+                                        columna: _$[$0-3].first_column +1 
                                     };
                                 
 break;
-case 31: case 80:
+case 31:
 
                                     this.$ = { 
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'padding-' + $$[$0-3].toLowerCase(), 
-                                        valor: $$[$0-1] 
+                                        valor: $$[$0-1],
+                                        linea: _$[$0-4].first_line, 
+                                        columna: _$[$0-4].first_column +1 
                                     };
                                 
 break;
-case 32: case 81:
+case 32:
 
                                     this.$ = { 
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'border-radius', 
-                                        valor: $$[$0-1] 
+                                        valor: $$[$0-1],
+                                        linea: _$[$0-4].first_line, 
+                                        columna: _$[$0-4].first_column +1 
                                     };
                                 
 break;
-case 33: case 82:
+case 33:
 
                                     this.$ = { 
                                         tipo: 'PROPIEDAD_ESTILO', 
@@ -355,40 +387,48 @@ case 33: case 82:
                                         valor: { 
                                             tipo: 'VALOR_LITERAL', 
                                             valor: $$[$0-1] 
-                                        } 
+                                        },
+                                        linea: _$[$0-4].first_line, 
+                                        columna: _$[$0-4].first_column +1 
                                     };
                                 
 break;
-case 34: case 83:
+case 34:
 
                                     this.$ = { 
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'border-width', 
-                                        valor: $$[$0-1] 
+                                        valor: $$[$0-1],
+                                        linea: _$[$0-4].first_line, 
+                                        columna: _$[$0-4].first_column +1 
                                     };
                                 
 break;
-case 35: case 84:
+case 35:
 
                                     this.$ = { 
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'border-color', 
-                                        valor: $$[$0-1] 
+                                        valor: $$[$0-1],
+                                        linea: _$[$0-4].first_line, 
+                                        columna: _$[$0-4].first_column +1 
                                     };
                                 
 break;
-case 36: case 85:
+case 36:
 
                                     this.$ = {
                                         tipo: 'PROPIEDAD_COMPUESTA',
                                         nombre: 'border',
                                         ancho: $$[$0-3],   
                                         estilo: $$[$0-2],  
-                                        color: $$[$0-1]    
+                                        color: $$[$0-1],
+                                        linea: _$[$0-5].first_line, 
+                                        columna: _$[$0-5].first_column +1    
                                     };
                                 
 break;
-case 37: case 86:
+case 37:
 
                                     this.$ = { 
                                         tipo: 'PROPIEDAD_ESTILO', 
@@ -396,18 +436,22 @@ case 37: case 86:
                                         valor: { 
                                             tipo: 'VALOR_LITERAL', 
                                             valor: $$[$0-1] 
-                                        } 
+                                        },
+                                        linea: _$[$0-5].first_line, 
+                                        columna: _$[$0-5].first_column +1 
                                     };
                                 
 break;
-case 38: case 87:
+case 38:
 
                                     this.$ = {
                                         tipo: 'PROPIEDAD_COMPUESTA',
                                         nombre: `border-${$$[$0-5].toLowerCase()}`,
                                         ancho: $$[$0-3],
                                         estilo: $$[$0-2],
-                                        color: $$[$0-1]
+                                        color: $$[$0-1],
+                                        linea: _$[$0-6].first_line, 
+                                        columna: _$[$0-6].first_column +1
                                     };
                                 
 break;
@@ -417,7 +461,9 @@ case 39:
                                 tipo: 'COLOR_RGB',
                                 r: $$[$0-5], 
                                 g: $$[$0-3], 
-                                b: $$[$0-1]  
+                                b: $$[$0-1],
+                                linea: _$[$0-7].first_line, 
+                                columna: _$[$0-7].first_column +1  
                             };
                         
 break;
@@ -426,7 +472,9 @@ case 40:
                             this.$ = {
                                 tipo: 'VALOR_LITERAL',
                                 subtipo: 'COLOR_HEX',
-                                valor: $$[$0]
+                                valor: $$[$0],
+                                linea: _$[$0].first_line, 
+                                columna: _$[$0].first_column +1
                             };
                         
 break;
@@ -435,7 +483,9 @@ case 41:
                             this.$ = {
                                 tipo: 'VALOR_LITERAL',
                                 subtipo: 'COLOR_PRESET',
-                                valor: $$[$0]
+                                valor: $$[$0],
+                                linea: _$[$0].first_line, 
+                                columna: _$[$0].first_column +1
                             };
 
                         
@@ -444,7 +494,9 @@ case 42:
 
                             this.$ = { 
                                 tipo: 'IDENTIFICADOR_DINAMICO', 
-                                partes: $$[$0] 
+                                partes: $$[$0],
+                                linea: _$[$0].first_line, 
+                                columna: _$[$0].first_column +1 
                             }; 
                         
 break;
@@ -496,7 +548,7 @@ case 50:
                             };
                         
 break;
-case 51:
+case 51: case 90:
  
                             this.$ = { 
                                 tipo: 'OPERACION', 
@@ -506,7 +558,7 @@ case 51:
                             }; 
                         
 break;
-case 52:
+case 52: case 91:
  
                             this.$ = { 
                                 tipo: 'OPERACION', 
@@ -516,7 +568,7 @@ case 52:
                             }; 
                         
 break;
-case 53:
+case 53: case 92:
  
                             this.$ = { 
                                 tipo: 'OPERACION', 
@@ -526,7 +578,7 @@ case 53:
                             }; 
                         
 break;
-case 54:
+case 54: case 93:
  
                             this.$ = { 
                                 tipo: 'OPERACION', 
@@ -536,7 +588,7 @@ case 54:
                             }; 
                         
 break;
-case 55:
+case 55: case 94:
  
                             this.$ = { 
                                 tipo: 'OPERACION', 
@@ -616,6 +668,220 @@ case 65:
                                 this.$ = [];
                             
 break;
+case 66:
+
+                                    this.$ = { 
+                                        tipo: 'PROPIEDAD_ESTILO', 
+                                        nombre: 'height', 
+                                        valor: $$[$0-1] 
+                                    };
+                                
+break;
+case 67:
+
+                                    this.$ = { 
+                                        tipo: 'PROPIEDAD_ESTILO', 
+                                        nombre: 'width', 
+                                        valor: $$[$0-1] 
+                                    };
+                                
+break;
+case 68:
+
+                                    this.$ = { 
+                                        tipo: 'PROPIEDAD_ESTILO', 
+                                        nombre: 'min-width', 
+                                        valor: $$[$0-1] 
+                                    };
+                                
+break;
+case 69:
+
+                                    this.$ = { 
+                                        tipo: 'PROPIEDAD_ESTILO', 
+                                        nombre: 'max-width', 
+                                        valor: $$[$0-1] 
+                                    };
+                                
+break;
+case 70:
+
+                                    this.$ = { 
+                                        tipo: 'PROPIEDAD_ESTILO', 
+                                        nombre: 'min-height', 
+                                        valor: $$[$0-1] 
+                                    };
+                                
+break;
+case 71:
+
+                                    this.$ = { 
+                                        tipo: 'PROPIEDAD_ESTILO', 
+                                        nombre: 'max-height', 
+                                        valor: $$[$0-1] 
+                                    };
+                                
+break;
+case 72:
+
+                                    this.$ = { 
+                                        tipo: 'PROPIEDAD_ESTILO', 
+                                        nombre: 'font-size', 
+                                        valor: $$[$0-1] 
+                                    };
+                                
+break;
+case 73:
+
+                                    this.$ = { 
+                                        tipo: 'PROPIEDAD_ESTILO', 
+                                        nombre: 'text-align', 
+                                        valor: { 
+                                            tipo: 'VALOR_LITERAL', 
+                                            valor: $$[$0-1] 
+                                        } 
+                                    };
+                                
+break;
+case 74:
+
+                                    this.$ = { 
+                                        tipo: 'PROPIEDAD_ESTILO', 
+                                        nombre: 'font-family', 
+                                        valor: { 
+                                            tipo: 'VALOR_LITERAL', 
+                                            valor: $$[$0-1] 
+                                        } 
+                                    };
+                                
+break;
+case 75:
+
+                                    this.$ = { 
+                                        tipo: 'PROPIEDAD_ESTILO', 
+                                        nombre: 'background-color', 
+                                        valor: $$[$0-1] 
+                                    };
+                                
+break;
+case 76:
+
+                                    this.$ = { 
+                                        tipo: 'PROPIEDAD_ESTILO', 
+                                        nombre: 'color', 
+                                        valor: $$[$0-1] 
+                                    };
+                                
+break;
+case 77:
+
+                                    this.$ = { 
+                                        tipo: 'PROPIEDAD_ESTILO', 
+                                        nombre: 'margin', 
+                                        valor: $$[$0-1] 
+                                    };
+                                
+break;
+case 78:
+
+                                    this.$ = { 
+                                        tipo: 'PROPIEDAD_ESTILO', 
+                                        nombre: 'margin-' + $$[$0-3].toLowerCase(), 
+                                        valor: $$[$0-1] 
+                                    };
+                                
+break;
+case 79:
+
+                                    this.$ = { 
+                                        tipo: 'PROPIEDAD_ESTILO', 
+                                        nombre: 'padding', 
+                                        valor: $$[$0-1] 
+                                    };
+                                
+break;
+case 80:
+
+                                    this.$ = { 
+                                        tipo: 'PROPIEDAD_ESTILO', 
+                                        nombre: 'padding-' + $$[$0-3].toLowerCase(), 
+                                        valor: $$[$0-1] 
+                                    };
+                                
+break;
+case 81:
+
+                                    this.$ = { 
+                                        tipo: 'PROPIEDAD_ESTILO', 
+                                        nombre: 'border-radius', 
+                                        valor: $$[$0-1] 
+                                    };
+                                
+break;
+case 82:
+
+                                    this.$ = { 
+                                        tipo: 'PROPIEDAD_ESTILO', 
+                                        nombre: 'border-style', 
+                                        valor: { 
+                                            tipo: 'VALOR_LITERAL', 
+                                            valor: $$[$0-1] 
+                                        } 
+                                    };
+                                
+break;
+case 83:
+
+                                    this.$ = { 
+                                        tipo: 'PROPIEDAD_ESTILO', 
+                                        nombre: 'border-width', 
+                                        valor: $$[$0-1] 
+                                    };
+                                
+break;
+case 84:
+
+                                    this.$ = { 
+                                        tipo: 'PROPIEDAD_ESTILO', 
+                                        nombre: 'border-color', 
+                                        valor: $$[$0-1] 
+                                    };
+                                
+break;
+case 85:
+
+                                    this.$ = {
+                                        tipo: 'PROPIEDAD_COMPUESTA',
+                                        nombre: 'border',
+                                        ancho: $$[$0-3],   
+                                        estilo: $$[$0-2],  
+                                        color: $$[$0-1]    
+                                    };
+                                
+break;
+case 86:
+
+                                    this.$ = { 
+                                        tipo: 'PROPIEDAD_ESTILO', 
+                                        nombre: `border-${$$[$0-4].toLowerCase()}-style`,
+                                        valor: { 
+                                            tipo: 'VALOR_LITERAL', 
+                                            valor: $$[$0-1] 
+                                        } 
+                                    };
+                                
+break;
+case 87:
+
+                                    this.$ = {
+                                        tipo: 'PROPIEDAD_COMPUESTA',
+                                        nombre: `border-${$$[$0-5].toLowerCase()}`,
+                                        ancho: $$[$0-3],
+                                        estilo: $$[$0-2],
+                                        color: $$[$0-1]
+                                    };
+                                
+break;
 case 88:
 
                             this.$ = {
@@ -632,51 +898,6 @@ case 89:
                                 expresion: $$[$0-1],
                                 unidad: '%'
                             };
-                        
-break;
-case 90:
- 
-                            this.$ = { 
-                                tipo: 'OPERACION', 
-                                operador: '+', 
-                                izq: $$[$0-2], der: $$[$0] 
-                            }; 
-                        
-break;
-case 91:
- 
-                            this.$ = { 
-                                tipo: 'OPERACION', 
-                                operador: '-', 
-                                izq: $$[$0-2], der: $$[$0] 
-                            }; 
-                        
-break;
-case 92:
- 
-                            this.$ = { 
-                                tipo: 'OPERACION', 
-                                operador: '*', 
-                                izq: $$[$0-2], der: $$[$0] 
-                            }; 
-                        
-break;
-case 93:
- 
-                            this.$ = { 
-                                tipo: 'OPERACION', 
-                                operador: '/', 
-                                izq: $$[$0-2], der: $$[$0] 
-                            }; 
-                        
-break;
-case 94:
- 
-                            this.$ = { 
-                                tipo: 'OPERACION', 
-                                operador: '%', 
-                                izq: $$[$0-2], der: $$[$0] 
-                            }; 
                         
 break;
 case 98: case 100: case 101: case 102:
