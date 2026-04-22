@@ -4,10 +4,11 @@
 	"version": "0.0.1",
 	"type": "module",
 	"scripts": {
-		"dev": "vite dev",
-		"build": "vite build",
+		"builder-parsers": "node build-parsers.js",
+		"dev": "npm run builder-parsers && vite dev",
+		"build": "npm run builder-parsers && vite build",
 		"preview": "vite preview",
-		"prepare": "svelte-kit sync || echo ''",
+		"prepare": "npm run builder-parsers && (svelte-kit sync || echo '')",
 		"lint": "prettier --check . && eslint .",
 		"format": "prettier --write ."
 	},

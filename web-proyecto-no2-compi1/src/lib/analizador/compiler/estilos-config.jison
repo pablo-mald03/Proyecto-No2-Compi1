@@ -164,7 +164,7 @@
                                     tipo: "Lexico",
                                     fila: yylloc.first_line,
                                     columna: yylloc.first_column + 1,
-                                    descripcion: "Caracter no valido en el lenguaje"
+                                    descripcion: "Caracter no valido en el lenguaje .styles"
                                 });
                             }
 
@@ -176,7 +176,7 @@
 /*---****===== Seccion del analizador Sintactico =====****---*/
 
 %{
-    /* Diccionario para traducir tokens técnicos a nombres amigables */
+    /* Diccionario para traducir tokens tecnicos a nombres amigables */
     const diccionarioTokens = {
         "PUNTO_COMA": "';'",
         "COMA": "' , '",
@@ -253,12 +253,12 @@
 
 inicio  : definicion_estilos  EOF 
         { 
-            return $3; 
+            return $1; 
         }
         | error EOF 
         {
             reportarError(yy, {
-                descripcion: 'Error en la estructura de la hoja de estilos',
+                descripcion: 'Error en la estructura del archivo de estilos',
                 loc: @1,
                 texto: yytext
             });
@@ -267,7 +267,7 @@ inicio  : definicion_estilos  EOF
         }
         ;
 
-/*-----=====-----Produccion para la definicion de estilos-----=====-----*/
+/*-----=====-----Produccion para la definicion del lenguaje de estilos .styles-----=====-----*/
 
 definicion_estilos      : definicion_estilos cuerpo
                         {{
@@ -278,6 +278,14 @@ definicion_estilos      : definicion_estilos cuerpo
                         {{
                             $$ = [$1];
                         }}
+                        | error 
+                        { 
+                            reportarError(yy, { 
+                                descripcion: 'Error de sintaxis cerca de: ' + yytext, 
+                                loc: @1 
+                            });
+                            $$ = []; 
+                        }
                         ;
 
 /*-----=====-----Produccion del cuerpo general de cuerpo de estilos-----=====-----*/
@@ -340,8 +348,18 @@ declaracion_for_estilo      : selector_dinamico LLAVE_APERTURA cuerpo_declaracio
                             {{
                                 $$ = {
                                         tipo: 'DEC_ESTILO_DINAMICO',
-                                        selector: $1,       
+                                        selector: $1,
+                                        parent: null,       
                                         propiedades: $3     
+                                };
+                            }}
+                            | selector_dinamico EXTENDS selector_dinamico LLAVE_APERTURA cuerpo_declaracion_for LLAVE_CIERRE
+                            {{
+                                $$ = {
+                                    tipo: 'DEC_ESTILO_NORMAL',
+                                    selector: $1,
+                                    parent: $3,       
+                                    propiedades: $5     
                                 };
                             }}
                             ;
@@ -356,6 +374,24 @@ cuerpo_declaracion_for      : cuerpo_declaracion_for propiedad_estilo_for
                             | propiedad_estilo_for
                             {{
                                 $$ = [$1];
+                            }}
+                            | cuerpo_declaracion_for error PUNTO_COMA
+                            {{
+                                reportarError(yy, {
+                                    descripcion: 'Error de sintaxis en la propiedad de estilo del @for. Cerca del punto y coma.',
+                                    loc: @2,
+                                    texto: yytext
+                                });
+                                $$ = $1;
+                            }}
+                            | error PUNTO_COMA
+                            {{
+                                reportarError(yy, {
+                                    descripcion: 'Error de sintaxis en el primer estilo del @for. Cerca del punto y coma.',
+                                    loc: @1,
+                                    texto: yytext
+                                });
+                                $$ = [];
                             }}
                             ;
 
@@ -621,8 +657,8 @@ parte_selector      : IDENTIFICADOR
                     | VARIABLE_DOLAR
                     {{ 
                         $$ = { 
-                            tipo: 'VARIABLE
-                            _REF', nombre: $1 
+                            tipo: 'VARIABLE_REF', 
+                            nombre: $1 
                         }; 
                     }}
                     | NUMERO
@@ -757,11 +793,21 @@ clase               : IDENTIFICADOR LLAVE_APERTURA cuerpo_propiedad LLAVE_CIERRE
                     {{
                         $$ = {
                             tipo: 'DEC_ESTILO_NORMAL',
-                            selector: $1,       
+                            selector: $1,  
+                            parent: null,
                             propiedades: $3     
                         };
-
                     }}
+                    | IDENTIFICADOR EXTENDS IDENTIFICADOR LLAVE_APERTURA cuerpo_propiedad LLAVE_CIERRE
+                    {{
+                        $$ = {
+                            tipo: 'DEC_ESTILO_NORMAL',
+                            selector: $1,
+                            parent: $3,       
+                            propiedades: $5     
+                        };
+                    }}
+                    ;
 
 
 /*-----=====-----Produccion del interior de una variable de estilos dentro de una clase normal----=====-----*/
@@ -774,6 +820,24 @@ cuerpo_propiedad            : cuerpo_propiedad propiedad_estilo_normal
                             | propiedad_estilo_normal
                             {{
                                 $$ = [$1];
+                            }}
+                            | cuerpo_propiedad error PUNTO_COMA
+                            {{
+                                reportarError(yy, {
+                                    descripcion: 'Error de sintaxis en la propiedad de estilo. Cerca del punto y coma.',
+                                    loc: @2,
+                                    texto: yytext
+                                });
+                                $$ = $1;
+                            }}
+                            | error PUNTO_COMA
+                            {{
+                                reportarError(yy, {
+                                    descripcion: 'Error de sintaxis en la primera propiedad de estilo. Cerca del punto y coma.',
+                                    loc: @1,
+                                    texto: yytext
+                                });
+                                $$ = [];
                             }}
                             ;
 
