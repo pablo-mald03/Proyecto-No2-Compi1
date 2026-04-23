@@ -124,7 +124,9 @@ case 7:
                                 variable: $$[$0-7],
                                 inicio: $$[$0-5],
                                 fin: $$[$0-3],
-                                cuerpo: $$[$0-1]
+                                cuerpo: $$[$0-1],
+                                loc_linea: _$[$0-8].first_line, 
+                                loc_columna: _$[$0-8].first_column + 1
                             };
                         
 break;
@@ -136,7 +138,9 @@ case 8:
                                 variable: $$[$0-7],
                                 inicio: $$[$0-5],
                                 fin: $$[$0-3],
-                                cuerpo: $$[$0-1]
+                                cuerpo: $$[$0-1],
+                                loc_linea: _$[$0-8].first_line, 
+                                loc_columna: _$[$0-8].first_column + 1
                             };
                         
 break;
@@ -149,10 +153,12 @@ break;
 case 11:
 
                                 this.$ = {
-                                        tipo: 'DEC_ESTILO_DINAMICO',
-                                        selector: $$[$0-3],
-                                        parent: null,       
-                                        propiedades: $$[$0-1]     
+                                    tipo: 'DEC_ESTILO_DINAMICO',
+                                    selector: $$[$0-3],
+                                    parent: null,       
+                                    propiedades: $$[$0-1],
+                                    loc_linea: _$[$0-3].first_line, 
+                                    loc_columna: _$[$0-3].first_column + 1     
                                 };
                             
 break;
@@ -162,7 +168,9 @@ case 12:
                                     tipo: 'DEC_ESTILO_NORMAL',
                                     selector: $$[$0-5],
                                     parent: $$[$0-3],       
-                                    propiedades: $$[$0-1]     
+                                    propiedades: $$[$0-1],
+                                    loc_linea: _$[$0-5].first_line, 
+                                    loc_columna: _$[$0-5].first_column + 1     
                                 };
                             
 break;
@@ -203,8 +211,8 @@ case 17:
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'height', 
                                         valor: $$[$0-1],
-                                        linea: _$[$0-3].first_line, 
-                                        columna: _$[$0-3].first_column + 1
+                                        loc_linea: _$[$0-3].first_line, 
+                                        loc_columna: _$[$0-3].first_column + 1
                                     };
                                 
 break;
@@ -214,8 +222,8 @@ case 18:
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'width', 
                                         valor: $$[$0-1],
-                                        linea: _$[$0-3].first_line, 
-                                        columna: _$[$0-3].first_column +1
+                                        loc_linea: _$[$0-3].first_line, 
+                                        loc_columna: _$[$0-3].first_column + 1
                                     };
                                 
 break;
@@ -225,8 +233,8 @@ case 19:
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'min-width', 
                                         valor: $$[$0-1],
-                                        linea: _$[$0-3].first_line, 
-                                        columna: _$[$0-3].first_column +1 
+                                        loc_linea: _$[$0-3].first_line, 
+                                        loc_columna: _$[$0-3].first_column + 1
                                     };
                                 
 break;
@@ -236,8 +244,8 @@ case 20:
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'max-width', 
                                         valor: $$[$0-1],
-                                        linea: _$[$0-3].first_line, 
-                                        columna: _$[$0-3].first_column +1 
+                                        loc_linea: _$[$0-3].first_line, 
+                                        loc_columna: _$[$0-3].first_column + 1 
                                     };
                                 
 break;
@@ -247,8 +255,8 @@ case 21:
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'min-height', 
                                         valor: $$[$0-1],
-                                        linea: _$[$0-3].first_line, 
-                                        columna: _$[$0-3].first_column +1 
+                                        loc_linea: _$[$0-3].first_line, 
+                                        loc_columna: _$[$0-3].first_column + 1 
                                     };
                                 
 break;
@@ -258,8 +266,8 @@ case 22:
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'max-height', 
                                         valor: $$[$0-1],
-                                        linea: _$[$0-3].first_line, 
-                                        columna: _$[$0-3].first_column +1 
+                                        loc_linea: _$[$0-3].first_line, 
+                                        loc_columna: _$[$0-3].first_column + 1
                                     };
                                 
 break;
@@ -269,8 +277,8 @@ case 23:
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'font-size', 
                                         valor: $$[$0-1],
-                                        linea: _$[$0-4].first_line, 
-                                        columna: _$[$0-4].first_column +1 
+                                        loc_linea: _$[$0-4].first_line, 
+                                        loc_columna: _$[$0-4].first_column + 1
                                     };
                                 
 break;
@@ -283,8 +291,8 @@ case 24:
                                             tipo: 'VALOR_LITERAL', 
                                             valor: $$[$0-1] 
                                         },
-                                        linea: _$[$0-4].first_line, 
-                                        columna: _$[$0-4].first_column +1 
+                                        loc_linea: _$[$0-4].first_line, 
+                                        loc_columna: _$[$0-4].first_column + 1
                                     };
                                 
 break;
@@ -297,8 +305,8 @@ case 25:
                                             tipo: 'VALOR_LITERAL', 
                                             valor: $$[$0-1] 
                                         },
-                                        linea: _$[$0-4].first_line, 
-                                        columna: _$[$0-4].first_column +1 
+                                        loc_linea: _$[$0-4].first_line, 
+                                        loc_columna: _$[$0-4].first_column + 1
                                     };
                                 
 break;
@@ -308,8 +316,8 @@ case 26:
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'background-color', 
                                         valor: $$[$0-1],
-                                        linea: _$[$0-4].first_line, 
-                                        columna: _$[$0-4].first_column +1 
+                                        loc_linea: _$[$0-4].first_line, 
+                                        loc_columna: _$[$0-4].first_column + 1
                                     };
                                 
 break;
@@ -319,8 +327,8 @@ case 27:
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'color', 
                                         valor: $$[$0-1],
-                                        linea: _$[$0-3].first_line, 
-                                        columna: _$[$0-3].first_column +1 
+                                        loc_linea: _$[$0-3].first_line, 
+                                        loc_columna: _$[$0-3].first_column + 1 
                                     };
                                 
 break;
@@ -330,8 +338,8 @@ case 28:
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'margin', 
                                         valor: $$[$0-1],
-                                        linea: _$[$0-3].first_line, 
-                                        columna: _$[$0-3].first_column +1 
+                                        loc_linea: _$[$0-3].first_line, 
+                                        loc_columna: _$[$0-3].first_column + 1 
                                     };
                                 
 break;
@@ -341,8 +349,8 @@ case 29:
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'margin-' + $$[$0-3].toLowerCase(), 
                                         valor: $$[$0-1],
-                                        linea: _$[$0-4].first_line, 
-                                        columna: _$[$0-4].first_column +1 
+                                        loc_linea: _$[$0-4].first_line, 
+                                        loc_columna: _$[$0-4].first_column + 1 
                                     };
                                 
 break;
@@ -352,8 +360,8 @@ case 30:
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'padding', 
                                         valor: $$[$0-1],
-                                        linea: _$[$0-3].first_line, 
-                                        columna: _$[$0-3].first_column +1 
+                                        loc_linea: _$[$0-3].first_line, 
+                                        loc_columna: _$[$0-3].first_column + 1
                                     };
                                 
 break;
@@ -363,8 +371,8 @@ case 31:
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'padding-' + $$[$0-3].toLowerCase(), 
                                         valor: $$[$0-1],
-                                        linea: _$[$0-4].first_line, 
-                                        columna: _$[$0-4].first_column +1 
+                                        loc_linea: _$[$0-4].first_line, 
+                                        loc_columna: _$[$0-4].first_column + 1 
                                     };
                                 
 break;
@@ -374,8 +382,8 @@ case 32:
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'border-radius', 
                                         valor: $$[$0-1],
-                                        linea: _$[$0-4].first_line, 
-                                        columna: _$[$0-4].first_column +1 
+                                        loc_linea: _$[$0-4].first_line, 
+                                        loc_columna: _$[$0-4].first_column + 1 
                                     };
                                 
 break;
@@ -388,8 +396,8 @@ case 33:
                                             tipo: 'VALOR_LITERAL', 
                                             valor: $$[$0-1] 
                                         },
-                                        linea: _$[$0-4].first_line, 
-                                        columna: _$[$0-4].first_column +1 
+                                        loc_linea: _$[$0-4].first_line, 
+                                        loc_columna: _$[$0-4].first_column + 1
                                     };
                                 
 break;
@@ -399,8 +407,8 @@ case 34:
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'border-width', 
                                         valor: $$[$0-1],
-                                        linea: _$[$0-4].first_line, 
-                                        columna: _$[$0-4].first_column +1 
+                                        loc_linea: _$[$0-4].first_line, 
+                                        loc_columna: _$[$0-4].first_column + 1
                                     };
                                 
 break;
@@ -410,8 +418,8 @@ case 35:
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'border-color', 
                                         valor: $$[$0-1],
-                                        linea: _$[$0-4].first_line, 
-                                        columna: _$[$0-4].first_column +1 
+                                        loc_linea: _$[$0-4].first_line, 
+                                        loc_columna: _$[$0-4].first_column + 1
                                     };
                                 
 break;
@@ -423,8 +431,8 @@ case 36:
                                         ancho: $$[$0-3],   
                                         estilo: $$[$0-2],  
                                         color: $$[$0-1],
-                                        linea: _$[$0-5].first_line, 
-                                        columna: _$[$0-5].first_column +1    
+                                        loc_linea: _$[$0-5].first_line, 
+                                        loc_columna: _$[$0-5].first_column + 1   
                                     };
                                 
 break;
@@ -437,8 +445,8 @@ case 37:
                                             tipo: 'VALOR_LITERAL', 
                                             valor: $$[$0-1] 
                                         },
-                                        linea: _$[$0-5].first_line, 
-                                        columna: _$[$0-5].first_column +1 
+                                        loc_linea: _$[$0-5].first_line, 
+                                        loc_columna: _$[$0-5].first_column + 1 
                                     };
                                 
 break;
@@ -450,8 +458,8 @@ case 38:
                                         ancho: $$[$0-3],
                                         estilo: $$[$0-2],
                                         color: $$[$0-1],
-                                        linea: _$[$0-6].first_line, 
-                                        columna: _$[$0-6].first_column +1
+                                        loc_linea: _$[$0-6].first_line, 
+                                        loc_columna: _$[$0-6].first_column + 1
                                     };
                                 
 break;
@@ -462,8 +470,8 @@ case 39:
                                 r: $$[$0-5], 
                                 g: $$[$0-3], 
                                 b: $$[$0-1],
-                                linea: _$[$0-7].first_line, 
-                                columna: _$[$0-7].first_column +1  
+                                loc_linea: _$[$0-7].first_line, 
+                                loc_columna: _$[$0-7].first_column + 1
                             };
                         
 break;
@@ -473,8 +481,8 @@ case 40:
                                 tipo: 'VALOR_LITERAL',
                                 subtipo: 'COLOR_HEX',
                                 valor: $$[$0],
-                                linea: _$[$0].first_line, 
-                                columna: _$[$0].first_column +1
+                                loc_linea: _$[$0].first_line, 
+                                loc_columna: _$[$0].first_column + 1
                             };
                         
 break;
@@ -484,8 +492,8 @@ case 41:
                                 tipo: 'VALOR_LITERAL',
                                 subtipo: 'COLOR_PRESET',
                                 valor: $$[$0],
-                                linea: _$[$0].first_line, 
-                                columna: _$[$0].first_column +1
+                                loc_linea: _$[$0].first_line, 
+                                loc_columna: _$[$0].first_column + 1
                             };
 
                         
@@ -495,8 +503,8 @@ case 42:
                             this.$ = { 
                                 tipo: 'IDENTIFICADOR_DINAMICO', 
                                 partes: $$[$0],
-                                linea: _$[$0].first_line, 
-                                columna: _$[$0].first_column +1 
+                                loc_linea: _$[$0].first_line, 
+                                loc_columna: _$[$0].first_column + 1 
                             }; 
                         
 break;
@@ -510,7 +518,9 @@ case 45: case 47:
  
                         this.$ = { 
                             tipo: 'TEXTO', 
-                            valor: $$[$0] 
+                            valor: $$[$0],
+                            loc_linea: _$[$0].first_line, 
+                            loc_columna: _$[$0].first_column + 1 
                         }; 
                     
 break;
@@ -518,7 +528,9 @@ case 46:
  
                         this.$ = { 
                             tipo: 'VARIABLE_REF',  
-                            nombre: $$[$0] 
+                            nombre: $$[$0],
+                            loc_linea: _$[$0].first_line, 
+                            loc_columna: _$[$0].first_column + 1  
                         }; 
                     
 break;
@@ -526,7 +538,9 @@ case 48:
  
                         this.$ = { 
                             tipo: 'TEXTO', 
-                            valor: '-' 
+                            valor: '-',
+                            loc_linea: _$[$0].first_line, 
+                            loc_columna: _$[$0].first_column + 1  
                         }; 
                     
 break;
@@ -535,7 +549,9 @@ case 49:
                             this.$ = {
                                 tipo: 'EXPRESION_COMPUESTA',
                                 expresion: $$[$0],
-                                unidad: 'px'
+                                unidad: 'px',
+                                loc_linea: _$[$0].first_line, 
+                                loc_columna: _$[$0].first_column + 1 
                             };
                         
 break;
@@ -544,66 +560,80 @@ case 50:
                             this.$ = {
                                 tipo: 'EXPRESION_COMPUESTA',
                                 expresion: $$[$0-1],
-                                unidad: '%'
+                                unidad: '%',
+                                loc_linea: _$[$0-1].first_line, 
+                                loc_columna: _$[$0-1].first_column + 1 
                             };
                         
 break;
-case 51: case 90:
+case 51:
  
                             this.$ = { 
                                 tipo: 'OPERACION', 
-                                operador: '+', 
+                                operador: 'SUMA', 
                                 izq: $$[$0-2], 
-                                der: $$[$0] 
+                                der: $$[$0],
+                                loc_linea: _$[$0-2].first_line, 
+                                loc_columna: _$[$0-2].first_column + 1 
                             }; 
                         
 break;
-case 52: case 91:
+case 52:
  
                             this.$ = { 
                                 tipo: 'OPERACION', 
                                 operador: '-', 
                                 izq: $$[$0-2], 
-                                der: $$[$0] 
+                                der: $$[$0],
+                                loc_linea: _$[$0-2].first_line, 
+                                loc_columna: _$[$0-2].first_column + 1  
                             }; 
                         
 break;
-case 53: case 92:
+case 53:
  
                             this.$ = { 
                                 tipo: 'OPERACION', 
-                                operador: '*', 
+                                operador: 'MULTIPLICACION', 
                                 izq: $$[$0-2], 
-                                der: $$[$0] 
+                                der: $$[$0],
+                                loc_linea: _$[$0-2].first_line, 
+                                loc_columna: _$[$0-2].first_column + 1 
                             }; 
                         
 break;
-case 54: case 93:
+case 54:
  
                             this.$ = { 
                                 tipo: 'OPERACION', 
-                                operador: '/', 
+                                operador: 'DIVISION', 
                                 izq: $$[$0-2], 
-                                der: $$[$0] 
+                                der: $$[$0],
+                                loc_linea: _$[$0-2].first_line, 
+                                loc_columna: _$[$0-2].first_column + 1 
                             }; 
                         
 break;
-case 55: case 94:
+case 55:
  
                             this.$ = { 
                                 tipo: 'OPERACION', 
-                                operador: '%', 
+                                operador: 'MODULO', 
                                 izq: $$[$0-2], 
-                                der: $$[$0] 
+                                der: $$[$0],
+                                loc_linea: _$[$0-2].first_line, 
+                                loc_columna: _$[$0-2].first_column + 1 
                             }; 
                         
 break;
-case 56: case 95:
+case 56:
  
                             this.$ = { 
                                 tipo: 'OPERACION_UNARIA', 
-                                operador: '-', 
-                                valor: $$[$0] 
+                                operador: 'MENOS_UNARIO', 
+                                valor: $$[$0],
+                                loc_linea: _$[$0-1].first_line, 
+                                loc_columna: _$[$0-1].first_column + 1 
                             }; 
                         
 break;
@@ -612,11 +642,13 @@ case 57: case 96:
                             this.$ = $$[$0-1]; 
                         
 break;
-case 58: case 97:
+case 58:
 
                             this.$ = { 
                                 tipo: 'VALOR', 
-                                valor: Number($$[$0]) 
+                                valor: Number($$[$0]),
+                                loc_linea: _$[$0].first_line, 
+                                loc_columna: _$[$0].first_column + 1 
                             }; 
                         
 break;
@@ -624,7 +656,9 @@ case 59:
  
                             this.$ = { 
                                 tipo: 'VARIABLE', 
-                                nombre: $$[$0] 
+                                nombre: $$[$0],
+                                loc_linea: _$[$0].first_line, 
+                                loc_columna: _$[$0].first_column + 1 
                             };
                         
 break;
@@ -634,7 +668,9 @@ case 60:
                             tipo: 'DEC_ESTILO_NORMAL',
                             selector: $$[$0-3],  
                             parent: null,
-                            propiedades: $$[$0-1]     
+                            propiedades: $$[$0-1],
+                            loc_linea: _$[$0-3].first_line, 
+                            loc_columna: _$[$0-3].first_column + 1     
                         };
                     
 break;
@@ -644,7 +680,9 @@ case 61:
                             tipo: 'DEC_ESTILO_NORMAL',
                             selector: $$[$0-5],
                             parent: $$[$0-3],       
-                            propiedades: $$[$0-1]     
+                            propiedades: $$[$0-1],
+                            loc_linea: _$[$0-5].first_line, 
+                            loc_columna: _$[$0-5].first_column + 1     
                         };
                     
 break;
@@ -673,7 +711,9 @@ case 66:
                                     this.$ = { 
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'height', 
-                                        valor: $$[$0-1] 
+                                        valor: $$[$0-1],
+                                        loc_linea: _$[$0-3].first_line, 
+                                        loc_columna: _$[$0-3].first_column + 1 
                                     };
                                 
 break;
@@ -682,7 +722,9 @@ case 67:
                                     this.$ = { 
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'width', 
-                                        valor: $$[$0-1] 
+                                        valor: $$[$0-1],
+                                        loc_linea: _$[$0-3].first_line, 
+                                        loc_columna: _$[$0-3].first_column + 1  
                                     };
                                 
 break;
@@ -691,7 +733,9 @@ case 68:
                                     this.$ = { 
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'min-width', 
-                                        valor: $$[$0-1] 
+                                        valor: $$[$0-1],
+                                        loc_linea: _$[$0-3].first_line, 
+                                        loc_columna: _$[$0-3].first_column + 1  
                                     };
                                 
 break;
@@ -700,7 +744,9 @@ case 69:
                                     this.$ = { 
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'max-width', 
-                                        valor: $$[$0-1] 
+                                        valor: $$[$0-1],
+                                        loc_linea: _$[$0-3].first_line, 
+                                        loc_columna: _$[$0-3].first_column + 1  
                                     };
                                 
 break;
@@ -709,7 +755,9 @@ case 70:
                                     this.$ = { 
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'min-height', 
-                                        valor: $$[$0-1] 
+                                        valor: $$[$0-1],
+                                        loc_linea: _$[$0-3].first_line, 
+                                        loc_columna: _$[$0-3].first_column + 1  
                                     };
                                 
 break;
@@ -718,7 +766,9 @@ case 71:
                                     this.$ = { 
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'max-height', 
-                                        valor: $$[$0-1] 
+                                        valor: $$[$0-1],
+                                        loc_linea: _$[$0-3].first_line, 
+                                        loc_columna: _$[$0-3].first_column + 1  
                                     };
                                 
 break;
@@ -727,7 +777,9 @@ case 72:
                                     this.$ = { 
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'font-size', 
-                                        valor: $$[$0-1] 
+                                        valor: $$[$0-1],
+                                        loc_linea: _$[$0-4].first_line, 
+                                        loc_columna: _$[$0-4].first_column + 1  
                                     };
                                 
 break;
@@ -739,7 +791,9 @@ case 73:
                                         valor: { 
                                             tipo: 'VALOR_LITERAL', 
                                             valor: $$[$0-1] 
-                                        } 
+                                        },
+                                        loc_linea: _$[$0-4].first_line, 
+                                        loc_columna: _$[$0-4].first_column + 1  
                                     };
                                 
 break;
@@ -751,7 +805,9 @@ case 74:
                                         valor: { 
                                             tipo: 'VALOR_LITERAL', 
                                             valor: $$[$0-1] 
-                                        } 
+                                        },
+                                        loc_linea: _$[$0-4].first_line, 
+                                        loc_columna: _$[$0-4].first_column + 1  
                                     };
                                 
 break;
@@ -760,7 +816,9 @@ case 75:
                                     this.$ = { 
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'background-color', 
-                                        valor: $$[$0-1] 
+                                        valor: $$[$0-1],
+                                        loc_linea: _$[$0-4].first_line, 
+                                        loc_columna: _$[$0-4].first_column + 1  
                                     };
                                 
 break;
@@ -769,7 +827,9 @@ case 76:
                                     this.$ = { 
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'color', 
-                                        valor: $$[$0-1] 
+                                        valor: $$[$0-1],
+                                        loc_linea: _$[$0-3].first_line, 
+                                        loc_columna: _$[$0-3].first_column + 1  
                                     };
                                 
 break;
@@ -778,7 +838,9 @@ case 77:
                                     this.$ = { 
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'margin', 
-                                        valor: $$[$0-1] 
+                                        valor: $$[$0-1],
+                                        loc_linea: _$[$0-3].first_line, 
+                                        loc_columna: _$[$0-3].first_column + 1  
                                     };
                                 
 break;
@@ -787,7 +849,9 @@ case 78:
                                     this.$ = { 
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'margin-' + $$[$0-3].toLowerCase(), 
-                                        valor: $$[$0-1] 
+                                        valor: $$[$0-1],
+                                        loc_linea: _$[$0-4].first_line, 
+                                        loc_columna: _$[$0-4].first_column + 1  
                                     };
                                 
 break;
@@ -796,7 +860,9 @@ case 79:
                                     this.$ = { 
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'padding', 
-                                        valor: $$[$0-1] 
+                                        valor: $$[$0-1],
+                                        loc_linea: _$[$0-3].first_line, 
+                                        loc_columna: _$[$0-3].first_column + 1  
                                     };
                                 
 break;
@@ -805,7 +871,9 @@ case 80:
                                     this.$ = { 
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'padding-' + $$[$0-3].toLowerCase(), 
-                                        valor: $$[$0-1] 
+                                        valor: $$[$0-1],
+                                        loc_linea: _$[$0-4].first_line, 
+                                        loc_columna: _$[$0-4].first_column + 1  
                                     };
                                 
 break;
@@ -814,7 +882,9 @@ case 81:
                                     this.$ = { 
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'border-radius', 
-                                        valor: $$[$0-1] 
+                                        valor: $$[$0-1],
+                                        loc_linea: _$[$0-4].first_line, 
+                                        loc_columna: _$[$0-4].first_column + 1  
                                     };
                                 
 break;
@@ -826,7 +896,9 @@ case 82:
                                         valor: { 
                                             tipo: 'VALOR_LITERAL', 
                                             valor: $$[$0-1] 
-                                        } 
+                                        },
+                                        loc_linea: _$[$0-4].first_line, 
+                                        loc_columna: _$[$0-4].first_column + 1  
                                     };
                                 
 break;
@@ -835,7 +907,9 @@ case 83:
                                     this.$ = { 
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'border-width', 
-                                        valor: $$[$0-1] 
+                                        valor: $$[$0-1],
+                                        loc_linea: _$[$0-4].first_line, 
+                                        loc_columna: _$[$0-4].first_column + 1  
                                     };
                                 
 break;
@@ -844,7 +918,9 @@ case 84:
                                     this.$ = { 
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'border-color', 
-                                        valor: $$[$0-1] 
+                                        valor: $$[$0-1],
+                                        loc_linea: _$[$0-4].first_line, 
+                                        loc_columna: _$[$0-4].first_column + 1  
                                     };
                                 
 break;
@@ -855,7 +931,9 @@ case 85:
                                         nombre: 'border',
                                         ancho: $$[$0-3],   
                                         estilo: $$[$0-2],  
-                                        color: $$[$0-1]    
+                                        color: $$[$0-1],
+                                        loc_linea: _$[$0-5].first_line, 
+                                        loc_columna: _$[$0-5].first_column + 1     
                                     };
                                 
 break;
@@ -867,7 +945,9 @@ case 86:
                                         valor: { 
                                             tipo: 'VALOR_LITERAL', 
                                             valor: $$[$0-1] 
-                                        } 
+                                        },
+                                        loc_linea: _$[$0-5].first_line, 
+                                        loc_columna: _$[$0-5].first_column + 1  
                                     };
                                 
 break;
@@ -878,7 +958,9 @@ case 87:
                                         nombre: `border-${$$[$0-5].toLowerCase()}`,
                                         ancho: $$[$0-3],
                                         estilo: $$[$0-2],
-                                        color: $$[$0-1]
+                                        color: $$[$0-1],
+                                        loc_linea: _$[$0-6].first_line, 
+                                        loc_columna: _$[$0-6].first_column + 1 
                                     };
                                 
 break;
@@ -887,7 +969,9 @@ case 88:
                             this.$ = {
                                 tipo: 'EXPRESION_SIMPLE',
                                 expresion: $$[$0],
-                                unidad: 'px'
+                                unidad: 'px',
+                                loc_linea: _$[$0].first_line, 
+                                loc_columna: _$[$0].first_column + 1 
                             };
                         
 break;
@@ -896,8 +980,91 @@ case 89:
                             this.$ = {
                                 tipo: 'EXPRESION_SIMPLE',
                                 expresion: $$[$0-1],
-                                unidad: '%'
+                                unidad: '%',
+                                loc_linea: _$[$0-1].first_line, 
+                                loc_columna: _$[$0-1].first_column + 1 
                             };
+                        
+break;
+case 90:
+ 
+                            this.$ = { 
+                                tipo: 'OPERACION', 
+                                operador: 'SUMA', 
+                                izq: $$[$0-2], 
+                                der: $$[$0],
+                                loc_linea: _$[$0-2].first_line, 
+                                loc_columna: _$[$0-2].first_column + 1  
+                            }; 
+                        
+break;
+case 91:
+ 
+                            this.$ = { 
+                                tipo: 'OPERACION', 
+                                operador: 'RESTA', 
+                                izq: $$[$0-2], 
+                                der: $$[$0],
+                                loc_linea: _$[$0-2].first_line, 
+                                loc_columna: _$[$0-2].first_column + 1  
+                            }; 
+                        
+break;
+case 92:
+ 
+                            this.$ = { 
+                                tipo: 'OPERACION', 
+                                operador: 'MULTIPLICACION', 
+                                izq: $$[$0-2], 
+                                der: $$[$0],
+                                loc_linea: _$[$0-2].first_line, 
+                                loc_columna: _$[$0-2].first_column + 1  
+                            }; 
+                        
+break;
+case 93:
+ 
+                            this.$ = { 
+                                tipo: 'OPERACION', 
+                                operador: 'DIVISION', 
+                                izq: $$[$0-2], 
+                                der: $$[$0],
+                                loc_linea: _$[$0-2].first_line, 
+                                loc_columna: _$[$0-2].first_column + 1  
+                            }; 
+                        
+break;
+case 94:
+ 
+                            this.$ = { 
+                                tipo: 'OPERACION', 
+                                operador: 'MODULO', 
+                                izq: $$[$0-2], 
+                                der: $$[$0],
+                                loc_linea: _$[$0-2].first_line, 
+                                loc_columna: _$[$0-2].first_column + 1  
+                            }; 
+                        
+break;
+case 95:
+ 
+                            this.$ = { 
+                                tipo: 'OPERACION_UNARIA', 
+                                operador: 'MENOS_UNARIO', 
+                                valor: $$[$0],
+                                loc_linea: _$[$0-1].first_line, 
+                                loc_columna: _$[$0-1].first_column + 1  
+                            }; 
+                        
+break;
+case 97:
+
+                            this.$ = { 
+                                tipo: 'VALOR', 
+                                valor: Number($$[$0]),
+                                loc_linea: _$[$0].first_line, 
+                                loc_columna: _$[$0].first_column + 1  
+                            }; 
                         
 break;
 case 98: case 100: case 101: case 102:

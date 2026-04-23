@@ -303,7 +303,9 @@ declaracion_for         : FOR VARIABLE_DOLAR FROM expresion_ciclos THROUGH expre
                                 variable: $2,
                                 inicio: $4,
                                 fin: $6,
-                                cuerpo: $8
+                                cuerpo: $8,
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1
                             };
                         }}
                         | FOR VARIABLE_DOLAR FROM expresion_ciclos TO expresion_ciclos LLAVE_APERTURA cuerpo_for LLAVE_CIERRE
@@ -314,7 +316,9 @@ declaracion_for         : FOR VARIABLE_DOLAR FROM expresion_ciclos THROUGH expre
                                 variable: $2,
                                 inicio: $4,
                                 fin: $6,
-                                cuerpo: $8
+                                cuerpo: $8,
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1
                             };
                         }}
                         ;   
@@ -339,10 +343,12 @@ cuerpo_for              : cuerpo_for declaracion_for_estilo
 declaracion_for_estilo      : selector_dinamico LLAVE_APERTURA cuerpo_declaracion_for LLAVE_CIERRE
                             {{
                                 $$ = {
-                                        tipo: 'DEC_ESTILO_DINAMICO',
-                                        selector: $1,
-                                        parent: null,       
-                                        propiedades: $3     
+                                    tipo: 'DEC_ESTILO_DINAMICO',
+                                    selector: $1,
+                                    parent: null,       
+                                    propiedades: $3,
+                                    loc_linea: @1.first_line, 
+                                    loc_columna: @1.first_column + 1     
                                 };
                             }}
                             | selector_dinamico EXTENDS selector_dinamico LLAVE_APERTURA cuerpo_declaracion_for LLAVE_CIERRE
@@ -351,7 +357,9 @@ declaracion_for_estilo      : selector_dinamico LLAVE_APERTURA cuerpo_declaracio
                                     tipo: 'DEC_ESTILO_NORMAL',
                                     selector: $1,
                                     parent: $3,       
-                                    propiedades: $5     
+                                    propiedades: $5,
+                                    loc_linea: @1.first_line, 
+                                    loc_columna: @1.first_column + 1     
                                 };
                             }}
                             ;
@@ -395,8 +403,8 @@ propiedad_estilo_for            : HEIGHT IGUAL expresion_ciclica PUNTO_COMA
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'height', 
                                         valor: $3,
-                                        linea: @1.first_line, 
-                                        columna: @1.first_column + 1
+                                        loc_linea: @1.first_line, 
+                                        loc_columna: @1.first_column + 1
                                     };
                                 }}
                                 | WIDTH IGUAL expresion_ciclica PUNTO_COMA
@@ -405,8 +413,8 @@ propiedad_estilo_for            : HEIGHT IGUAL expresion_ciclica PUNTO_COMA
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'width', 
                                         valor: $3,
-                                        linea: @1.first_line, 
-                                        columna: @1.first_column +1
+                                        loc_linea: @1.first_line, 
+                                        loc_columna: @1.first_column + 1
                                     };
                                 }}
                                 | MIN_WIDTH IGUAL expresion_ciclica PUNTO_COMA
@@ -415,8 +423,8 @@ propiedad_estilo_for            : HEIGHT IGUAL expresion_ciclica PUNTO_COMA
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'min-width', 
                                         valor: $3,
-                                        linea: @1.first_line, 
-                                        columna: @1.first_column +1 
+                                        loc_linea: @1.first_line, 
+                                        loc_columna: @1.first_column + 1
                                     };
                                 }}
                                 | MAX_WIDTH IGUAL expresion_ciclica PUNTO_COMA
@@ -425,8 +433,8 @@ propiedad_estilo_for            : HEIGHT IGUAL expresion_ciclica PUNTO_COMA
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'max-width', 
                                         valor: $3,
-                                        linea: @1.first_line, 
-                                        columna: @1.first_column +1 
+                                        loc_linea: @1.first_line, 
+                                        loc_columna: @1.first_column + 1 
                                     };
                                 }}
                                 | MIN_HEIGHT IGUAL expresion_ciclica PUNTO_COMA
@@ -435,8 +443,8 @@ propiedad_estilo_for            : HEIGHT IGUAL expresion_ciclica PUNTO_COMA
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'min-height', 
                                         valor: $3,
-                                        linea: @1.first_line, 
-                                        columna: @1.first_column +1 
+                                        loc_linea: @1.first_line, 
+                                        loc_columna: @1.first_column + 1 
                                     };
                                 }}
                                 | MAX_HEIGHT IGUAL expresion_ciclica PUNTO_COMA
@@ -445,8 +453,8 @@ propiedad_estilo_for            : HEIGHT IGUAL expresion_ciclica PUNTO_COMA
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'max-height', 
                                         valor: $3,
-                                        linea: @1.first_line, 
-                                        columna: @1.first_column +1 
+                                        loc_linea: @1.first_line, 
+                                        loc_columna: @1.first_column + 1
                                     };
                                 }}
                                 | TEXT SIZE IGUAL expresion_ciclica PUNTO_COMA
@@ -455,8 +463,8 @@ propiedad_estilo_for            : HEIGHT IGUAL expresion_ciclica PUNTO_COMA
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'font-size', 
                                         valor: $4,
-                                        linea: @1.first_line, 
-                                        columna: @1.first_column +1 
+                                        loc_linea: @1.first_line, 
+                                        loc_columna: @1.first_column + 1
                                     };
                                 }}
                                 | TEXT ALIGN IGUAL DIRECTION PUNTO_COMA
@@ -468,8 +476,8 @@ propiedad_estilo_for            : HEIGHT IGUAL expresion_ciclica PUNTO_COMA
                                             tipo: 'VALOR_LITERAL', 
                                             valor: $4 
                                         },
-                                        linea: @1.first_line, 
-                                        columna: @1.first_column +1 
+                                        loc_linea: @1.first_line, 
+                                        loc_columna: @1.first_column + 1
                                     };
                                 }}
                                 | TEXT FONT IGUAL fuente_estilo PUNTO_COMA
@@ -481,8 +489,8 @@ propiedad_estilo_for            : HEIGHT IGUAL expresion_ciclica PUNTO_COMA
                                             tipo: 'VALOR_LITERAL', 
                                             valor: $4 
                                         },
-                                        linea: @1.first_line, 
-                                        columna: @1.first_column +1 
+                                        loc_linea: @1.first_line, 
+                                        loc_columna: @1.first_column + 1
                                     };
                                 }}
                                 | BACKGROUND COLOR IGUAL color_config_for PUNTO_COMA
@@ -491,8 +499,8 @@ propiedad_estilo_for            : HEIGHT IGUAL expresion_ciclica PUNTO_COMA
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'background-color', 
                                         valor: $4,
-                                        linea: @1.first_line, 
-                                        columna: @1.first_column +1 
+                                        loc_linea: @1.first_line, 
+                                        loc_columna: @1.first_column + 1
                                     };
                                 }}
                                 | COLOR IGUAL color_config_for PUNTO_COMA
@@ -501,8 +509,8 @@ propiedad_estilo_for            : HEIGHT IGUAL expresion_ciclica PUNTO_COMA
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'color', 
                                         valor: $3,
-                                        linea: @1.first_line, 
-                                        columna: @1.first_column +1 
+                                        loc_linea: @1.first_line, 
+                                        loc_columna: @1.first_column + 1 
                                     };
                                 }}
                                 | MARGIN IGUAL expresion_ciclica PUNTO_COMA
@@ -511,8 +519,8 @@ propiedad_estilo_for            : HEIGHT IGUAL expresion_ciclica PUNTO_COMA
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'margin', 
                                         valor: $3,
-                                        linea: @1.first_line, 
-                                        columna: @1.first_column +1 
+                                        loc_linea: @1.first_line, 
+                                        loc_columna: @1.first_column + 1 
                                     };
                                 }}
                                 | MARGIN POSITION IGUAL expresion_ciclica PUNTO_COMA
@@ -521,8 +529,8 @@ propiedad_estilo_for            : HEIGHT IGUAL expresion_ciclica PUNTO_COMA
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'margin-' + $2.toLowerCase(), 
                                         valor: $4,
-                                        linea: @1.first_line, 
-                                        columna: @1.first_column +1 
+                                        loc_linea: @1.first_line, 
+                                        loc_columna: @1.first_column + 1 
                                     };
                                 }}
                                 | PADDING IGUAL expresion_ciclica PUNTO_COMA
@@ -531,8 +539,8 @@ propiedad_estilo_for            : HEIGHT IGUAL expresion_ciclica PUNTO_COMA
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'padding', 
                                         valor: $3,
-                                        linea: @1.first_line, 
-                                        columna: @1.first_column +1 
+                                        loc_linea: @1.first_line, 
+                                        loc_columna: @1.first_column + 1
                                     };
                                 }}
                                 | PADDING POSITION IGUAL expresion_ciclica PUNTO_COMA
@@ -541,8 +549,8 @@ propiedad_estilo_for            : HEIGHT IGUAL expresion_ciclica PUNTO_COMA
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'padding-' + $2.toLowerCase(), 
                                         valor: $4,
-                                        linea: @1.first_line, 
-                                        columna: @1.first_column +1 
+                                        loc_linea: @1.first_line, 
+                                        loc_columna: @1.first_column + 1 
                                     };
                                 }}
                                 | BORDER RADIUS IGUAL expresion_ciclica PUNTO_COMA
@@ -551,8 +559,8 @@ propiedad_estilo_for            : HEIGHT IGUAL expresion_ciclica PUNTO_COMA
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'border-radius', 
                                         valor: $4,
-                                        linea: @1.first_line, 
-                                        columna: @1.first_column +1 
+                                        loc_linea: @1.first_line, 
+                                        loc_columna: @1.first_column + 1 
                                     };
                                 }}
                                 | BORDER STYLE IGUAL MARGIN_TIPO PUNTO_COMA
@@ -564,8 +572,8 @@ propiedad_estilo_for            : HEIGHT IGUAL expresion_ciclica PUNTO_COMA
                                             tipo: 'VALOR_LITERAL', 
                                             valor: $4 
                                         },
-                                        linea: @1.first_line, 
-                                        columna: @1.first_column +1 
+                                        loc_linea: @1.first_line, 
+                                        loc_columna: @1.first_column + 1
                                     };
                                 }}
                                 | BORDER WIDTH IGUAL expresion_ciclica PUNTO_COMA
@@ -574,8 +582,8 @@ propiedad_estilo_for            : HEIGHT IGUAL expresion_ciclica PUNTO_COMA
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'border-width', 
                                         valor: $4,
-                                        linea: @1.first_line, 
-                                        columna: @1.first_column +1 
+                                        loc_linea: @1.first_line, 
+                                        loc_columna: @1.first_column + 1
                                     };
                                 }}
                                 | BORDER COLOR IGUAL color_config_for PUNTO_COMA
@@ -584,8 +592,8 @@ propiedad_estilo_for            : HEIGHT IGUAL expresion_ciclica PUNTO_COMA
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'border-color', 
                                         valor: $4,
-                                        linea: @1.first_line, 
-                                        columna: @1.first_column +1 
+                                        loc_linea: @1.first_line, 
+                                        loc_columna: @1.first_column + 1
                                     };
                                 }}
                                 | BORDER IGUAL expresion_ciclica MARGIN_TIPO color_config_for PUNTO_COMA
@@ -596,8 +604,8 @@ propiedad_estilo_for            : HEIGHT IGUAL expresion_ciclica PUNTO_COMA
                                         ancho: $3,   
                                         estilo: $4,  
                                         color: $5,
-                                        linea: @1.first_line, 
-                                        columna: @1.first_column +1    
+                                        loc_linea: @1.first_line, 
+                                        loc_columna: @1.first_column + 1   
                                     };
                                 }}
                                 | BORDER POSITION STYLE IGUAL MARGIN_TIPO PUNTO_COMA
@@ -609,8 +617,8 @@ propiedad_estilo_for            : HEIGHT IGUAL expresion_ciclica PUNTO_COMA
                                             tipo: 'VALOR_LITERAL', 
                                             valor: $5 
                                         },
-                                        linea: @1.first_line, 
-                                        columna: @1.first_column +1 
+                                        loc_linea: @1.first_line, 
+                                        loc_columna: @1.first_column + 1 
                                     };
                                 }}
                                 | BORDER POSITION IGUAL expresion_ciclica MARGIN_TIPO color_config_for PUNTO_COMA
@@ -621,8 +629,8 @@ propiedad_estilo_for            : HEIGHT IGUAL expresion_ciclica PUNTO_COMA
                                         ancho: $4,
                                         estilo: $5,
                                         color: $6,
-                                        linea: @1.first_line, 
-                                        columna: @1.first_column +1
+                                        loc_linea: @1.first_line, 
+                                        loc_columna: @1.first_column + 1
                                     };
                                 }}
                                 ;               
@@ -636,8 +644,8 @@ color_config_for        : RGB PARENT_APERTURA expresion_ciclos COMA expresion_ci
                                 r: $3, 
                                 g: $5, 
                                 b: $7,
-                                linea: @1.first_line, 
-                                columna: @1.first_column +1  
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1
                             };
                         }}
                         | HEX_COLOR
@@ -646,8 +654,8 @@ color_config_for        : RGB PARENT_APERTURA expresion_ciclos COMA expresion_ci
                                 tipo: 'VALOR_LITERAL',
                                 subtipo: 'COLOR_HEX',
                                 valor: $1,
-                                linea: @1.first_line, 
-                                columna: @1.first_column +1
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1
                             };
                         }}
                         | COLOR_PRESET
@@ -656,8 +664,8 @@ color_config_for        : RGB PARENT_APERTURA expresion_ciclos COMA expresion_ci
                                 tipo: 'VALOR_LITERAL',
                                 subtipo: 'COLOR_PRESET',
                                 valor: $1,
-                                linea: @1.first_line, 
-                                columna: @1.first_column +1
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1
                             };
 
                         }}
@@ -670,8 +678,8 @@ selector_dinamico       : lista_partes_selector
                             $$ = { 
                                 tipo: 'IDENTIFICADOR_DINAMICO', 
                                 partes: $1,
-                                linea: @1.first_line, 
-                                columna: @1.first_column +1 
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1 
                             }; 
                         }}
                         ;
@@ -695,28 +703,36 @@ parte_selector      : IDENTIFICADOR
                     {{ 
                         $$ = { 
                             tipo: 'TEXTO', 
-                            valor: $1 
+                            valor: $1,
+                            loc_linea: @1.first_line, 
+                            loc_columna: @1.first_column + 1 
                         }; 
                     }}
                     | VARIABLE_DOLAR
                     {{ 
                         $$ = { 
                             tipo: 'VARIABLE_REF',  
-                            nombre: $1 
+                            nombre: $1,
+                            loc_linea: @1.first_line, 
+                            loc_columna: @1.first_column + 1  
                         }; 
                     }}
                     | NUMERO
                     {{ 
                         $$ = { 
                             tipo: 'TEXTO', 
-                            valor: $1 
+                            valor: $1,
+                            loc_linea: @1.first_line, 
+                            loc_columna: @1.first_column + 1 
                         }; 
                     }}
                     | MENOS
                     {{ 
                         $$ = { 
                             tipo: 'TEXTO', 
-                            valor: '-' 
+                            valor: '-',
+                            loc_linea: @1.first_line, 
+                            loc_columna: @1.first_column + 1  
                         }; 
                     }}
                     ;
@@ -729,7 +745,9 @@ expresion_ciclica       : expresion_ciclos
                             $$ = {
                                 tipo: 'EXPRESION_COMPUESTA',
                                 expresion: $1,
-                                unidad: 'px'
+                                unidad: 'px',
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1 
                             };
                         }}
                         | expresion_ciclos PORCENTAJE
@@ -737,7 +755,9 @@ expresion_ciclica       : expresion_ciclos
                             $$ = {
                                 tipo: 'EXPRESION_COMPUESTA',
                                 expresion: $1,
-                                unidad: '%'
+                                unidad: '%',
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1 
                             };
                         }}
                         ;
@@ -748,9 +768,11 @@ expresion_ciclos        : expresion_ciclos MAS expresion_ciclos
                         {{ 
                             $$ = { 
                                 tipo: 'OPERACION', 
-                                operador: '+', 
+                                operador: 'SUMA', 
                                 izq: $1, 
-                                der: $3 
+                                der: $3,
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1 
                             }; 
                         }}
                         | expresion_ciclos MENOS expresion_ciclos
@@ -759,42 +781,52 @@ expresion_ciclos        : expresion_ciclos MAS expresion_ciclos
                                 tipo: 'OPERACION', 
                                 operador: '-', 
                                 izq: $1, 
-                                der: $3 
+                                der: $3,
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1  
                             }; 
                         }}
                         | expresion_ciclos MULTIPLICACION expresion_ciclos
                         {{ 
                             $$ = { 
                                 tipo: 'OPERACION', 
-                                operador: '*', 
+                                operador: 'MULTIPLICACION', 
                                 izq: $1, 
-                                der: $3 
+                                der: $3,
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1 
                             }; 
                         }}
                         | expresion_ciclos DIVISION expresion_ciclos
                         {{ 
                             $$ = { 
                                 tipo: 'OPERACION', 
-                                operador: '/', 
+                                operador: 'DIVISION', 
                                 izq: $1, 
-                                der: $3 
+                                der: $3,
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1 
                             }; 
                         }}
                         | expresion_ciclos PORCENTAJE expresion_ciclos
                         {{ 
                             $$ = { 
                                 tipo: 'OPERACION', 
-                                operador: '%', 
+                                operador: 'MODULO', 
                                 izq: $1, 
-                                der: $3 
+                                der: $3,
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1 
                             }; 
                         }}
                         | MENOS expresion_ciclos %prec UMENOS
                         {{ 
                             $$ = { 
                                 tipo: 'OPERACION_UNARIA', 
-                                operador: '-', 
-                                valor: $2 
+                                operador: 'MENOS_UNARIO', 
+                                valor: $2,
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1 
                             }; 
                         }}
                         | PARENT_APERTURA expresion_ciclos PARENT_CIERRE
@@ -805,14 +837,18 @@ expresion_ciclos        : expresion_ciclos MAS expresion_ciclos
                         {{
                             $$ = { 
                                 tipo: 'VALOR', 
-                                valor: Number($1) 
+                                valor: Number($1),
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1 
                             }; 
                         }}
                         | VARIABLE_DOLAR
                         {{ 
                             $$ = { 
                                 tipo: 'VARIABLE', 
-                                nombre: $1 
+                                nombre: $1,
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1 
                             };
                         }}
                         ;
@@ -826,7 +862,9 @@ clase               : IDENTIFICADOR LLAVE_APERTURA cuerpo_propiedad LLAVE_CIERRE
                             tipo: 'DEC_ESTILO_NORMAL',
                             selector: $1,  
                             parent: null,
-                            propiedades: $3     
+                            propiedades: $3,
+                            loc_linea: @1.first_line, 
+                            loc_columna: @1.first_column + 1     
                         };
                     }}
                     | IDENTIFICADOR EXTENDS IDENTIFICADOR LLAVE_APERTURA cuerpo_propiedad LLAVE_CIERRE
@@ -835,7 +873,9 @@ clase               : IDENTIFICADOR LLAVE_APERTURA cuerpo_propiedad LLAVE_CIERRE
                             tipo: 'DEC_ESTILO_NORMAL',
                             selector: $1,
                             parent: $3,       
-                            propiedades: $5     
+                            propiedades: $5,
+                            loc_linea: @1.first_line, 
+                            loc_columna: @1.first_column + 1     
                         };
                     }}
                     ;
@@ -879,7 +919,9 @@ propiedad_estilo_normal         : HEIGHT IGUAL expresion_comun PUNTO_COMA
                                     $$ = { 
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'height', 
-                                        valor: $3 
+                                        valor: $3,
+                                        loc_linea: @1.first_line, 
+                                        loc_columna: @1.first_column + 1 
                                     };
                                 }}
                                 | WIDTH IGUAL expresion_comun PUNTO_COMA
@@ -887,7 +929,9 @@ propiedad_estilo_normal         : HEIGHT IGUAL expresion_comun PUNTO_COMA
                                     $$ = { 
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'width', 
-                                        valor: $3 
+                                        valor: $3,
+                                        loc_linea: @1.first_line, 
+                                        loc_columna: @1.first_column + 1  
                                     };
                                 }}
                                 | MIN_WIDTH IGUAL expresion_comun PUNTO_COMA
@@ -895,7 +939,9 @@ propiedad_estilo_normal         : HEIGHT IGUAL expresion_comun PUNTO_COMA
                                     $$ = { 
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'min-width', 
-                                        valor: $3 
+                                        valor: $3,
+                                        loc_linea: @1.first_line, 
+                                        loc_columna: @1.first_column + 1  
                                     };
                                 }}
                                 | MAX_WIDTH IGUAL expresion_comun PUNTO_COMA
@@ -903,7 +949,9 @@ propiedad_estilo_normal         : HEIGHT IGUAL expresion_comun PUNTO_COMA
                                     $$ = { 
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'max-width', 
-                                        valor: $3 
+                                        valor: $3,
+                                        loc_linea: @1.first_line, 
+                                        loc_columna: @1.first_column + 1  
                                     };
                                 }}
                                 | MIN_HEIGHT IGUAL expresion_comun PUNTO_COMA
@@ -911,7 +959,9 @@ propiedad_estilo_normal         : HEIGHT IGUAL expresion_comun PUNTO_COMA
                                     $$ = { 
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'min-height', 
-                                        valor: $3 
+                                        valor: $3,
+                                        loc_linea: @1.first_line, 
+                                        loc_columna: @1.first_column + 1  
                                     };
                                 }}
                                 | MAX_HEIGHT IGUAL expresion_comun PUNTO_COMA
@@ -919,7 +969,9 @@ propiedad_estilo_normal         : HEIGHT IGUAL expresion_comun PUNTO_COMA
                                     $$ = { 
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'max-height', 
-                                        valor: $3 
+                                        valor: $3,
+                                        loc_linea: @1.first_line, 
+                                        loc_columna: @1.first_column + 1  
                                     };
                                 }}
                                 | TEXT SIZE IGUAL expresion_comun PUNTO_COMA
@@ -927,7 +979,9 @@ propiedad_estilo_normal         : HEIGHT IGUAL expresion_comun PUNTO_COMA
                                     $$ = { 
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'font-size', 
-                                        valor: $4 
+                                        valor: $4,
+                                        loc_linea: @1.first_line, 
+                                        loc_columna: @1.first_column + 1  
                                     };
                                 }}
                                 | TEXT ALIGN IGUAL DIRECTION PUNTO_COMA
@@ -938,7 +992,9 @@ propiedad_estilo_normal         : HEIGHT IGUAL expresion_comun PUNTO_COMA
                                         valor: { 
                                             tipo: 'VALOR_LITERAL', 
                                             valor: $4 
-                                        } 
+                                        },
+                                        loc_linea: @1.first_line, 
+                                        loc_columna: @1.first_column + 1  
                                     };
                                 }}
                                 | TEXT FONT IGUAL fuente_estilo PUNTO_COMA
@@ -949,7 +1005,9 @@ propiedad_estilo_normal         : HEIGHT IGUAL expresion_comun PUNTO_COMA
                                         valor: { 
                                             tipo: 'VALOR_LITERAL', 
                                             valor: $4 
-                                        } 
+                                        },
+                                        loc_linea: @1.first_line, 
+                                        loc_columna: @1.first_column + 1  
                                     };
                                 }}
                                 | BACKGROUND COLOR IGUAL color_config_for PUNTO_COMA
@@ -957,7 +1015,9 @@ propiedad_estilo_normal         : HEIGHT IGUAL expresion_comun PUNTO_COMA
                                     $$ = { 
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'background-color', 
-                                        valor: $4 
+                                        valor: $4,
+                                        loc_linea: @1.first_line, 
+                                        loc_columna: @1.first_column + 1  
                                     };
                                 }}
                                 | COLOR IGUAL color_config_for PUNTO_COMA
@@ -965,7 +1025,9 @@ propiedad_estilo_normal         : HEIGHT IGUAL expresion_comun PUNTO_COMA
                                     $$ = { 
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'color', 
-                                        valor: $3 
+                                        valor: $3,
+                                        loc_linea: @1.first_line, 
+                                        loc_columna: @1.first_column + 1  
                                     };
                                 }}
                                 | MARGIN IGUAL expresion_comun PUNTO_COMA
@@ -973,7 +1035,9 @@ propiedad_estilo_normal         : HEIGHT IGUAL expresion_comun PUNTO_COMA
                                     $$ = { 
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'margin', 
-                                        valor: $3 
+                                        valor: $3,
+                                        loc_linea: @1.first_line, 
+                                        loc_columna: @1.first_column + 1  
                                     };
                                 }}
                                 | MARGIN POSITION IGUAL expresion_comun PUNTO_COMA
@@ -981,7 +1045,9 @@ propiedad_estilo_normal         : HEIGHT IGUAL expresion_comun PUNTO_COMA
                                     $$ = { 
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'margin-' + $2.toLowerCase(), 
-                                        valor: $4 
+                                        valor: $4,
+                                        loc_linea: @1.first_line, 
+                                        loc_columna: @1.first_column + 1  
                                     };
                                 }}
                                 | PADDING IGUAL expresion_comun PUNTO_COMA
@@ -989,7 +1055,9 @@ propiedad_estilo_normal         : HEIGHT IGUAL expresion_comun PUNTO_COMA
                                     $$ = { 
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'padding', 
-                                        valor: $3 
+                                        valor: $3,
+                                        loc_linea: @1.first_line, 
+                                        loc_columna: @1.first_column + 1  
                                     };
                                 }}
                                 | PADDING POSITION IGUAL expresion_comun PUNTO_COMA
@@ -997,7 +1065,9 @@ propiedad_estilo_normal         : HEIGHT IGUAL expresion_comun PUNTO_COMA
                                     $$ = { 
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'padding-' + $2.toLowerCase(), 
-                                        valor: $4 
+                                        valor: $4,
+                                        loc_linea: @1.first_line, 
+                                        loc_columna: @1.first_column + 1  
                                     };
                                 }}
                                 | BORDER RADIUS IGUAL expresion_comun PUNTO_COMA
@@ -1005,7 +1075,9 @@ propiedad_estilo_normal         : HEIGHT IGUAL expresion_comun PUNTO_COMA
                                     $$ = { 
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'border-radius', 
-                                        valor: $4 
+                                        valor: $4,
+                                        loc_linea: @1.first_line, 
+                                        loc_columna: @1.first_column + 1  
                                     };
                                 }}
                                 | BORDER STYLE IGUAL MARGIN_TIPO PUNTO_COMA
@@ -1016,7 +1088,9 @@ propiedad_estilo_normal         : HEIGHT IGUAL expresion_comun PUNTO_COMA
                                         valor: { 
                                             tipo: 'VALOR_LITERAL', 
                                             valor: $4 
-                                        } 
+                                        },
+                                        loc_linea: @1.first_line, 
+                                        loc_columna: @1.first_column + 1  
                                     };
                                 }}
                                 | BORDER WIDTH IGUAL expresion_comun PUNTO_COMA
@@ -1024,7 +1098,9 @@ propiedad_estilo_normal         : HEIGHT IGUAL expresion_comun PUNTO_COMA
                                     $$ = { 
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'border-width', 
-                                        valor: $4 
+                                        valor: $4,
+                                        loc_linea: @1.first_line, 
+                                        loc_columna: @1.first_column + 1  
                                     };
                                 }}
                                 | BORDER COLOR IGUAL color_config_for PUNTO_COMA
@@ -1032,7 +1108,9 @@ propiedad_estilo_normal         : HEIGHT IGUAL expresion_comun PUNTO_COMA
                                     $$ = { 
                                         tipo: 'PROPIEDAD_ESTILO', 
                                         nombre: 'border-color', 
-                                        valor: $4 
+                                        valor: $4,
+                                        loc_linea: @1.first_line, 
+                                        loc_columna: @1.first_column + 1  
                                     };
                                 }}
                                 | BORDER IGUAL expresion_comun MARGIN_TIPO color_config_for PUNTO_COMA
@@ -1042,7 +1120,9 @@ propiedad_estilo_normal         : HEIGHT IGUAL expresion_comun PUNTO_COMA
                                         nombre: 'border',
                                         ancho: $3,   
                                         estilo: $4,  
-                                        color: $5    
+                                        color: $5,
+                                        loc_linea: @1.first_line, 
+                                        loc_columna: @1.first_column + 1     
                                     };
                                 }}
                                 | BORDER POSITION STYLE IGUAL MARGIN_TIPO PUNTO_COMA
@@ -1053,7 +1133,9 @@ propiedad_estilo_normal         : HEIGHT IGUAL expresion_comun PUNTO_COMA
                                         valor: { 
                                             tipo: 'VALOR_LITERAL', 
                                             valor: $5 
-                                        } 
+                                        },
+                                        loc_linea: @1.first_line, 
+                                        loc_columna: @1.first_column + 1  
                                     };
                                 }}
                                 | BORDER POSITION IGUAL expresion_comun MARGIN_TIPO color_config_for PUNTO_COMA
@@ -1063,7 +1145,9 @@ propiedad_estilo_normal         : HEIGHT IGUAL expresion_comun PUNTO_COMA
                                         nombre: `border-${$2.toLowerCase()}`,
                                         ancho: $4,
                                         estilo: $5,
-                                        color: $6
+                                        color: $6,
+                                        loc_linea: @1.first_line, 
+                                        loc_columna: @1.first_column + 1 
                                     };
                                 }}
                                 ;
@@ -1076,7 +1160,9 @@ expresion_comun         : expresion_normal
                             $$ = {
                                 tipo: 'EXPRESION_SIMPLE',
                                 expresion: $1,
-                                unidad: 'px'
+                                unidad: 'px',
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1 
                             };
                         }}
                         | expresion_normal PORCENTAJE
@@ -1084,7 +1170,9 @@ expresion_comun         : expresion_normal
                             $$ = {
                                 tipo: 'EXPRESION_SIMPLE',
                                 expresion: $1,
-                                unidad: '%'
+                                unidad: '%',
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1 
                             };
                         }}
                         ;
@@ -1096,53 +1184,65 @@ expresion_normal        : expresion_normal MAS expresion_normal
                         {{ 
                             $$ = { 
                                 tipo: 'OPERACION', 
-                                operador: '+', 
+                                operador: 'SUMA', 
                                 izq: $1, 
-                                der: $3 
+                                der: $3,
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1  
                             }; 
                         }}
                         | expresion_normal MENOS expresion_normal
                         {{ 
                             $$ = { 
                                 tipo: 'OPERACION', 
-                                operador: '-', 
+                                operador: 'RESTA', 
                                 izq: $1, 
-                                der: $3 
+                                der: $3,
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1  
                             }; 
                         }}
                         | expresion_normal MULTIPLICACION expresion_normal
                         {{ 
                             $$ = { 
                                 tipo: 'OPERACION', 
-                                operador: '*', 
+                                operador: 'MULTIPLICACION', 
                                 izq: $1, 
-                                der: $3 
+                                der: $3,
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1  
                             }; 
                         }}
                         | expresion_normal DIVISION expresion_normal
                         {{ 
                             $$ = { 
                                 tipo: 'OPERACION', 
-                                operador: '/', 
+                                operador: 'DIVISION', 
                                 izq: $1, 
-                                der: $3 
+                                der: $3,
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1  
                             }; 
                         }}
                         | expresion_normal PORCENTAJE expresion_normal
                         {{ 
                             $$ = { 
                                 tipo: 'OPERACION', 
-                                operador: '%', 
+                                operador: 'MODULO', 
                                 izq: $1, 
-                                der: $3 
+                                der: $3,
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1  
                             }; 
                         }}
                         | MENOS expresion_normal %prec UMENOS
                         {{ 
                             $$ = { 
                                 tipo: 'OPERACION_UNARIA', 
-                                operador: '-', 
-                                valor: $2 
+                                operador: 'MENOS_UNARIO', 
+                                valor: $2,
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1  
                             }; 
                         }}
                         | PARENT_APERTURA expresion_normal PARENT_CIERRE
@@ -1153,7 +1253,9 @@ expresion_normal        : expresion_normal MAS expresion_normal
                         {{
                             $$ = { 
                                 tipo: 'VALOR', 
-                                valor: Number($1) 
+                                valor: Number($1),
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1  
                             }; 
                         }}
                         ;
