@@ -10,6 +10,26 @@
 
 [\u200B\uFEFF\u200E\u200F\u202A-\u202E]+ /* Ignorar caracteres basura */
 
+/*Apartado de comentarios*/
+
+"#".*           /*Ignorar comentario de linea*/
+
+"/*"([^*]|\*+[^*/])*(\*+"/")           /*Ignorar comentario multilinea*/
+
+
+/*------***---Reconocimiento de tipos de variables---***------*/
+
+"int"                       return 'INT';
+
+"float"                       return 'FLOAT';
+
+"string"                       return 'STRING';
+
+"boolean"                       return 'BOOLEAN';
+
+"float"                       return 'FLOAT';
+
+"char"                       return 'CHAR';
 
 .                           {
                                 if (!yy.errores) yy.errores = [];
