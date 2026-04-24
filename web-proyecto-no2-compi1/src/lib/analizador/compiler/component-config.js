@@ -688,7 +688,23 @@ case 0:/* ignorar espacios */
 break;
 case 1:/* Ignorar caracteres basura */
 break;
-case 2:
+case 2:/*Ignorar comentario de linea*/
+break;
+case 3:/*Ignorar comentario multilinea*/
+break;
+case 4:return 'INT';
+break;
+case 5:return 'FLOAT';
+break;
+case 6:return 'STRING';
+break;
+case 7:return 'BOOLEAN';
+break;
+case 8:return 'FLOAT';
+break;
+case 9:return 'CHAR';
+break;
+case 10:
                                 if (!yy.errores) yy.errores = [];
                                 
                                 yy.errores.push({
@@ -700,12 +716,12 @@ case 2:
                                 });
                             
 break;
-case 3:return 5;
+case 11:return 5;
 break;
 }
 },
-rules: [/^(?:\s+)/,/^(?:[\u200B\uFEFF\u200E\u200F\u202A-\u202E]+)/,/^(?:.)/,/^(?:$)/],
-conditions: {"INITIAL":{"rules":[0,1,2,3],"inclusive":true}}
+rules: [/^(?:\s+)/,/^(?:[\u200B\uFEFF\u200E\u200F\u202A-\u202E]+)/,/^(?:#.*)/,/^(?:\/\*([^*]|\*+[^*/])*(\*+\/))/,/^(?:int\b)/,/^(?:float\b)/,/^(?:string\b)/,/^(?:boolean\b)/,/^(?:float\b)/,/^(?:char\b)/,/^(?:.)/,/^(?:$)/],
+conditions: {"INITIAL":{"rules":[0,1,2,3,4,5,6,7,8,9,10,11],"inclusive":true}}
 });
 return lexer;
 })();
