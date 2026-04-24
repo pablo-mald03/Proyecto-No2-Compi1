@@ -319,6 +319,7 @@ definicion_lenguaje         : definicion_lenguaje cuerpo_lenguaje
                             }}
                             ;
 
+/*-----=====-----Produccion principal del cuerpo que puede tener el archivo .y-----=====-----*/
 
 cuerpo_lenguaje             : IMPORT cadena_texto PUNTO_COMA
                             {{
@@ -342,7 +343,12 @@ cuerpo_lenguaje             : IMPORT cadena_texto PUNTO_COMA
                             }}
                             | MAIN LLAVE_APERTURA cuerpo_main LLAVE_CIERRE
                             {{
-                                $$ = null;
+                                $$ = {
+                                    tipo: 'FUNCION_MAIN',
+                                    cuerpo: $3,
+                                    linea: @1.first_line,
+                                    columna: @1.first_column + 1
+                                };
                             }}
                             | tipo_variable IDENTIFICADOR IGUAL expresion_logica PUNTO_COMA
                             {{
@@ -389,6 +395,167 @@ cuerpo_lenguaje             : IMPORT cadena_texto PUNTO_COMA
                                 };
                             }}
                             ;
+
+
+/*-----=====-----Produccion que permite representar listado de instrucciones dentro de la funcion main-----=====-----*/
+
+bloque_instrucciones            : bloque_instrucciones instruccion
+                                {{
+                                    $1.push($2);
+                                    $$ = $1;
+                                }}
+                                | instruccion
+                                {{
+                                    $$ = [$1];
+                                }}
+                                | /* vacio */
+                                {{
+                                    $$ = [];
+                                }}
+                                ;
+
+
+/*-----=====-----Produccion que permite representar cada posible instruccion que puede tener el main dentro-----=====-----*/
+
+instruccion                 : ARROBA_VAR PARENT_APERTURA lista_parametros PARENT_CIERRE PUNTO_COMA
+                            {{
+                                $$ = {
+                                    tipo: 'LLAMADA_ARROBA_VAR',
+                                    parametros: $3,
+                                    linea: @1.first_line,
+                                    columna: @1.first_column + 1
+                                };
+                            }}
+                            | WHILE PARENT_APERTURA expresion_logica PARENT_CIERRE LLAVE_APERTURA bloque_instrucciones LLAVE_CIERRE
+                            {{
+                                $$ = {
+                                    tipo: 'CICLO_WHILE',
+                                    condicion: $3,
+                                    cuerpo: $6,
+                                    linea: @1.first_line,
+                                    columna: @1.first_column + 1
+                                };
+                            }}
+                            | FOR PARENT_APERTURA IDENTIFICADOR IGUAL expresion_logica PUNTO_COMA expresion_logica PUNTO_COMA IDENTIFICADOR IGUAL expresion_logica PARENT_CIERRE LLAVE_APERTURA bloque_instrucciones LLAVE_CIERRE
+                            {{
+                                // Corrección: Agregué el PARENT_CIERRE antes de la llave de apertura
+                                $$ = {
+                                    tipo: 'CICLO_FOR',
+                                    variable: $3,
+                                    inicio: $5,
+                                    condicion: $7,
+                                    incremento_id: $9,
+                                    incremento_val: $11,
+                                    cuerpo: $13,
+                                    linea: @1.first_line,
+                                    columna: @1.first_column + 1
+                                };
+                            }}
+                            | DO LLAVE_APERTURA bloque_instrucciones LLAVE_CIERRE WHILE PARENT_APERTURA expresion_logica PARENT_CIERRE PUNTO_COMA
+                            {{
+                                $$ = {
+                                    tipo: 'CICLO_DO_WHILE',
+                                    cuerpo: $3,
+                                    condicion: $7,
+                                    linea: @1.first_line,
+                                    columna: @1.first_column + 1
+                                };
+                            }}
+                            | IDENTIFICADOR IGUAL expresion_logica PUNTO_COMA
+                            {{
+                                $$ = {
+                                    tipo: 'ASIGNACION',
+                                    id: $1,
+                                    valor: $3,
+                                    linea: @1.first_line,
+                                    columna: @1.first_column + 1
+                                };
+                            }}
+                            | sentencia_if
+                            {{
+                                $$ = $1;
+                            }}
+                            ;
+
+
+
+/*-----=====-----Produccion que permite representar el cuerpo principal de la funcion main-----=====-----*/
+
+sentencia_if            : IF PARENT_APERTURA expresion_logica PARENT_CIERRE LLAVE_APERTURA bloque_instrucciones LLAVE_CIERRE opcional_else
+                        {{
+                            $$ = {
+                                tipo: 'ESTRUCTURA_IF',
+                                condicion: $3,
+                                instrucciones_true: $6,
+                                instrucciones_false: $8,
+                                linea: @1.first_line,
+                                columna: @1.first_column + 1
+                            };
+                        }}
+                        ;
+
+
+/*-----=====-----Producciones que representan a los else que puede llevar el if-----=====-----*/
+
+opcional_else           : ELSE sentencia_if
+                        {{
+                            $$ = $2; 
+                        }}
+                        | ELSE LLAVE_APERTURA bloque_instrucciones LLAVE_CIERRE
+                        {{
+                            $$ = $3; 
+                        }}
+                        | /* vacio */
+                        {{
+                            $$ = null; 
+                        }}
+                        ;
+
+
+/*-----=====-----Produccion que permite representar al listado de instrucciones dentro de una funcion-----=====-----*/
+
+cuerpo_funciones        : cuerpo_funciones instruccion_funcion
+                        {{
+                            $1.push($2);
+                            $$ = $1;
+                        }}
+                        | instruccion_funcion
+                        {{
+                            $$ = [$1]; 
+                        }}
+                        ;
+
+/*-----=====-----Produccion que define las instrucciones que pueden tener dentro las funciones-----=====-----*/
+
+instruccion_funcion         : EXECUTE query_database PUNTO_COMA
+                            {{
+                                $$ = {
+                                    tipo: 'DATABASE_QUERY',
+                                    query: $2,
+                                    linea: @1.first_line,
+                                    columna: @1.first_column + 1
+                                };
+                            }}
+                            | LOAD IDENTIFICADOR PUNTO_COMA
+                            {{
+                                $$ = {
+                                    tipo: 'LOAD_ID',
+                                    id: $2,
+                                    linea: @1.first_line,
+                                    columna: @1.first_column + 1
+                                };  
+                            }}
+                            | LOAD cadena_texto PUNTO_COMA
+                            {{
+                                $$ = {
+                                    tipo: 'LOAD_ARCHIVO',
+                                    uri: $2,
+                                    linea: @1.first_line,
+                                    columna: @1.first_column + 1
+                                };  
+                            }}
+                            ;
+
 
 /*-----=====-----Produccion principal para las querys en la base de datos .y-----=====-----*/
 
