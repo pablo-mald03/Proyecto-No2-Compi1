@@ -1805,23 +1805,41 @@ case 43:return 62;
 break;
 case 44:return 59;
 break;
-case 45:return 21;
+case 45:return 'MAYOR_IGUAL';
 break;
-case 46:return 9;
+case 46:return 'MENOR_IGUAL';
 break;
-case 47:return 11;              
+case 47:return 'MAYOR';
 break;
-case 48:return 13;    
+case 48:return 'MENOR';
 break;
-case 49:return 17;    
+case 49:return 'IGUALACION';
 break;
-case 50:return 57;
+case 50:return 'DIFERENTE';
 break;
-case 51:return 10;
+case 51:return 'OR';
 break;
-case 52:return 56;
+case 52:return 'AND';
 break;
-case 53:
+case 53:return 'NOT';
+break;
+case 54:return 21;
+break;
+case 55:return 9;
+break;
+case 56:return 11;              
+break;
+case 57:return 13;    
+break;
+case 58:return 17;    
+break;
+case 59:return 57;
+break;
+case 60:return 10;
+break;
+case 61:return 56;
+break;
+case 62:
                                 if (!yy.errores) yy.errores = [];
                                 
                                 yy.errores.push({
@@ -1833,12 +1851,12 @@ case 53:
                                 });
                             
 break;
-case 54:return 5;
+case 63:return 5;
 break;
 }
 },
-rules: [/^(?:\s+)/,/^(?:[\u200B\uFEFF\u200E\u200F\u202A-\u202E]+)/,/^(?:#[0-9A-Fa-f]{6})/,/^(?:#[0-9A-Fa-f]{3})/,/^(?:#.*)/,/^(?:\/\*([^*]|\*+[^*/])*(\*+\/))/,/^(?:CENTER|RIGHT|LEFT\b)/,/^(?:DOTTED|LINE|DOUBLE\b)/,/^(?:HELVETICA\b)/,/^(?:SANS\b)/,/^(?:SERIF\b)/,/^(?:MONO\b)/,/^(?:CURSIVE\b)/,/^(?:blue|white|red|green|violet|gray|black|lightgray\b)/,/^(?:top|bottom|left|right\b)/,/^(?:rgb\b)/,/^(?:text\b)/,/^(?:align\b)/,/^(?:size\b)/,/^(?:font\b)/,/^(?:padding\b)/,/^(?:margin\b)/,/^(?:border\b)/,/^(?:style\b)/,/^(?:radius\b)/,/^(?:height\b)/,/^(?:width\b)/,/^(?:min-height\b)/,/^(?:min-width\b)/,/^(?:max-height\b)/,/^(?:max-width\b)/,/^(?:background\b)/,/^(?:color\b)/,/^(?:,)/,/^(?:;)/,/^(?:\{)/,/^(?:\})/,/^(?:\()/,/^(?:\))/,/^(?:=)/,/^(?:\+)/,/^(?:-)/,/^(?:\*)/,/^(?:\/)/,/^(?:%)/,/^(?:extends\b)/,/^(?:@for\b)/,/^(?:from\b)/,/^(?:through\b)/,/^(?:to\b)/,/^(?:[0-9]+(\.[0-9]+)?\b)/,/^(?:\$[a-zA-Z_][a-zA-Z0-9_-]*)/,/^(?:[a-zA-Z_][a-zA-Z0-9_-]*)/,/^(?:.)/,/^(?:$)/],
-conditions: {"INITIAL":{"rules":[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54],"inclusive":true}}
+rules: [/^(?:\s+)/,/^(?:[\u200B\uFEFF\u200E\u200F\u202A-\u202E]+)/,/^(?:#[0-9A-Fa-f]{6})/,/^(?:#[0-9A-Fa-f]{3})/,/^(?:#.*)/,/^(?:\/\*([^*]|\*+[^*/])*(\*+\/))/,/^(?:CENTER|RIGHT|LEFT\b)/,/^(?:DOTTED|LINE|DOUBLE\b)/,/^(?:HELVETICA\b)/,/^(?:SANS\b)/,/^(?:SERIF\b)/,/^(?:MONO\b)/,/^(?:CURSIVE\b)/,/^(?:blue|white|red|green|violet|gray|black|lightgray\b)/,/^(?:top|bottom|left|right\b)/,/^(?:rgb\b)/,/^(?:text\b)/,/^(?:align\b)/,/^(?:size\b)/,/^(?:font\b)/,/^(?:padding\b)/,/^(?:margin\b)/,/^(?:border\b)/,/^(?:style\b)/,/^(?:radius\b)/,/^(?:height\b)/,/^(?:width\b)/,/^(?:min-height\b)/,/^(?:min-width\b)/,/^(?:max-height\b)/,/^(?:max-width\b)/,/^(?:background\b)/,/^(?:color\b)/,/^(?:,)/,/^(?:;)/,/^(?:\{)/,/^(?:\})/,/^(?:\()/,/^(?:\))/,/^(?:=)/,/^(?:\+)/,/^(?:-)/,/^(?:\*)/,/^(?:\/)/,/^(?:%)/,/^(?:>=)/,/^(?:<=)/,/^(?:>)/,/^(?:<)/,/^(?:==)/,/^(?:!=)/,/^(?:\|\|)/,/^(?:&&)/,/^(?:!)/,/^(?:extends\b)/,/^(?:@for\b)/,/^(?:from\b)/,/^(?:through\b)/,/^(?:to\b)/,/^(?:[0-9]+(\.[0-9]+)?\b)/,/^(?:\$[a-zA-Z_][a-zA-Z0-9_-]*)/,/^(?:[a-zA-Z_][a-zA-Z0-9_-]*)/,/^(?:.)/,/^(?:$)/],
+conditions: {"INITIAL":{"rules":[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63],"inclusive":true}}
 });
 return lexer;
 })();

@@ -98,7 +98,7 @@
 
 "/"                     return 'DIVISION';
 
-"%"                     return 'PORCENTAJE';
+"%"                     return 'MODULO';
 
 
 /*------***---Reconocimiento de operadores de comparacion---***------*/
@@ -185,9 +185,6 @@
 
 <backstring>"`"          { this.popState(); return 'BACKTICK'; }
 
-%%
-
-
 .                           {
                                 if (!yy.errores) yy.errores = [];
                                 
@@ -204,7 +201,67 @@
 
 /lex
 
+
 /*---****===== Seccion del analizador Sintactico =====****---*/
+
+%{
+    /* Diccionario para traducir tokens tecnicos a nombres amigables */
+    const diccionarioTokens = {
+        "PUNTO_COMA": "';'",
+        "COMA": "' , '",
+        "LLAVE_APERTURA": "'{'",
+        "LLAVE_CIERRE": "'}'",
+        "PARENT_APERTURA": "'('",
+        "PARENT_CIERRE": "')'",
+        "CORCHETE_APERTURA": "'('",
+        "CORCHETE_CIERRE": "')'",
+        "MAS": "'+'",
+        "MENOS": "'-'",
+        "MULTIPLICACION": "'*'",
+        "DIVISION": "'/'",
+        "MODULO": "'%'",
+        "FOR": "'for'",
+        "IGUAL": "'='",
+        "EOF": "el fin del archivo"
+    };
+
+    /* Función auxiliar para reportar errores al arreglo global */
+    function reportarError(yy, info) {
+        const nuevoError = {
+            tipo: 'ERROR_SINTACTICO',
+            descripcion: info.descripcion,
+            fila: info.loc.first_line,
+            columna: info.loc.first_column + 1
+        };
+    
+        yy.errores.push({
+            lexema: info.texto || "N/A",
+            tipo: "Sintactico",
+            fila: nuevoError.fila,
+            columna: nuevoError.columna,
+            descripcion: nuevoError.descripcion
+        });
+    
+        return nuevoError;
+    } 
+
+    /* Funcion auxiliar para traducir los tokens esperados que Jison provee */
+    function traducirEsperados(esperados) {
+
+        if (!esperados || esperados.length === 0) return "algo diferente";
+
+        const traducidos = esperados.map(token => {
+            const tokenLimpio = token.replace(/'/g, "");
+            return diccionarioTokens[tokenLimpio] || tokenLimpio;
+        });
+
+        if (traducidos.length > 1) {
+            const ultimo = traducidos.pop();
+            return traducidos.join(", ") + " o " + ultimo;
+        }
+        return traducidos[0];
+    }
+%}
 
 
 /*----***Definicion de presedencia***----*/
@@ -222,7 +279,7 @@
 /*----***Definicion de operadores matematicos***----*/
 
 %left 'MAS' 'MENOS'
-%left 'MULTIPLICACION' 'DIVISION' 'PORCENTAJE'
+%left 'MULTIPLICACION' 'DIVISION' 'MODULO'
 %right 'NOT' 'UMENOS'
 
 /*----Simbolo inicial----*/
@@ -272,20 +329,153 @@ cuerpo_lenguaje             : IMPORT cadena_texto PUNTO_COMA
                                     columna: @1.first_column + 1
                                 };
                             }}
+                            | FUNCTION IDENTIFICADOR CORCHETE_APERTURA lista_parametros CORCHETE_CIERRE LLAVE_APERTURA cuerpo_funciones LLAVE_CIERRE
+                            {{
+                                $$ = {
+                                    tipo: 'FUNCION',
+                                    id: $2,
+                                    parametros: $4,
+                                    cuerpo: $7,
+                                    linea: @1.first_line,
+                                    columna: @1.first_column + 1
+                                };
+                            }}
+                            | MAIN LLAVE_APERTURA cuerpo_main LLAVE_CIERRE
+                            {{
+                                $$ = null;
+                            }}
                             | tipo_variable IDENTIFICADOR IGUAL expresion_logica PUNTO_COMA
                             {{
                                 $$ = {
                                     tipo: 'DECLARACION_VARIABLE',
-                                    ruta: $2, 
+                                    tipado: $1,
+                                    id: $2, 
+                                    valor: $4,
+                                    linea: @1.first_line,
+                                    columna: @1.first_column + 1
+                                };
+                            }}
+                            | tipo_variable CORCHETE_APERTURA CORCHETE_CIERRE IDENTIFICADOR IGUAL CORCHETE_APERTURA valor_arreglo CORCHETE_CIERRE PUNTO_COMA
+                            {{
+                                $$ = {
+                                    tipo: 'ARREGLO_VACIO',
+                                    tipado: $1,
+                                    id: $4, 
+                                    amplitud: $7,
+                                    linea: @1.first_line,
+                                    columna: @1.first_column + 1
+                                };
+                            }}
+                            | tipo_variable CORCHETE_APERTURA CORCHETE_CIERRE IDENTIFICADOR IGUAL LLAVE_APERTURA lista_expresiones LLAVE_CIERRE PUNTO_COMA
+                            {{
+                                $$ = {
+                                    tipo: 'ARREGLO_INICIALIZADO',
+                                    tipado: $1,
+                                    id: $4, 
+                                    valores: $7,
+                                    linea: @1.first_line,
+                                    columna: @1.first_column + 1
+                                };
+                            }}
+                            | tipo_variable CORCHETE_APERTURA CORCHETE_CIERRE IDENTIFICADOR IGUAL EXECUTE query_database PUNTO_COMA
+                            {{
+                                $$ = {
+                                    tipo: 'ARREGLO_QUERY',
+                                    tipado: $1,
+                                    id: $4, 
+                                    query: $7,
                                     linea: @1.first_line,
                                     columna: @1.first_column + 1
                                 };
                             }}
                             ;
 
+/*-----=====-----Produccion principal para las querys en la base de datos .y-----=====-----*/
 
-/*-----=====-----Produccion principal para los valores que pueden adoptar las variables .y-----=====-----*/
+query_database          : BACKTICK contenido_query BACKTICK
+                        {{
+                            $$ = {
+                                tipo: 'QUERY_TEMPLATE',
+                                fragmentos: $2,
+                                linea: @1.first_line,
+                                columna: @1.first_column + 1
+                            };
+                        }}
+                        ;
 
+/*-----=====-----Produccion principal para el contenido de la query en el .y-----=====-----*/
+
+contenido_query         : contenido_query elemento_query
+                        {{
+                            $1.push($2);
+                            $$ = $1;
+                        }}
+                        | /* vacio */
+                        {{
+                            $$ = [];
+                        }}
+                        ;
+
+/*-----=====-----Produccion principal para el contenido de la query en el .y-----=====-----*/
+
+elemento_query          : TEXTO_BACKSTRING
+                        {{
+                            $$ = { 
+                                tipo: 'TEXTO_QUERY', 
+                                valor: $1,
+                                linea: @1.first_line,
+                                columna: @1.first_column + 1
+                            };
+                        }}
+                        | VAR_INTERPOLADA
+                        {{
+                            $$ = { 
+                                tipo: 'VAR_INTERPOLADA', 
+                                id: $1,
+                                linea: @1.first_line,
+                                columna: @1.first_column + 1
+                            };
+                        }}
+                        ;
+
+
+/*-----=====-----Produccion principal para los valores de inicializacion del arreglo .y-----=====-----*/
+lista_expresiones           : lista_expresiones COMA expresion_logica
+                            {{ 
+                                $1.push($3); 
+                                $$ = $1; 
+                            }}
+                            | expresion_logica
+                            {{ 
+                                $$ = [$1]; 
+                            }}
+                            ;
+
+/*-----=====-----Produccion principal para los valores que pueden contener los arreglos dentro de su inicializacion directa .y-----=====-----*/
+
+valor_arreglo               : expresion_logica
+                            {{
+                                $$ = $1;
+                            }}
+                            | IDENTIFICADOR
+                            {{
+                                $$ = { 
+                                    tipo: 'ID', 
+                                    valor: $1, 
+                                    linea: @1.first_line, 
+                                    columna: @1.first_column + 1 
+                                };
+                            }}
+                            | ENTERO
+                            {{
+                                $$ = { 
+                                    tipo: 'ENTERO', 
+                                    valor: parseInt($1), 
+                                    linea: @1.first_line, 
+                                    columna: @1.first_column + 1 
+                                };
+                            }}
+                            ;
 
 /*-----=====-----Produccion principal para las expresiones permitidas en el lenguaje (precedencia OR) en .y-----=====-----*/
 
@@ -439,6 +629,15 @@ expresion_multiplicativa        : expresion_multiplicativa MULTIPLICACION expres
                                         der: $3 
                                     }; 
                                 }}
+                                | expresion_multiplicativa MODULO expresion_unaria
+                                {{ 
+                                    $$ = { 
+                                        tipo: 'ARITMETICA', 
+                                        op: 'MODULO', 
+                                        izq: $1, 
+                                        der: $3 
+                                    }; 
+                                }}
                                 | exp_unaria
                                 {{ 
                                     $$ = $1; 
@@ -549,7 +748,7 @@ contenido_cadena        : contenido_cadena TEXTO_PLANO
                         }}
                         | /* vacio */
                         {{
-                            $$ = ""; /
+                            $$ = "";
                         }}
                         ;
 

@@ -19,17 +19,20 @@
 
 /*------***---Reconocimiento de tipos de variables---***------*/
 
-"int"                       return 'INT';
+"int"                           return 'INT';
 
-"float"                       return 'FLOAT';
+"float"                         return 'FLOAT';
 
-"string"                       return 'STRING';
+"string"                        return 'STRING';
 
 "boolean"                       return 'BOOLEAN';
 
-"float"                       return 'FLOAT';
+"float"                         return 'FLOAT';
 
-"char"                       return 'CHAR';
+"char"                          return 'CHAR';
+
+/*------***---Reconocimiento ---***------*/
+
 
 .                           {
                                 if (!yy.errores) yy.errores = [];

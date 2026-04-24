@@ -129,6 +129,29 @@
 
 "%"                     return 'PORCENTAJE';
 
+/*------***---Reconocimiento de operadores de comparacion---***------*/
+
+">="                        return 'MAYOR_IGUAL';
+
+"<="                        return 'MENOR_IGUAL';
+
+">"                         return 'MAYOR';
+
+"<"                         return 'MENOR';
+
+"=="                        return 'IGUALACION';
+
+"!="                        return 'DIFERENTE';
+
+
+/*------***---Reconocimiento de operadores logicos---***------*/
+
+"||"                            return 'OR';
+
+"&&"                            return 'AND';
+
+"!"                             return 'NOT';
+
 /*------***--- Reconocimiento de palabras reservadas del lenguaje---***------*/
 
 "extends"                   return 'EXTENDS';
@@ -238,10 +261,23 @@
 
 
 /*----***Definicion de presedencia***----*/
+
+/*----***Definicion de operadores logicos***----*/
+
+%left 'OR'
+%left 'AND'
+
+/*----***Definicion de operadores de comparacion***----*/
+
+%left 'IGUALACION' 'DIFERENTE'
+%left 'MAYOR' 'MENOR' 'MAYOR_IGUAL' 'MENOR_IGUAL'
+
+/*----***Definicion de operadores matematicos***----*/
+
 %left 'MAS' 'MENOS'
 %left 'MULTIPLICACION' 'DIVISION' 'PORCENTAJE'
-%right UMENOS 
-%left UMAS
+
+%right 'NOT' 'UMENOS'
 
 /*----Simbolo inicial----*/
 
