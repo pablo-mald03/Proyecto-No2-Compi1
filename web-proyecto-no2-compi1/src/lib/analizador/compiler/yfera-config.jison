@@ -84,6 +84,8 @@
 
 "break"                         return 'BREAK';
 
+"continue"                      return 'CONTINUE';
+
 "default"                       return 'DEFAULT';
 
 "do"                            return 'DO';
@@ -438,7 +440,6 @@ instruccion                 : ARROBA_VAR PARENT_APERTURA lista_parametros PARENT
                             }}
                             | FOR PARENT_APERTURA IDENTIFICADOR IGUAL expresion_logica PUNTO_COMA expresion_logica PUNTO_COMA IDENTIFICADOR IGUAL expresion_logica PARENT_CIERRE LLAVE_APERTURA bloque_instrucciones LLAVE_CIERRE
                             {{
-                                // Corrección: Agregué el PARENT_CIERRE antes de la llave de apertura
                                 $$ = {
                                     tipo: 'CICLO_FOR',
                                     variable: $3,
@@ -461,23 +462,138 @@ instruccion                 : ARROBA_VAR PARENT_APERTURA lista_parametros PARENT
                                     columna: @1.first_column + 1
                                 };
                             }}
-                            | IDENTIFICADOR IGUAL expresion_logica PUNTO_COMA
+                            | operaciones_basicas
                             {{
-                                $$ = {
-                                    tipo: 'ASIGNACION',
-                                    id: $1,
-                                    valor: $3,
-                                    linea: @1.first_line,
-                                    columna: @1.first_column + 1
-                                };
+                                $$ = $1;
                             }}
                             | sentencia_if
                             {{
                                 $$ = $1;
                             }}
+                            | BREAK PUNTO_COMA
+                            {{
+                                $$ = {
+                                    tipo: 'BREAK',
+                                    linea: @1.first_line,
+                                    columna: @1.first_column + 1
+                                };
+                            }}
+                            ;
+
+/*-----=====-----Produccion que permite definir la produccion de switch-----=====-----*/
+
+sentencia_switch            : SWITCH PARENT_APERTURA expresion_logica PARENT_CIERRE LLAVE_APERTURA lista_casos LLAVE_CIERRE
+                            {{
+                                $$ = {
+                                    tipo: 'ESTRUCTURA_SWITCH',
+                                    expresion: $3,
+                                    casos: $6,
+                                    linea: @1.first_line,
+                                    columna: @1.first_column + 1
+                                };
+                            }}
+                            ;
+
+/*-----=====-----Produccion que permite definir la lista de casos que puede tener el switch-----=====-----*/
+
+lista_casos                 : lista_casos caso
+                            {{
+                                $1.push($2);
+                                $$ = $1;
+                            }}
+                            | caso
+                            {{
+                                $$ = [$1];
+                            }}
+                            | /* vacio*/
+                            {{
+                                $$ = [];
+                            }}
+                            ;
+
+/*-----=====---*****--Produccion que permite definir los casos y el cuerpo de los casos--*****---=====-----*/
+
+caso                        : CASE expresion_logica DOS_PUNTOS bloque_instrucciones
+                            {{
+                                $$ = {
+                                    tipo: 'CASO',
+                                    valor: $2,
+                                    instrucciones: $4,
+                                    linea: @1.first_line,
+                                    columna: @1.first_column + 1
+                                };
+                            }}
+                            | DEFAULT DOS_PUNTOS bloque_instrucciones
+                            {{
+                                $$ = {
+                                    tipo: 'DEFAULT',
+                                    instrucciones: $3,
+                                    linea: @1.first_line,
+                                    columna: @1.first_column + 1
+                                };
+                            }}
                             ;
 
 
+/*-----=====-----Produccion que permite representar los posibles casos de reasignacion de variables u operaciones diferentes-----=====-----*/
+
+operaciones_basicas             : IDENTIFICADOR IGUAL expresion_logica PUNTO_COMA
+                                {{
+                                    $$ = {
+                                        tipo: 'ASIGNACION',
+                                        id: $1,
+                                        valor: $3,
+                                        linea: @1.first_line,
+                                        columna: @1.first_column + 1
+                                    };
+                                }}
+                                | IDENTIFICADOR CORCHETE_APERTURA expresion_logica CORCHETE_CIERRE IGUAL expresion_logica PUNTO_COMA
+                                {{
+                                    $$ = {
+                                        tipo: 'ASIGNACION_ARREGLO',
+                                        id: $1,
+                                        indice: $3,   // La posición (ej: i + 1)
+                                        valor: $6,    // Lo que vas a guardar
+                                        linea: @1.first_line,
+                                        columna: @1.first_column + 1
+                                    };
+                                }}
+                                ;
+
+/*-----=====-----Produccion que permite representar los posibles parametros que se reciben dentro de un componente-----=====-----*/
+
+lista_parametros        : lista_parametros COMA parametro
+                        {{
+                            $1.push($3);
+                            $$ = $1;
+                        }}
+                        | parametro
+                        {{
+                            $$ = [$1];
+                        }}
+                        | /* vacio */
+                        {{
+                            $$ = [];
+                        }}
+                        ;
+
+/*-----=====-----Produccion que permite representar los posibles parametros que se reciben dentro de un componente-----=====-----*/
+
+parametro               : expresion_logica
+                        {{
+                            $$ = $1;
+                        }}
+                        | IDENTIFICADOR CORCHETE_APERTURA expresion_logica CORCHETE_CIERRE
+                        {{
+                            $$ = {
+                                tipo: 'ACCESO_ARREGLO',
+                                id: $1,
+                                indice: $3,
+                                linea: @1.first_line,
+                                columna: @1.first_column + 1
+                            };
+                        }}
+                        ;
 
 /*-----=====-----Produccion que permite representar el cuerpo principal de la funcion main-----=====-----*/
 
@@ -883,6 +999,16 @@ valor_primario              : ENTERO
                                     linea: @1.first_line,
                                     columna: @1.first_column + 1  
                                 }; 
+                            }}
+                            | IDENTIFICADOR CORCHETE_APERTURA expresion_logica CORCHETE_CIERRE
+                            {{
+                                $$ = {
+                                    tipo: 'ACCESO_ARREGLO',
+                                    valor: $1,
+                                    indice: $3,
+                                    linea: @1.first_line,
+                                    columna: @1.first_column + 1
+                                };
                             }}
                             | cadena_texto
                             {{
