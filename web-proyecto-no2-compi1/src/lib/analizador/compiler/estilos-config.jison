@@ -808,14 +808,14 @@ expresion_ciclos        : expresion_ciclos MAS expresion_ciclos
                                 izq: $1, 
                                 der: $3,
                                 loc_linea: @1.first_line, 
-                                loc_columna: @1.first_column + 1 
+                                loc_columna: @1.first_column + 1  
                             }; 
                         }}
                         | expresion_ciclos MENOS expresion_ciclos
                         {{ 
                             $$ = { 
                                 tipo: 'OPERACION', 
-                                operador: '-', 
+                                operador: 'RESTA', 
                                 izq: $1, 
                                 der: $3,
                                 loc_linea: @1.first_line, 
@@ -855,6 +855,94 @@ expresion_ciclos        : expresion_ciclos MAS expresion_ciclos
                                 loc_columna: @1.first_column + 1 
                             }; 
                         }}
+                        | expresion_ciclos MAYOR expresion_ciclos
+                        {{ 
+                            $$ = { 
+                                tipo: 'OPERACION', 
+                                operador: 'MAYOR', 
+                                izq: $1, 
+                                der: $3,
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1  
+                            }; 
+                        }}
+                        | expresion_ciclos MENOR expresion_ciclos
+                        {{ 
+                            $$ = { 
+                                tipo: 'OPERACION', 
+                                operador: 'MENOR', 
+                                izq: $1, 
+                                der: $3,
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1  
+                            }; 
+                        }}
+                        | expresion_ciclos MAYOR_IGUAL expresion_ciclos
+                        {{ 
+                            $$ = { 
+                                tipo: 'OPERACION', 
+                                operador: 'MAYOR_IGUAL', 
+                                izq: $1, 
+                                der: $3,
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1  
+                            }; 
+                        }}
+                        | expresion_ciclos MENOR_IGUAL expresion_ciclos
+                        {{ 
+                            $$ = { 
+                                tipo: 'OPERACION', 
+                                operador: 'MENOR_IGUAL', 
+                                izq: $1, 
+                                der: $3,
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1  
+                            }; 
+                        }}
+                        | expresion_ciclos IGUALACION expresion_ciclos
+                        {{ 
+                            $$ = { 
+                                tipo: 'OPERACION', 
+                                operador: 'IGUALACION', 
+                                izq: $1, 
+                                der: $3,
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1  
+                            }; 
+                        }}
+                        | expresion_ciclos DIFERENTE expresion_ciclos
+                        {{ 
+                            $$ = { 
+                                tipo: 'OPERACION', 
+                                operador: 'DIFERENCIA', 
+                                izq: $1, 
+                                der: $3,
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1  
+                            }; 
+                        }}
+                        | expresion_ciclos OR expresion_ciclos
+                        {{ 
+                            $$ = { 
+                                tipo: 'OPERACION', 
+                                operador: 'OR', 
+                                izq: $1, 
+                                der: $3,
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1  
+                            }; 
+                        }}
+                        | expresion_ciclos AND expresion_ciclos
+                        {{ 
+                            $$ = { 
+                                tipo: 'OPERACION', 
+                                operador: 'AND', 
+                                izq: $1, 
+                                der: $3,
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1  
+                            }; 
+                        }}
                         | MENOS expresion_ciclos %prec UMENOS
                         {{ 
                             $$ = { 
@@ -863,6 +951,16 @@ expresion_ciclos        : expresion_ciclos MAS expresion_ciclos
                                 valor: $2,
                                 loc_linea: @1.first_line, 
                                 loc_columna: @1.first_column + 1 
+                            }; 
+                        }}
+                        | NOT expresion_ciclos
+                        {{ 
+                            $$ = { 
+                                tipo: 'OPERACION_UNARIA', 
+                                operador: 'NOT', 
+                                valor: $2,
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1  
                             }; 
                         }}
                         | PARENT_APERTURA expresion_ciclos PARENT_CIERRE
@@ -888,7 +986,6 @@ expresion_ciclos        : expresion_ciclos MAS expresion_ciclos
                             };
                         }}
                         ;
-
 
 /*-----=====-----Produccion que define el cuerpo de un id utilizado-----=====-----*/
 
@@ -1271,11 +1368,109 @@ expresion_normal        : expresion_normal MAS expresion_normal
                                 loc_columna: @1.first_column + 1  
                             }; 
                         }}
+                        | expresion_normal MAYOR expresion_normal
+                        {{ 
+                            $$ = { 
+                                tipo: 'OPERACION', 
+                                operador: 'MAYOR', 
+                                izq: $1, 
+                                der: $3,
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1  
+                            }; 
+                        }}
+                        | expresion_normal MENOR expresion_normal
+                        {{ 
+                            $$ = { 
+                                tipo: 'OPERACION', 
+                                operador: 'MENOR', 
+                                izq: $1, 
+                                der: $3,
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1  
+                            }; 
+                        }}
+                        | expresion_normal MAYOR_IGUAL expresion_normal
+                        {{ 
+                            $$ = { 
+                                tipo: 'OPERACION', 
+                                operador: 'MAYOR_IGUAL', 
+                                izq: $1, 
+                                der: $3,
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1  
+                            }; 
+                        }}
+                        | expresion_normal MENOR_IGUAL expresion_normal
+                        {{ 
+                            $$ = { 
+                                tipo: 'OPERACION', 
+                                operador: 'MENOR_IGUAL', 
+                                izq: $1, 
+                                der: $3,
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1  
+                            }; 
+                        }}
+                        | expresion_normal IGUALACION expresion_normal
+                        {{ 
+                            $$ = { 
+                                tipo: 'OPERACION', 
+                                operador: 'IGUALACION', 
+                                izq: $1, 
+                                der: $3,
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1  
+                            }; 
+                        }}
+                        | expresion_normal DIFERENTE expresion_normal
+                        {{ 
+                            $$ = { 
+                                tipo: 'OPERACION', 
+                                operador: 'DIFERENCIA', 
+                                izq: $1, 
+                                der: $3,
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1  
+                            }; 
+                        }}
+                        | expresion_normal OR expresion_normal
+                        {{ 
+                            $$ = { 
+                                tipo: 'OPERACION', 
+                                operador: 'OR', 
+                                izq: $1, 
+                                der: $3,
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1  
+                            }; 
+                        }}
+                        | expresion_normal AND expresion_normal
+                        {{ 
+                            $$ = { 
+                                tipo: 'OPERACION', 
+                                operador: 'AND', 
+                                izq: $1, 
+                                der: $3,
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1  
+                            }; 
+                        }}
                         | MENOS expresion_normal %prec UMENOS
                         {{ 
                             $$ = { 
                                 tipo: 'OPERACION_UNARIA', 
                                 operador: 'MENOS_UNARIO', 
+                                valor: $2,
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1  
+                            }; 
+                        }}
+                        | NOT expresion_normal
+                        {{ 
+                            $$ = { 
+                                tipo: 'OPERACION_UNARIA', 
+                                operador: 'NOT', 
                                 valor: $2,
                                 loc_linea: @1.first_line, 
                                 loc_columna: @1.first_column + 1  

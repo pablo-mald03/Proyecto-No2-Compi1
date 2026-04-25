@@ -438,19 +438,9 @@ instruccion                 : ARROBA_VAR PARENT_APERTURA lista_parametros PARENT
                                     columna: @1.first_column + 1
                                 };
                             }}
-                            | FOR PARENT_APERTURA IDENTIFICADOR IGUAL expresion_logica PUNTO_COMA expresion_logica PUNTO_COMA IDENTIFICADOR IGUAL expresion_logica PARENT_CIERRE LLAVE_APERTURA bloque_instrucciones LLAVE_CIERRE
+                            | estructura_for
                             {{
-                                $$ = {
-                                    tipo: 'CICLO_FOR',
-                                    variable: $3,
-                                    inicio: $5,
-                                    condicion: $7,
-                                    incremento_id: $9,
-                                    incremento_val: $11,
-                                    cuerpo: $13,
-                                    linea: @1.first_line,
-                                    columna: @1.first_column + 1
-                                };
+                                $$ = $1;
                             }}
                             | DO LLAVE_APERTURA bloque_instrucciones LLAVE_CIERRE WHILE PARENT_APERTURA expresion_logica PARENT_CIERRE PUNTO_COMA
                             {{
@@ -474,6 +464,52 @@ instruccion                 : ARROBA_VAR PARENT_APERTURA lista_parametros PARENT
                             {{
                                 $$ = {
                                     tipo: 'BREAK',
+                                    linea: @1.first_line,
+                                    columna: @1.first_column + 1
+                                };
+                            }}
+                            | CONTINUE PUNTO_COMA
+                            {{
+                                $$ = {
+                                    tipo: 'CONTINUE',
+                                    linea: @1.first_line,
+                                    columna: @1.first_column + 1
+                                };
+                            }}
+                            ;
+
+/*-----=====-----Produccion que permite definir la produccion de la estructura del for-----=====-----*/
+
+estructura_for              : FOR PARENT_APERTURA IDENTIFICADOR IGUAL expresion_logica PUNTO_COMA expresion_logica PUNTO_COMA IDENTIFICADOR IGUAL expresion_logica PARENT_CIERRE LLAVE_APERTURA bloque_instrucciones LLAVE_CIERRE
+                            {{
+                                $$ = {
+                                    tipo: 'CICLO_FOR',
+                                    variable: $3,
+                                    inicio: $5,
+                                    condicion: $7,
+                                    actualizacion: {
+                                        tipo: 'ASIGNACION',
+                                        id: $9,
+                                        valor: $11
+                                    },
+                                    cuerpo: $14, 
+                                    linea: @1.first_line,
+                                    columna: @1.first_column + 1
+                                };
+                            }}
+                            | FOR PARENT_APERTURA IDENTIFICADOR IGUAL expresion_logica PUNTO_COMA expresion_logica PUNTO_COMA IDENTIFICADOR MAS MAS PARENT_CIERRE LLAVE_APERTURA bloque_instrucciones LLAVE_CIERRE
+                            {{
+                                $$ = {
+                                    tipo: 'CICLO_FOR',
+                                    variable: $3,
+                                    inicio: $5,
+                                    condicion: $7,
+                                    actualizacion: {
+                                        tipo: 'INCREMENTO_SIMPLE',
+                                        id: $9,
+                                        valor: 1
+                                    },
+                                    cuerpo: $14,
                                     linea: @1.first_line,
                                     columna: @1.first_column + 1
                                 };
@@ -552,8 +588,8 @@ operaciones_basicas             : IDENTIFICADOR IGUAL expresion_logica PUNTO_COM
                                     $$ = {
                                         tipo: 'ASIGNACION_ARREGLO',
                                         id: $1,
-                                        indice: $3,   // La posición (ej: i + 1)
-                                        valor: $6,    // Lo que vas a guardar
+                                        indice: $3,  
+                                        valor: $6,  
                                         linea: @1.first_line,
                                         columna: @1.first_column + 1
                                     };
