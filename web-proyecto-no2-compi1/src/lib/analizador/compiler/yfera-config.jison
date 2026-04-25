@@ -396,6 +396,24 @@ cuerpo_lenguaje             : IMPORT cadena_texto PUNTO_COMA
                                     columna: @1.first_column + 1
                                 };
                             }}
+                            | error PUNTO_COMA
+                            {{
+                                reportarError(yy, {
+                                    descripcion: 'Error de sintaxis en la definicion global cerca de punto y coma',
+                                    loc: @1,
+                                    texto: yytext
+                                });
+                                $$ = null;
+                            }}
+                            | error LLAVE_CIERRE
+                            {{
+                                reportarError(yy, {
+                                    descripcion: 'Error de sintaxis cerca del cierre de bloque.',
+                                    loc: @1,
+                                    texto: yytext
+                                });
+                                $$ = null;
+                            }}
                             ;
 
 
@@ -442,7 +460,7 @@ instruccion                 : ARROBA_VAR PARENT_APERTURA lista_parametros PARENT
                             {{
                                 $$ = $1;
                             }}
-                            | DO LLAVE_APERTURA bloque_instrucciones LLAVE_CIERRE WHILE PARENT_APERTURA expresion_logica PARENT_CIERRE PUNTO_COMA
+                            | DO LLAVE_APERTURA bloque_instrucciones LLAVE_CIERRE WHILE PARENT_APERTURA expresion_logica PARENT_CIERRE
                             {{
                                 $$ = {
                                     tipo: 'CICLO_DO_WHILE',
@@ -475,6 +493,15 @@ instruccion                 : ARROBA_VAR PARENT_APERTURA lista_parametros PARENT
                                     linea: @1.first_line,
                                     columna: @1.first_column + 1
                                 };
+                            }}
+                            | error PUNTO_COMA
+                            {{
+                                reportarError(yy, {
+                                    descripcion: 'Se esperaba una instrucción valida antes del punto y coma.',
+                                    loc: @1,
+                                    texto: yytext
+                                });
+                                $$ = null;
                             }}
                             ;
 
@@ -628,6 +655,15 @@ parametro               : expresion_logica
                                 linea: @1.first_line,
                                 columna: @1.first_column + 1
                             };
+                        }}
+                        | error
+                        {{
+                            reportarError(yy, {
+                                descripcion: 'Error de sintaxis en el parámetro.',
+                                loc: @1,
+                                texto: yytext
+                            });
+                            $$ = null;
                         }}
                         ;
 
