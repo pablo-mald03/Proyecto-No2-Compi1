@@ -31,8 +31,6 @@
 
 "boolean"                       return 'BOOLEAN';
 
-"float"                         return 'FLOAT';
-
 "char"                          return 'CHAR';
 
 "function"                      return 'FUNCTION';
