@@ -354,6 +354,103 @@ cuerpo_componentes              : secciones_def
                                 {{ 
                                     $$ = $1; 
                                 }}
+                                | ciclo_for_def     
+                                {{ 
+                                    $$ = $1; 
+                                }}
+                                ;
+
+/*-----=====-----Produccion que permite representar un ciclo for dentro del componente-----=====-----*/
+
+ciclo_for_def                   : FOR EACH PARENT_APERTURA VARIABLE_DOLAR DOS_PUNTOS VARIABLE_DOLAR PARENT_CIERRE LLAVE_APERTURA contenido_bloque LLAVE_CIERRE
+                                {{
+                                    $$ = {
+                                        tipo: 'FOR_EACH',
+                                        arreglo: $4,
+                                        iterador: $6,
+                                        cuerpo: $9,
+                                        linea: @1.first_line,
+                                        columna: @1.first_column + 1
+                                    };
+                                }}
+                                | FOR PARENT_APERTURA lista_iteradores PARENT_CIERRE TRACK VARIABLE_DOLAR LLAVE_APERTURA contenido_bloque LLAVE_CIERRE empty_opcional
+                                {{
+                                    $$ = {
+                                        tipo: 'FOR_COMPLEJO',
+                                        iteradores: $3,
+                                        track: $6,
+                                        cuerpo: $8,
+                                        empty: $10,
+                                        linea: @1.first_line,
+                                        columna: @1.first_column + 1
+                                    };
+                                }}
+                                ;
+
+/*-----=====----- Producciones de los iteradores del for complejo -----=====-----*/
+
+lista_iteradores                : lista_iteradores COMA iterador_def
+                                {{
+                                    $1.push($3);
+                                    $$ = $1;
+                                }}
+                                | iterador_def
+                                {{
+                                    $$ = [$1];
+                                }}
+                                ;
+
+/*-----=====----- Producciones del iterador definido -----=====-----*/
+
+iterador_def                    : VARIABLE_DOLAR DOS_PUNTOS VARIABLE_DOLAR
+                                {{
+                                    $$ = {
+                                        arreglo: $1,
+                                        iterador: $3
+                                    };
+                                }}
+                                ;
+
+/*-----=====----- Produccion del bloque empty opcional -----=====-----*/
+
+empty_opcional                  : EMPTY LLAVE_APERTURA contenido_bloque LLAVE_CIERRE
+                                {{
+                                    $$ = {
+                                        tipo: 'EMPTY_BLOQUE',
+                                        cuerpo: $3,
+                                        linea: @1.first_line,
+                                        columna: @1.first_column + 1
+                                    };
+                                }}
+                                | /* vacio */
+                                {{
+                                    $$ = null;
+                                }}
+                                ;
+
+/*-----=====----- Contenido generico de un bloque-----=====-----*/
+
+contenido_bloque                : lista_componentes
+                                {{
+                                    $$ = $1;
+                                }}
+                                | /* vacio */
+                                {{
+                                    $$ = [];
+                                }}
+                                ;
+
+/*-----=====----- Produccion del liestado del contenido generico de un bloque-----=====-----*/
+
+lista_componentes               : lista_componentes cuerpo_componentes
+                                {{
+                                    $1.push($2);
+                                    $$ = $1;
+                                }}
+                                | cuerpo_componentes
+                                {{
+                                    $$ = [$1];
+                                }}
                                 ;
 
 /*-----=====-----Produccion que permite representar un formulario-----=====-----*/
@@ -738,19 +835,31 @@ text_def                    : TEXT estilos_opcionales PARENT_APERTURA cadena_int
 
 /*-----=====-----Produccion de la definicion de la tabla-----=====-----*/
 
-tablas_def                  : estilos_opcionales CORCHETE_DOBLE_APERTURA lista_filas CORCHETE_DOBLE_CIERRE
-                            {{
-                                $$ = {
-                                    tipo: 'TABLA',
-                                    estilos: $1,
-                                    filas: $3, 
-                                    total_filas: $3.length, 
-                                    total_columnas: $3.length > 0 ? $3[0].cantidad_celdas : 0, 
-                                    linea: @1.first_line,
-                                    columna: @1.first_column + 1
-                                };
-                            }}
-                            ;
+tablas_def              : estilos_obligatorios CORCHETE_DOBLE_APERTURA lista_filas CORCHETE_DOBLE_CIERRE
+                        {{
+                            $$ = { 
+                                tipo: 'TABLA', 
+                                estilos: $1, 
+                                filas: $3, 
+                                total_filas: $3.length, 
+                                total_columnas: $3.length > 0 ? $3[0].cantidad_celdas : 0, 
+                                linea: @1.first_line, 
+                                columna: @1.first_column + 1 
+                            };
+                        }}
+                        | CORCHETE_DOBLE_APERTURA lista_filas CORCHETE_DOBLE_CIERRE
+                        {{
+                            $$ = { 
+                                tipo: 'TABLA', 
+                                estilos: [], 
+                                filas: $2, 
+                                total_filas: $2.length, 
+                                total_columnas: $2.length > 0 ? $2[0].cantidad_celdas : 0, 
+                                linea: @1.first_line, 
+                                columna: @1.first_column + 1 
+                            };
+                        }}
+                        ;
 
 /*-----=====-----Produccion que permite representar la lista de filas-----=====-----*/
 
@@ -766,18 +875,29 @@ lista_filas                 : lista_filas fila_def
 
 /*-----=====-----Produccion que permite reconocer filas-----=====-----*/
 
-fila_def                    : estilos_opcionales CORCHETE_DOBLE_APERTURA lista_celdas CORCHETE_DOBLE_CIERRE
-                            {{
-                                $$ = {
-                                    tipo: 'FILA',
-                                    estilos: $1,
-                                    celdas: $3,
-                                    cantidad_celdas: $3.length,
-                                    linea: @1.first_line,
-                                    columna: @1.first_column + 1
-                                };
-                            }}
-                            ;
+fila_def                : estilos_obligatorios CORCHETE_DOBLE_APERTURA lista_celdas CORCHETE_DOBLE_CIERRE
+                        {{
+                            $$ = { 
+                                tipo: 'FILA', 
+                                estilos: $1, 
+                                celdas: $3, 
+                                cantidad_celdas: $3.length, 
+                                linea: @1.first_line, 
+                                columna: @1.first_column + 1 
+                            };
+                        }}
+                        | CORCHETE_DOBLE_APERTURA lista_celdas CORCHETE_DOBLE_CIERRE
+                        {{
+                            $$ = { 
+                                tipo: 'FILA',
+                                estilos: [], 
+                                celdas: $2, cantidad_celdas: $2.length, 
+                                linea: @1.first_line, 
+                                columna: @1.first_column + 1 
+                            };
+                        }}
+                        ;
+
 /*-----=====-----Produccion que permite reconocer listado de celdas-----=====-----*/
 
 lista_celdas                : lista_celdas celda_def
@@ -792,17 +912,27 @@ lista_celdas                : lista_celdas celda_def
 
 /*-----=====-----Produccion que permite reconocer celdas-----=====-----*/
 
-celda_def                   : estilos_opcionales CORCHETE_DOBLE_APERTURA contenido_celda CORCHETE_DOBLE_CIERRE
-                            {{
-                                $$ = {
-                                    tipo: 'CELDA',
-                                    estilos: $1,
-                                    contenido: $3, 
-                                    linea: @1.first_line,
-                                    columna: @1.first_column + 1
-                                };
-                            }}
-                            ;
+celda_def               : estilos_obligatorios CORCHETE_DOBLE_APERTURA contenido_celda CORCHETE_DOBLE_CIERRE
+                        {{
+                            $$ = { 
+                                tipo: 'CELDA', 
+                                estilos: $1, 
+                                contenido: $3, 
+                                linea: @1.first_line, 
+                                columna: @1.first_column + 1 
+                            };
+                        }}
+                        | CORCHETE_DOBLE_APERTURA contenido_celda CORCHETE_DOBLE_CIERRE
+                        {{
+                            $$ = { 
+                                tipo: 'CELDA', 
+                                estilos: [], 
+                                contenido: $2, 
+                                linea: @1.first_line, 
+                                columna: @1.first_column + 1 
+                            };
+                        }}
+                        ;
 
 /*-----=====-----Produccion que permite reconocer el cuerpo de las celdas-----=====-----*/
 
@@ -817,14 +947,24 @@ contenido_celda             : contenido_celda cuerpo_componentes
 
 /*-----=====-----Produccion que permite representar a las secciones -----=====-----*/
 
-secciones_def           : estilos_opcionales CORCHETE_APERTURA contenido_seccion CORCHETE_CIERRE
+secciones_def           : estilos_obligatorios CORCHETE_APERTURA contenido_seccion CORCHETE_CIERRE
                         {{
-                            $$ = {
-                                tipo: 'SECCION',
-                                estilos: $1,
+                            $$ = { 
+                                tipo: 'SECCION', 
+                                estilos: $1, 
                                 contenido: $3, 
-                                linea: @1.first_line,
-                                columna: @1.first_column + 1
+                                linea: @1.first_line, 
+                                columna: @1.first_column + 1 
+                            };
+                        }}
+                        | CORCHETE_APERTURA contenido_seccion CORCHETE_CIERRE
+                        {{
+                            $$ = { 
+                                tipo: 'SECCION', 
+                                estilos: [], 
+                                contenido: $2, 
+                                linea: @1.first_line, 
+                                columna: @1.first_column + 1 
                             };
                         }}
                         ;
@@ -845,15 +985,11 @@ contenido_seccion           : contenido_seccion cuerpo_componentes
 
 /*-----=====-----Produccion que permite representar a los estilos que puede tener un componente-----=====-----*/
 
-estilos_opcionales          : MENOR lista_estilos_nombres MAYOR    
-                            {{ 
-                                $$ = $2; 
-                            }}
-                            | /* vacio */                          
-                            {{ 
-                                $$ = [];
-                            }}
-                            ;
+estilos_obligatorios            : MENOR lista_estilos_nombres MAYOR    
+                                {{ 
+                                    $$ = $2; 
+                                }}
+                                ;
 
 /*-----=====-----Produccion que permite representar a la lista de estilos que puede tener un componente-----=====-----*/
 
