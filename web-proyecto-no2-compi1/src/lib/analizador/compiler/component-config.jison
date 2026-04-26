@@ -285,21 +285,21 @@
 
 /*-----=====-----Produccion principal de inicio de lectura-----=====-----*/
 
-inicio  : definicion_lenguaje  EOF 
-        { 
-            return $1; 
-        }
-        | error EOF 
-        {
-            reportarError(yy, {
-                descripcion: 'Error en la estructura del archivo de componentes',
-                loc: @1,
-                texto: yytext
-            });
+inicio          : definicion_lenguaje  EOF 
+                { 
+                    return $1; 
+                }
+                | error EOF 
+                {
+                    reportarError(yy, {
+                        descripcion: 'Error en la estructura del archivo de componentes',
+                        loc: @1,
+                        texto: yytext
+                    });
 
-            return null; 
-        }
-        ;
+                    return null; 
+                }
+                ;
 
 /*-----=====-----Produccion principal de la definicion del lenguaje .comp-----=====-----*/
 
@@ -311,6 +311,24 @@ definicion_lenguaje : definicion_lenguaje cuerpo_lenguaje
                     | cuerpo_lenguaje
                     {{
                         $$ = [$1];
+                    }}
+                    | definicion_lenguaje error LLAVE_CIERRE
+                    {{
+                        reportarError(yy, {
+                            descripcion: 'Error sintactico grave en el cuerpo del componente.',
+                            loc: @2,
+                            texto: yytext
+                        });
+                        $$ = $1;
+                    }}
+                    | error LLAVE_CIERRE
+                    {{
+                        reportarError(yy, {
+                            descripcion: 'Error sintactico grave en la declaracion del componente.',
+                            loc: @1,
+                            texto: yytext
+                        });
+                        $$ = [];
                     }}
                     ;
 
@@ -357,6 +375,148 @@ cuerpo_componentes              : secciones_def
                                 | ciclo_for_def     
                                 {{ 
                                     $$ = $1; 
+                                }}
+                                | condicional_if_def 
+                                {{ 
+                                    $$ = $1; 
+                                }}
+                                | switch_def
+                                {{ 
+                                    $$ = $1; 
+                                }}
+                                | error LLAVE_CIERRE
+                                {{
+                                    reportarError(yy, { 
+                                        descripcion: 'Error de sintaxis dentro de un bloque {}. Componente descartado.', 
+                                        loc: @1, texto: yytext 
+                                    });
+                                    $$ = { tipo: 'NODO_ERROR', linea: @1.first_line, columna: @1.first_column + 1 };
+                                }}
+                                | error CORCHETE_CIERRE
+                                {{
+                                    reportarError(yy, { 
+                                        descripcion: 'Error de sintaxis dentro de una seccion []. Componente descartado.', 
+                                        loc: @1, texto: yytext 
+                                    });
+                                    $$ = { tipo: 'NODO_ERROR', linea: @1.first_line, columna: @1.first_column + 1 };
+                                }}
+                                | error CORCHETE_DOBLE_CIERRE
+                                {{
+                                    reportarError(yy, { 
+                                        descripcion: 'Error de sintaxis dentro de una tabla o celda [[]]. Componente descartado.', 
+                                        loc: @1, texto: yytext 
+                                    });
+                                    $$ = { tipo: 'NODO_ERROR', linea: @1.first_line, columna: @1.first_column + 1 };
+                                }}
+                                | error PARENT_CIERRE
+                                {{
+                                    reportarError(yy, { 
+                                        descripcion: 'Error de sintaxis en los parametros de un componente (). Componente descartado.', 
+                                        loc: @1, texto: yytext 
+                                    });
+                                    $$ = { tipo: 'NODO_ERROR', linea: @1.first_line, columna: @1.first_column + 1 };
+                                }}
+                                ;
+
+/*-----=====-----Produccion que permite representar un condicional switch dentro del componente-----=====-----*/
+
+condicional_switch_def          : SWITCH PARENT_APERTURA expresion_interior PARENT_CIERRE LLAVE_APERTURA lista_casos LLAVE_CIERRE
+                                {{
+                                    $$ = {
+                                        tipo: 'ESTRUCTURA_SWITCH',
+                                        evalua: $3,
+                                        casos: $6,
+                                        linea: @1.first_line,
+                                        columna: @1.first_column + 1
+                                    };
+                                }}
+                                ;
+
+/*-----=====-----Produccion que permite representar la lista de casos del switch-----=====-----*/
+
+lista_casos                     : lista_casos COMA caso_def
+                                {{
+                                    $1.push($3);
+                                    $$ = $1;
+                                }}
+                                | caso_def
+                                {{
+                                    $$ = [$1];
+                                }}
+                                ;
+
+/*-----=====-----Produccion que permite representar cada caso del switch-----=====-----*/
+
+caso_def                        : CASE expresion_interior LLAVE_APERTURA contenido_bloque LLAVE_CIERRE
+                                {{
+                                    $$ = {
+                                        tipo: 'CASO_SWITCH',
+                                        valor_comparacion: $2,
+                                        cuerpo: $4,
+                                        linea: @1.first_line,
+                                        columna: @1.first_column + 1
+                                    };
+                                }}
+                                | DEFAULT LLAVE_APERTURA contenido_bloque LLAVE_CIERRE
+                                {{
+                                    $$ = {
+                                        tipo: 'DEFAULT_SWITCH',
+                                        cuerpo: $3,
+                                        linea: @1.first_line,
+                                        columna: @1.first_column + 1
+                                    };
+                                }}
+                                ;
+
+
+/*-----=====-----Produccion que permite representar un condicional if dentro del componente-----=====-----*/
+
+condicional_if_def              : IF PARENT_APERTURA expresion_interior PARENT_CIERRE LLAVE_APERTURA contenido_bloque LLAVE_CIERRE lista_else
+                                {{
+                                    $$ = {
+                                        tipo: 'ESTRUCTURA_IF',
+                                        condicion: $3,    
+                                        cuerpo: $6,      
+                                        bloques_else: $8,  
+                                        linea: @1.first_line,
+                                        columna: @1.first_column + 1
+                                    };
+                                }}
+                                ;
+
+/*-----=====-----Produccion que permite reconocer si el if tiene else y en que listado-----=====-----*/
+
+lista_else                      : lista_else bloque_else
+                                {{
+                                    $1.push($2);
+                                    $$ = $1;
+                                }}
+                                | /* vacio*/
+                                {{
+                                    $$ = [];
+                                }}
+                                ;
+
+/*-----=====-----Produccion que permite reconocer si el if tiene algun tipo de else encadenado-----=====-----*/
+
+bloque_else                     : ELSE PARENT_APERTURA expresion_interior PARENT_CIERRE LLAVE_APERTURA contenido_bloque LLAVE_CIERRE
+                                {{
+                                    $$ = {
+                                        tipo: 'ELSE_CONDICIONAL',
+                                        condicion: $3,
+                                        cuerpo: $6,
+                                        linea: @1.first_line,
+                                        columna: @1.first_column + 1
+                                    };
+                                }}
+                                | ELSE LLAVE_APERTURA contenido_bloque LLAVE_CIERRE
+                                {{
+                                    $$ = {
+                                        tipo: 'ELSE_DEFECTO',
+                                        cuerpo: $3,
+                                        linea: @1.first_line,
+                                        columna: @1.first_column + 1
+                                    };
                                 }}
                                 ;
 
@@ -540,7 +700,7 @@ propiedad_submit            : LABEL DOS_PUNTOS valor_propiedad_submit
 
 /*-----=====----- Valores que puede tener una propiedad del Submit -----=====-----*/
 
-valor_propiedad_submit      : cadena_interpolada  
+valor_propiedad_submit      : expresion_interior  
                             {{ 
                                 $$ = $1; 
                             }}
@@ -577,10 +737,6 @@ lista_argumentos_llamada    : lista_argumentos_llamada COMA argumento_llamada
 
 argumento_llamada           : expresion_interior  
                             {{
-                                $$ = $1; 
-                            }}
-                            | cadena_interpolada  
-                            {{ 
                                 $$ = $1; 
                             }}
                             | ARROBA_VAR          
@@ -677,11 +833,7 @@ propiedad_bool                 : ID DOS_PUNTOS valor_propiedad
                                 ;
 
 
-valor_propiedad_bool            : cadena_interpolada
-                                {{ 
-                                    $$ = $1; 
-                                }}
-                                | expresion_interior  
+valor_propiedad_bool            : expresion_interior  
                                 {{ 
                                     $$ = $1; 
                                 }}
@@ -716,6 +868,14 @@ lista_propiedades_comunes           : lista_propiedades_comunes COMA propiedad_c
                                     | propiedad_comun
                                     {{ 
                                         $$ = [$1]; 
+                                    }}
+                                    | lista_propiedades_comunes COMA error
+                                    {{
+                                        reportarError(yy, { 
+                                            descripcion: 'Error de sintaxis en una propiedad.', 
+                                            loc: @3, texto: yytext 
+                                        });
+                                        $$ = $1;
                                     }}
                                     ;
 
@@ -755,11 +915,7 @@ propiedad_comun                 : ID DOS_PUNTOS valor_propiedad
 
 /*-----=====----- Produccion que que permite definir el valor de las propiedades de los inputs-----=====-----*/
 
-valor_propiedad             : cadena_interpolada
-                            {{ 
-                                $$ = $1; 
-                            }}
-                            | expresion_interior  
+valor_propiedad             : expresion_interior  
                             {{ 
                                 $$ = $1; 
                             }}
@@ -1057,6 +1213,15 @@ cadena_interpolada      : COMILLA contenido_string COMILLA
                                 loc_columna: @1.first_column + 1
                             };
                         }}
+                        | COMILLA COMILLA
+                        {{
+                            $$ = {
+                                tipo: 'CADENA_INTERPOLADA',
+                                fragmentos: [], 
+                                loc_linea: @1.first_line,
+                                loc_columna: @1.first_column + 1
+                            };
+                        }}
                         ;
 
 /*-----=====----- Produccion de la lista recursiva de fragmentos dentro de un string -----=====-----*/
@@ -1066,9 +1231,9 @@ contenido_string        : contenido_string fragmento_string
                             $1.push($2);
                             $$ = $1;
                         }}
-                        | /* vacio */
+                        | fragmento_string
                         {{
-                            $$ = [];
+                            $$ = [$1];
                         }}
                         ;
 
@@ -1310,6 +1475,10 @@ expresion_interior      : expresion_interior MAS expresion_interior
                                 loc_linea: @1.first_line, 
                                 loc_columna: @1.first_column + 1 
                             };
+                        }}
+                        | cadena_interpolada
+                        {{
+                            $$  = $1;
                         }}
                         ;
 
