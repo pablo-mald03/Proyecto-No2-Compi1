@@ -140,6 +140,10 @@
 
 "}"                         return 'LLAVE_CIERRE';
 
+"[["                        return 'CORCHETE_DOBLE_APERTURA';
+
+"]]"                        return 'CORCHETE_DOBLE_CIERRE';
+
 "["                         return 'CORCHETE_APERTURA';
 
 "]"                         return 'CORCHETE_CIERRE';
@@ -312,7 +316,7 @@ definicion_lenguaje : definicion_lenguaje cuerpo_lenguaje
 
 /*-----=====-----Produccion principal de todo lo que puede tener un archivo .comp-----=====-----*/
 
-cuerpo_lenguaje         : IDENTIFICADOR PARENT_APERTURA lista_parametros PARENT_CIERRE
+cuerpo_lenguaje         : IDENTIFICADOR PARENT_APERTURA lista_parametros PARENT_CIERRE LLAVE_APERTURA cuerpo_componentes LLAVE_CIERRE
                         {{
                             $$ = {
                                 tipo: 'LLAMADA_FUNCION',
@@ -322,13 +326,547 @@ cuerpo_lenguaje         : IDENTIFICADOR PARENT_APERTURA lista_parametros PARENT_
                                 columna: @1.first_column + 1
                             };
                         }}
-                        | secciones_def
+                        ;
+
+/*-----=====-----Produccion que permite representar al cuerpo que pueden tener los componentes-----=====-----*/
+
+cuerpo_componentes              : secciones_def
+                                {{
+                                    $$ = $1;
+                                }}
+                                | tablas_def
+                                {{
+                                    $$ = $1;
+                                }}
+                                | text_def
+                                {{
+                                    $$ = $1;
+                                }}
+                                | img_def
+                                {{
+                                    $$ = $1;
+                                }}
+                                | form_def
+                                {{
+                                    $$ = $1;
+                                }}
+                                | input_def         
+                                {{ 
+                                    $$ = $1; 
+                                }}
+                                ;
+
+/*-----=====-----Produccion que permite representar un formulario-----=====-----*/
+
+form_def                    : FORM estilos_opcionales LLAVE_APERTURA contenido_form LLAVE_CIERRE submit_opcional
+                            {{
+                                $$ = {
+                                    tipo: 'FORMULARIO',
+                                    estilos: $2,
+                                    contenido: $4,
+                                    submit: $6,      
+                                    linea: @1.first_line,
+                                    columna: @1.first_column + 1
+                                };
+                            }}
+                            ;
+
+/*-----=====-----Produccion que permite representar el contenido de un formulario-----=====-----*/
+
+contenido_form              : contenido_form cuerpo_componentes
+                            {{
+                                $1.push($2);
+                                $$ = $1;
+                            }}
+                            | cuerpo_componentes
+                            {{
+                                $$ = [$1];
+                            }}
+                            ;
+
+/*-----=====-----Produccion que permite representar el submit del formulario-----=====-----*/
+
+submit_opcional             : SUBMIT estilos_opcionales LLAVE_APERTURA lista_propiedades_submit LLAVE_CIERRE
+                            {{
+                                $$ = {
+                                    tipo: 'SUBMIT',
+                                    estilos: $2,
+                                    propiedades: $4,
+                                    linea: @1.first_line,
+                                    columna: @1.first_column + 1
+                                };
+                            }}
+                            | /* vacío */
+                            {{
+                                $$ = null;
+                            }}
+                            ;
+
+/*-----=====----- Lista de Propiedades (label: ..., function: ...) -----=====-----*/
+
+lista_propiedades_submit    : lista_propiedades_submit COMA propiedad_submit
+                            {{ 
+                                $1.push($3); 
+                                $$ = $1; 
+                            }}
+                            | propiedad_submit
+                            {{ 
+                                $$ = [$1]; 
+                            }}
+                            | /* vacio */
+                            {{ 
+                                $$ = []; 
+                            }}
+                            ;
+
+/*-----=====----- Definicion de una sola propiedad -----=====-----*/
+
+propiedad_submit            : LABEL DOS_PUNTOS valor_propiedad_submit
+                            {{
+                                $$ = {
+                                    clave: $1,
+                                    valor: $3,
+                                    linea: @1.first_line,
+                                    columna: @1.first_column + 1
+                                };
+                            }}
+                            | FUNCTION DOS_PUNTOS valor_propiedad_submit
+                            {{
+                                $$ = {
+                                    clave: $1, 
+                                    valor: $3,
+                                    linea: @1.first_line,
+                                    columna: @1.first_column + 1
+                                };
+                            }}
+                            ;
+
+/*-----=====----- Valores que puede tener una propiedad del Submit -----=====-----*/
+
+valor_propiedad_submit      : cadena_interpolada  
+                            {{ 
+                                $$ = $1; 
+                            }}
+                            | VARIABLE_DOLAR PARENT_APERTURA lista_argumentos_llamada PARENT_CIERRE
+                            {{
+                                $$ = {
+                                    tipo: 'LLAMADA_FUNCION_VAR',
+                                    nombre: $1,
+                                    argumentos: $3,
+                                    linea: @1.first_line,
+                                    columna: @1.first_column + 1
+                                };
+                            }}
+                            ;
+
+/*-----=====----- Argumentos permitidos adentro de los paréntesis de la función -----=====-----*/
+
+lista_argumentos_llamada    : lista_argumentos_llamada COMA argumento_llamada
+                            {{ 
+                                $1.push($3); 
+                                $$ = $1; 
+                            }}
+                            | argumento_llamada
+                            {{ 
+                                $$ = [$1]; 
+                            }}
+                            | /* vacio */
+                            {{ 
+                                $$ = []; 
+                            }}
+                            ;
+
+/*-----=====----- Produccion de los argumentos dentro de una funcion-----=====-----*/
+
+argumento_llamada           : expresion_interior  
+                            {{
+                                $$ = $1; 
+                            }}
+                            | cadena_interpolada  
+                            {{ 
+                                $$ = $1; 
+                            }}
+                            | ARROBA_VAR          
+                            {{ 
+                                $$ = { 
+                                    tipo: 'ARROBA_VAR', 
+                                    nombre: $1, 
+                                    linea: @1.first_line, 
+                                    columna: @1.first_column + 1 
+                                }; 
+                            }}
+                            ;
+
+/*-----=====----- Producciones de los Inputs -----=====-----*/
+
+input_def                   : INPUT_TEXT estilos_opcionales PARENT_APERTURA lista_propiedades_comunes PARENT_CIERRE
+                            {{
+                                $$ = { 
+                                    tipo: 'INPUT_TEXT', 
+                                    estilos: $2, 
+                                    propiedades: $4, 
+                                    linea: @1.first_line, 
+                                    columna: @1.first_column + 1 
+                                };
+                            }}
+                            | INPUT_NUMBER estilos_opcionales PARENT_APERTURA lista_propiedades_comunes PARENT_CIERRE
+                            {{
+                                $$ = { 
+                                    tipo: 'INPUT_NUMBER', 
+                                    estilos: $2, 
+                                    propiedades: $4, 
+                                    linea: @1.first_line, 
+                                    columna: @1.first_column + 1 
+                                };
+                            }}
+                            | INPUT_BOOL estilos_opcionales PARENT_APERTURA lista_propiedades_bool PARENT_CIERRE
+                            {{
+                                $$ = { 
+                                    tipo: 'INPUT_BOOL', 
+                                    estilos: $2, 
+                                    propiedades: $4, 
+                                    linea: @1.first_line, 
+                                    columna: @1.first_column + 1
+                                };
+                            }}
+                            ;
+
+
+/*-----=====----- Produccion que permite identificar las Propiedades del input booleano-----=====-----*/
+
+lista_propiedades_bool              : lista_propiedades_bool COMA propiedad_bool
+                                    {{ 
+                                        $1.push($3); 
+                                        $$ = $1; 
+                                    }}
+                                    | propiedad_bool
+                                    {{ 
+                                        $$ = [$1]; 
+                                    }}
+                                    ;
+
+/*-----=====----- Produccion que permite identificar la propiedad del input booleano-----=====-----*/
+
+propiedad_bool                 : ID DOS_PUNTOS valor_propiedad
+                                {{
+                                    $$ = {
+                                        tipo: 'ID',
+                                        clave: $1,   
+                                        valor: $3,   
+                                        linea: @1.first_line,
+                                        columna: @1.first_column + 1
+                                    };
+                                }}
+                                | LABEL DOS_PUNTOS valor_propiedad
+                                {{
+                                    $$ = {
+                                        tipo: 'LABEL',
+                                        clave: $1,   
+                                        valor: $3,   
+                                        linea: @1.first_line,
+                                        columna: @1.first_column + 1
+                                    };
+                                }}
+                                | VALUE DOS_PUNTOS valor_propiedad_bool
+                                {{
+                                    $$ = {
+                                        tipo: 'VALUE',
+                                        clave: $1,   
+                                        valor: $3,   
+                                        linea: @1.first_line,
+                                        columna: @1.first_column + 1
+                                    };
+                                }}
+                                ;
+
+
+valor_propiedad_bool            : cadena_interpolada
+                                {{ 
+                                    $$ = $1; 
+                                }}
+                                | expresion_interior  
+                                {{ 
+                                    $$ = $1; 
+                                }}
+                                | TRUE
+                                {{
+                                    $$ = {
+                                        tipo: 'VALOR_TRUE',
+                                        valor: $1,
+                                        linea: @1.first_line,
+                                        columna: @1.first_column + 1
+                                    };
+                                }}
+                                | FALSE
+                                {{
+                                    $$ = {
+                                        tipo: 'VALOR_FALSE',
+                                        valor: $1,
+                                        linea: @1.first_line,
+                                        columna: @1.first_column + 1
+                                    };
+                                }}
+                                ;
+
+
+/*-----=====----- Produccion que permite identificar las Propiedades del input comunes-----=====-----*/
+
+lista_propiedades_comunes           : lista_propiedades_comunes COMA propiedad_comun
+                                    {{ 
+                                        $1.push($3); 
+                                        $$ = $1; 
+                                    }}
+                                    | propiedad_comun
+                                    {{ 
+                                        $$ = [$1]; 
+                                    }}
+                                    ;
+
+/*-----=====----- Produccion que que permite definir que propiedades tendra el input-----=====-----*/
+
+propiedad_comun                 : ID DOS_PUNTOS valor_propiedad
+                                {{
+                                    $$ = {
+                                        tipo: 'ID',
+                                        clave: $1,   
+                                        valor: $3,   
+                                        linea: @1.first_line,
+                                        columna: @1.first_column + 1
+                                    };
+                                }}
+                                | LABEL DOS_PUNTOS valor_propiedad
+                                {{
+                                    $$ = {
+                                        tipo: 'LABEL',
+                                        clave: $1,   
+                                        valor: $3,   
+                                        linea: @1.first_line,
+                                        columna: @1.first_column + 1
+                                    };
+                                }}
+                                | VALUE DOS_PUNTOS valor_propiedad
+                                {{
+                                    $$ = {
+                                        tipo: 'VALUE',
+                                        clave: $1,   
+                                        valor: $3,   
+                                        linea: @1.first_line,
+                                        columna: @1.first_column + 1
+                                    };
+                                }}
+                                ;
+
+/*-----=====----- Produccion que que permite definir el valor de las propiedades de los inputs-----=====-----*/
+
+valor_propiedad             : cadena_interpolada
+                            {{ 
+                                $$ = $1; 
+                            }}
+                            | expresion_interior  
+                            {{ 
+                                $$ = $1; 
+                            }}
+                            ;
+
+/*-----=====-----Produccion que permite representar el cuerpo de una imagen-----=====-----*/
+
+img_def                 : IMG estilos_opcionales PARENT_APERTURA lista_argumentos_img PARENT_CIERRE
                         {{
-                            $$  = $1;
+                            $$ = {
+                                tipo: 'COMPONENTE_IMG',
+                                estilos: $2,     
+                                urls: $4,         
+                                linea: @1.first_line,
+                                columna: @1.first_column + 1
+                            };
                         }}
                         ;
 
+/*-----=====----- Lista de argumentos/URLs para el componente IMG -----=====-----*/
 
+lista_argumentos_img    : lista_argumentos_img COMA argumento_img
+                        {{
+                            $1.push($3);
+                            $$ = $1;
+                        }}
+                        | argumento_img
+                        {{
+                            $$ = [$1];
+                        }}
+                        ;
+
+/*-----=====----- Produccion de argumentos de las imagenes-----=====-----*/
+
+argumento_img           : cadena_interpolada
+                        {{
+                            $$ = $1; 
+                        }}
+                        | VARIABLE_DOLAR
+                        {{
+                            $$ = { 
+                                tipo: 'VARIABLE', 
+                                nombre: $1,
+                                linea: @1.first_line,
+                                columna: @1.first_column + 1
+                            };
+                        }}
+                        | VARIABLE_DOLAR CORCHETE_APERTURA expresion_interior CORCHETE_CIERRE
+                        {{
+                            $$ = { 
+                                tipo: 'ACCESO_ARREGLO', 
+                                nombre: $1,
+                                indice: $3,
+                                linea: @1.first_line,
+                                columna: @1.first_column + 1
+                            };
+                        }}
+                        ;
+
+/*-----=====-----Produccion que permite representar el cuerpo de un texto-----=====-----*/
+
+text_def                    : TEXT estilos_opcionales PARENT_APERTURA cadena_interpolada PARENT_CIERRE
+                            {{
+                                $$ = {
+                                    tipo: 'COMPONENTE_TEXTO',
+                                    estilos: $2,    
+                                    contenido: $4,    
+                                    linea: @1.first_line,
+                                    columna: @1.first_column + 1
+                                };
+                            }}
+                            ;
+
+/*-----=====-----Produccion de la definicion de la tabla-----=====-----*/
+
+tablas_def                  : estilos_opcionales CORCHETE_DOBLE_APERTURA lista_filas CORCHETE_DOBLE_CIERRE
+                            {{
+                                $$ = {
+                                    tipo: 'TABLA',
+                                    estilos: $1,
+                                    filas: $3, 
+                                    total_filas: $3.length, 
+                                    total_columnas: $3.length > 0 ? $3[0].cantidad_celdas : 0, 
+                                    linea: @1.first_line,
+                                    columna: @1.first_column + 1
+                                };
+                            }}
+                            ;
+
+/*-----=====-----Produccion que permite representar la lista de filas-----=====-----*/
+
+lista_filas                 : lista_filas fila_def
+                            {{
+                                $1.push($2);
+                                $$ = $1;
+                            }}
+                            | /* vacio */
+                            {{ $$ = []; }}
+                            ;
+
+
+/*-----=====-----Produccion que permite reconocer filas-----=====-----*/
+
+fila_def                    : estilos_opcionales CORCHETE_DOBLE_APERTURA lista_celdas CORCHETE_DOBLE_CIERRE
+                            {{
+                                $$ = {
+                                    tipo: 'FILA',
+                                    estilos: $1,
+                                    celdas: $3,
+                                    cantidad_celdas: $3.length,
+                                    linea: @1.first_line,
+                                    columna: @1.first_column + 1
+                                };
+                            }}
+                            ;
+/*-----=====-----Produccion que permite reconocer listado de celdas-----=====-----*/
+
+lista_celdas                : lista_celdas celda_def
+                            {{
+                                $1.push($2);
+                                $$ = $1;
+                            }}
+                            | /* vacio */
+                            {{ $$ = []; }}
+                            ;
+
+
+/*-----=====-----Produccion que permite reconocer celdas-----=====-----*/
+
+celda_def                   : estilos_opcionales CORCHETE_DOBLE_APERTURA contenido_celda CORCHETE_DOBLE_CIERRE
+                            {{
+                                $$ = {
+                                    tipo: 'CELDA',
+                                    estilos: $1,
+                                    contenido: $3, 
+                                    linea: @1.first_line,
+                                    columna: @1.first_column + 1
+                                };
+                            }}
+                            ;
+
+/*-----=====-----Produccion que permite reconocer el cuerpo de las celdas-----=====-----*/
+
+contenido_celda             : contenido_celda cuerpo_componentes
+                            {{
+                                $1.push($2);
+                                $$ = $1;
+                            }}
+                            | /* vacio */
+                            {{ $$ = []; }}
+                            ;
+
+/*-----=====-----Produccion que permite representar a las secciones -----=====-----*/
+
+secciones_def           : estilos_opcionales CORCHETE_APERTURA contenido_seccion CORCHETE_CIERRE
+                        {{
+                            $$ = {
+                                tipo: 'SECCION',
+                                estilos: $1,
+                                contenido: $3, 
+                                linea: @1.first_line,
+                                columna: @1.first_column + 1
+                            };
+                        }}
+                        ;
+
+/*-----=====-----Produccion que permite representar el cuerpo que tienen las secciones-----=====-----*/
+
+contenido_seccion           : contenido_seccion cuerpo_componentes 
+                            {{ 
+                                $1.push($2); 
+                                $$ = $1; 
+                            }}
+                            | /* vacio */ 
+                            {{ 
+                                $$ = [];
+                            }}
+                            ;
+
+
+/*-----=====-----Produccion que permite representar a los estilos que puede tener un componente-----=====-----*/
+
+estilos_opcionales          : MENOR lista_estilos_nombres MAYOR    
+                            {{ 
+                                $$ = $2; 
+                            }}
+                            | /* vacio */                          
+                            {{ 
+                                $$ = [];
+                            }}
+                            ;
+
+/*-----=====-----Produccion que permite representar a la lista de estilos que puede tener un componente-----=====-----*/
+
+lista_estilos_nombres           : lista_estilos_nombres COMA IDENTIFICADOR 
+                                {{ 
+                                    $1.push($3); 
+                                    $$ = $1; 
+                                }}
+                                | IDENTIFICADOR                            
+                                {{ 
+                                    $$ = [$1]; 
+                                }}
+                                ;
 
 /*-----=====-----Produccion que permite representar el listado de los parametros dentro de una funcion-----=====-----*/
 
@@ -477,7 +1015,7 @@ expresion_interior      : expresion_interior MAS expresion_interior
                                 loc_columna: @1.first_column + 1 
                             }; 
                         }}
-                        | expresion_interior PORCENTAJE expresion_interior
+                        | expresion_interior MODULO expresion_interior
                         {{ 
                             $$ = { 
                                 tipo: 'OPERACION', 
