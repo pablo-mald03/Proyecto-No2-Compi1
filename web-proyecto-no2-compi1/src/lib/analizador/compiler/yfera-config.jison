@@ -332,7 +332,7 @@ cuerpo_lenguaje             : IMPORT cadena_texto PUNTO_COMA
                                     columna: @1.first_column + 1
                                 };
                             }}
-                            | FUNCTION IDENTIFICADOR CORCHETE_APERTURA lista_parametros CORCHETE_CIERRE LLAVE_APERTURA cuerpo_funciones LLAVE_CIERRE
+                            | FUNCTION IDENTIFICADOR CORCHETE_APERTURA lista_parametros_def CORCHETE_CIERRE LLAVE_APERTURA cuerpo_funciones LLAVE_CIERRE
                             {{
                                 $$ = {
                                     tipo: 'FUNCION',
@@ -437,11 +437,11 @@ bloque_instrucciones            : bloque_instrucciones instruccion
 
 /*-----=====-----Produccion que permite representar cada posible instruccion que puede tener el main dentro-----=====-----*/
 
-instruccion                 : ARROBA_VAR PARENT_APERTURA lista_parametros PARENT_CIERRE PUNTO_COMA
+instruccion                 : ARROBA_VAR PARENT_APERTURA lista_argumentos PARENT_CIERRE PUNTO_COMA
                             {{
                                 $$ = {
                                     tipo: 'LLAMADA_ARROBA_VAR',
-                                    parametros: $3,
+                                    argumentos: $3,
                                     linea: @1.first_line,
                                     columna: @1.first_column + 1
                                 };
@@ -623,9 +623,51 @@ operaciones_basicas             : IDENTIFICADOR IGUAL expresion_logica PUNTO_COM
                                 }}
                                 ;
 
+/*-----=====-----Produccion que permite representar el listado de los parametros dentro de una funcion-----=====-----*/
+
+lista_parametros_def    : lista_parametros_def COMA parametro_def
+                        {{
+                            $1.push($3);
+                            $$ = $1;
+                        }}
+                        | parametro_def
+                        {{
+                            $$ = [$1];
+                        }}
+                        | /* vacio */
+                        {{
+                            $$ = [];
+                        }}
+                        ;
+
+
+/*-----=====-----Produccion que permite representar a los parametros dentro de una funcion-----=====-----*/
+
+parametro_def           : tipo_variable IDENTIFICADOR
+                        {{
+                            $$ = {
+                                tipo: 'PARAMETRO_DEF',
+                                tipado: $1,
+                                id: $2,
+                                linea: @1.first_line,
+                                columna: @1.first_column + 1
+                            };
+                        }}
+                        | tipo_variable CORCHETE_APERTURA CORCHETE_CIERRE IDENTIFICADOR
+                        {{
+                            $$ = {
+                                tipo: 'PARAMETRO_DEF_ARREGLO',
+                                tipado: $1,
+                                id: $4,
+                                linea: @1.first_line,
+                                columna: @1.first_column + 1
+                            };
+                        }}
+                        ;
+
 /*-----=====-----Produccion que permite representar los posibles parametros que se reciben dentro de un componente-----=====-----*/
 
-lista_parametros        : lista_parametros COMA parametro
+lista_argumentos        : lista_argumentos COMA parametro
                         {{
                             $1.push($3);
                             $$ = $1;

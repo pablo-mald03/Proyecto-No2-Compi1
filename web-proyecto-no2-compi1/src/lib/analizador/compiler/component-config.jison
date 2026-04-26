@@ -283,7 +283,7 @@
 
 inicio  : definicion_lenguaje  EOF 
         { 
-            return $3; 
+            return $1; 
         }
         | error EOF 
         {
@@ -299,8 +299,371 @@ inicio  : definicion_lenguaje  EOF
 
 /*-----=====-----Produccion principal de la definicion del lenguaje .comp-----=====-----*/
 
-definicion_lenguaje : 
+definicion_lenguaje : definicion_lenguaje cuerpo_lenguaje
                     {{
-
+                        $1.push($2);
+                        $$  = $1;
+                    }}
+                    | cuerpo_lenguaje
+                    {{
+                        $$ = [$1];
                     }}
                     ;
+
+/*-----=====-----Produccion principal de todo lo que puede tener un archivo .comp-----=====-----*/
+
+cuerpo_lenguaje         : IDENTIFICADOR PARENT_APERTURA lista_parametros PARENT_CIERRE
+                        {{
+                            $$ = {
+                                tipo: 'LLAMADA_FUNCION',
+                                id: $1,
+                                parametros: $3,
+                                linea: @1.first_line,
+                                columna: @1.first_column + 1
+                            };
+                        }}
+                        | secciones_def
+                        {{
+                            $$  = $1;
+                        }}
+                        ;
+
+
+
+/*-----=====-----Produccion que permite representar el listado de los parametros dentro de una funcion-----=====-----*/
+
+lista_parametros    : lista_parametros COMA parametro_def
+                        {{
+                            $1.push($3);
+                            $$ = $1;
+                        }}
+                        | parametro_def
+                        {{
+                            $$ = [$1];
+                        }}
+                        | /* vacio */
+                        {{
+                            $$ = [];
+                        }}
+                        ;
+
+
+/*-----=====-----Produccion que permite representar a los parametros dentro de una funcion-----=====-----*/
+
+parametro_def           : tipo_variable IDENTIFICADOR
+                        {{
+                            $$ = {
+                                tipo: 'PARAMETRO_DEF',
+                                tipado: $1,
+                                id: $2,
+                                linea: @1.first_line,
+                                columna: @1.first_column + 1
+                            };
+                        }}
+                        | tipo_variable CORCHETE_APERTURA CORCHETE_CIERRE IDENTIFICADOR
+                        {{
+                            $$ = {
+                                tipo: 'PARAMETRO_DEF_ARREGLO',
+                                tipado: $1,
+                                id: $4,
+                                linea: @1.first_line,
+                                columna: @1.first_column + 1
+                            };
+                        }}
+                        ;
+
+/*-----=====----- Producción principal para Strings con datos o variables adentro  o simplemente textos normales-----=====-----*/
+
+cadena_interpolada      : COMILLA contenido_string COMILLA
+                        {{
+                            $$ = {
+                                tipo: 'CADENA_INTERPOLADA',
+                                fragmentos: $2, 
+                                loc_linea: @1.first_line,
+                                loc_columna: @1.first_column + 1
+                            };
+                        }}
+                        ;
+
+/*-----=====----- Produccion de la lista recursiva de fragmentos dentro de un string -----=====-----*/
+
+contenido_string        : contenido_string fragmento_string
+                        {{
+                            $1.push($2);
+                            $$ = $1;
+                        }}
+                        | /* vacio */
+                        {{
+                            $$ = [];
+                        }}
+                        ;
+
+/*-----=====----- Los 3 tipos de fragmentos posibles dentro de las comillas -----=====-----*/
+
+fragmento_string        : TEXTO_CADENA
+                        {{
+                            $$ = { 
+                                tipo: 'TEXTO_PLANO', 
+                                valor: $1,
+                                loc_linea: @1.first_line,
+                                loc_columna: @1.first_column + 1
+                            };
+                        }}
+                        | VARIABLE_DOLAR
+                        {{
+                            $$ = { 
+                                tipo: 'VARIABLE', 
+                                nombre: $1,
+                                loc_linea: @1.first_line,
+                                loc_columna: @1.first_column + 1
+                            };
+                        }}
+                        | BACKTICK expresion_interior BACKTICK
+                        {{
+                            $$ = { 
+                                tipo: 'EXPRESION_INTERPOLADA', 
+                                expresion: $2,
+                                loc_linea: @1.first_line,
+                                loc_columna: @1.first_column + 1
+                            };
+                        }}
+                        ;
+
+
+
+/*-----=====-----Produccion del cuerpo que pueden contener definiciones de expresiones especiales en el for -----=====-----*/
+
+expresion_interior      : expresion_interior MAS expresion_interior
+                        {{ 
+                            $$ = { 
+                                tipo: 'OPERACION', 
+                                operador: 'SUMA', 
+                                izq: $1, 
+                                der: $3,
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1  
+                            }; 
+                        }}
+                        | expresion_interior MENOS expresion_interior
+                        {{ 
+                            $$ = { 
+                                tipo: 'OPERACION', 
+                                operador: 'RESTA', 
+                                izq: $1, 
+                                der: $3,
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1  
+                            }; 
+                        }}
+                        | expresion_interior MULTIPLICACION expresion_interior
+                        {{ 
+                            $$ = { 
+                                tipo: 'OPERACION', 
+                                operador: 'MULTIPLICACION', 
+                                izq: $1, 
+                                der: $3,
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1 
+                            }; 
+                        }}
+                        | expresion_interior DIVISION expresion_interior
+                        {{ 
+                            $$ = { 
+                                tipo: 'OPERACION', 
+                                operador: 'DIVISION', 
+                                izq: $1, 
+                                der: $3,
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1 
+                            }; 
+                        }}
+                        | expresion_interior PORCENTAJE expresion_interior
+                        {{ 
+                            $$ = { 
+                                tipo: 'OPERACION', 
+                                operador: 'MODULO', 
+                                izq: $1, 
+                                der: $3,
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1 
+                            }; 
+                        }}
+                        | expresion_interior MAYOR expresion_interior
+                        {{ 
+                            $$ = { 
+                                tipo: 'OPERACION', 
+                                operador: 'MAYOR', 
+                                izq: $1, 
+                                der: $3,
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1  
+                            }; 
+                        }}
+                        | expresion_interior MENOR expresion_interior
+                        {{ 
+                            $$ = { 
+                                tipo: 'OPERACION', 
+                                operador: 'MENOR', 
+                                izq: $1, 
+                                der: $3,
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1  
+                            }; 
+                        }}
+                        | expresion_interior MAYOR_IGUAL expresion_interior
+                        {{ 
+                            $$ = { 
+                                tipo: 'OPERACION', 
+                                operador: 'MAYOR_IGUAL', 
+                                izq: $1, 
+                                der: $3,
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1  
+                            }; 
+                        }}
+                        | expresion_interior MENOR_IGUAL expresion_interior
+                        {{ 
+                            $$ = { 
+                                tipo: 'OPERACION', 
+                                operador: 'MENOR_IGUAL', 
+                                izq: $1, 
+                                der: $3,
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1  
+                            }; 
+                        }}
+                        | expresion_interior IGUALACION expresion_interior
+                        {{ 
+                            $$ = { 
+                                tipo: 'OPERACION', 
+                                operador: 'IGUALACION', 
+                                izq: $1, 
+                                der: $3,
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1  
+                            }; 
+                        }}
+                        | expresion_interior DIFERENTE expresion_interior
+                        {{ 
+                            $$ = { 
+                                tipo: 'OPERACION', 
+                                operador: 'DIFERENCIA', 
+                                izq: $1, 
+                                der: $3,
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1  
+                            }; 
+                        }}
+                        | expresion_interior OR expresion_interior
+                        {{ 
+                            $$ = { 
+                                tipo: 'OPERACION', 
+                                operador: 'OR', 
+                                izq: $1, 
+                                der: $3,
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1  
+                            }; 
+                        }}
+                        | expresion_interior AND expresion_interior
+                        {{ 
+                            $$ = { 
+                                tipo: 'OPERACION', 
+                                operador: 'AND', 
+                                izq: $1, 
+                                der: $3,
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1  
+                            }; 
+                        }}
+                        | MENOS expresion_interior %prec UMENOS
+                        {{ 
+                            $$ = { 
+                                tipo: 'OPERACION_UNARIA', 
+                                operador: 'MENOS_UNARIO', 
+                                valor: $2,
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1 
+                            }; 
+                        }}
+                        | NOT expresion_interior
+                        {{ 
+                            $$ = { 
+                                tipo: 'OPERACION_UNARIA', 
+                                operador: 'NOT', 
+                                valor: $2,
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1  
+                            }; 
+                        }}
+                        | PARENT_APERTURA expresion_interior PARENT_CIERRE
+                        {{
+                            $$ = $2; 
+                        }}
+                        | NUMERO
+                        {{
+                            $$ = { 
+                                tipo: 'VALOR', 
+                                valor: Number($1),
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1 
+                            }; 
+                        }}
+                        | DECIMAL
+                        {{
+                            $$ = { 
+                                tipo: 'VALOR', 
+                                valor: Number($1),
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1  
+                            };                       
+                        }}
+                        | VARIABLE_DOLAR
+                        {{ 
+                            $$ = { 
+                                tipo: 'VARIABLE', 
+                                nombre: $1,
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1 
+                            };
+                        }}
+                        | VARIABLE_DOLAR CORCHETE_APERTURA expresion_interior CORCHETE_CIERRE
+                        {{ 
+                            $$ = { 
+                                tipo: 'ACCESO_ARREGLO', 
+                                nombre: $1,
+                                indice: $3,
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1 
+                            };
+                        }}
+                        ;
+
+
+/*-----=====-----Producion de los tipos de variables que se reciben en el  .comp-----=====-----*/
+
+tipo_variable           : INT
+                        {{
+                            $$  = 'ENTERA';
+                        }}
+                        | FLOAT
+                        {{
+                            $$  = 'FLOAT';
+                        }}
+                        | BOOLEAN
+                        {{
+                            $$  = 'BOOLEANA';
+                        }}
+                        | STRING 
+                        {{
+                            $$  = 'CADENA';
+                        }}
+                        | CHAR
+                        {{
+                            $$  = 'CARACTER';
+                        }}
+                        | FUNCTION
+                        {{
+                            $$  = 'FUNCTION';
+                        }}
+                        ;

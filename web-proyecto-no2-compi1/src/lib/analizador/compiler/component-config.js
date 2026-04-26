@@ -73,12 +73,12 @@
   }
 */
 var parser = (function(){
-var o=function(k,v,o,l){for(o=o||{},l=k.length;l--;o[k[l]]=v);return o};
+var o=function(k,v,o,l){for(o=o||{},l=k.length;l--;o[k[l]]=v);return o},$V0=[1,5],$V1=[1,6],$V2=[5,7,11],$V3=[10,12],$V4=[1,14],$V5=[1,15],$V6=[1,16],$V7=[1,17],$V8=[1,18],$V9=[1,19],$Va=[7,15];
 var parser = {trace: function trace () { },
 yy: {},
-symbols_: {"error":2,"inicio":3,"definicion_lenguaje":4,"EOF":5,"$accept":0,"$end":1},
-terminals_: {2:"error",5:"EOF"},
-productions_: [0,[3,2],[3,2],[4,0]],
+symbols_: {"error":2,"inicio":3,"definicion_lenguaje":4,"EOF":5,"cuerpo_lenguaje":6,"IDENTIFICADOR":7,"PARENT_APERTURA":8,"lista_parametros":9,"PARENT_CIERRE":10,"secciones_def":11,"COMA":12,"parametro_def":13,"tipo_variable":14,"CORCHETE_APERTURA":15,"CORCHETE_CIERRE":16,"cadena_interpolada":17,"COMILLA":18,"contenido_string":19,"fragmento_string":20,"TEXTO_CADENA":21,"VARIABLE_DOLAR":22,"BACKTICK":23,"expresion_interior":24,"MAS":25,"MENOS":26,"MULTIPLICACION":27,"DIVISION":28,"PORCENTAJE":29,"MAYOR":30,"MENOR":31,"MAYOR_IGUAL":32,"MENOR_IGUAL":33,"IGUALACION":34,"DIFERENTE":35,"OR":36,"AND":37,"NOT":38,"NUMERO":39,"DECIMAL":40,"INT":41,"FLOAT":42,"BOOLEAN":43,"STRING":44,"CHAR":45,"FUNCTION":46,"$accept":0,"$end":1},
+terminals_: {2:"error",5:"EOF",7:"IDENTIFICADOR",8:"PARENT_APERTURA",10:"PARENT_CIERRE",11:"secciones_def",12:"COMA",15:"CORCHETE_APERTURA",16:"CORCHETE_CIERRE",18:"COMILLA",21:"TEXTO_CADENA",22:"VARIABLE_DOLAR",23:"BACKTICK",25:"MAS",26:"MENOS",27:"MULTIPLICACION",28:"DIVISION",29:"PORCENTAJE",30:"MAYOR",31:"MENOR",32:"MAYOR_IGUAL",33:"MENOR_IGUAL",34:"IGUALACION",35:"DIFERENTE",36:"OR",37:"AND",38:"NOT",39:"NUMERO",40:"DECIMAL",41:"INT",42:"FLOAT",43:"BOOLEAN",44:"STRING",45:"CHAR",46:"FUNCTION"},
+productions_: [0,[3,2],[3,2],[4,2],[4,1],[6,4],[6,1],[9,3],[9,1],[9,0],[13,2],[13,4],[17,3],[19,2],[19,0],[20,1],[20,1],[20,3],[24,3],[24,3],[24,3],[24,3],[24,3],[24,3],[24,3],[24,3],[24,3],[24,3],[24,3],[24,3],[24,3],[24,2],[24,2],[24,3],[24,1],[24,1],[24,1],[24,4],[14,1],[14,1],[14,1],[14,1],[14,1],[14,1]],
 performAction: function anonymous(yytext, yyleng, yylineno, yy, yystate /* action[1] */, $$ /* vstack */, _$ /* lstack */) {
 /* this == yyval */
 
@@ -86,7 +86,7 @@ var $0 = $$.length - 1;
 switch (yystate) {
 case 1:
  
-            return $$[$01]; 
+            return $$[$0-1]; 
         
 break;
 case 2:
@@ -102,13 +102,373 @@ case 2:
 break;
 case 3:
 
-
+                        $$[$0-1].push($$[$0]);
+                        this.$  = $$[$0-1];
                     
+break;
+case 4:
+
+                        this.$ = [$$[$0]];
+                    
+break;
+case 5:
+
+                            this.$ = {
+                                tipo: 'LLAMADA_FUNCION',
+                                id: $$[$0-3],
+                                parametros: $$[$0-1],
+                                linea: _$[$0-3].first_line,
+                                columna: _$[$0-3].first_column + 1
+                            };
+                        
+break;
+case 6:
+
+                            this.$  = $$[$0];
+                        
+break;
+case 7:
+
+                            $$[$0-2].push($$[$0]);
+                            this.$ = $$[$0-2];
+                        
+break;
+case 8:
+
+                            this.$ = [$$[$0]];
+                        
+break;
+case 9: case 14:
+
+                            this.$ = [];
+                        
+break;
+case 10:
+
+                            this.$ = {
+                                tipo: 'PARAMETRO_DEF',
+                                tipado: $$[$0-1],
+                                id: $$[$0],
+                                linea: _$[$0-1].first_line,
+                                columna: _$[$0-1].first_column + 1
+                            };
+                        
+break;
+case 11:
+
+                            this.$ = {
+                                tipo: 'PARAMETRO_DEF_ARREGLO',
+                                tipado: $$[$0-3],
+                                id: $$[$0],
+                                linea: _$[$0-3].first_line,
+                                columna: _$[$0-3].first_column + 1
+                            };
+                        
+break;
+case 12:
+
+                            this.$ = {
+                                tipo: 'CADENA_INTERPOLADA',
+                                fragmentos: $$[$0-1], 
+                                loc_linea: _$[$0-2].first_line,
+                                loc_columna: _$[$0-2].first_column + 1
+                            };
+                        
+break;
+case 13:
+
+                            $$[$0-1].push($$[$0]);
+                            this.$ = $$[$0-1];
+                        
+break;
+case 15:
+
+                            this.$ = { 
+                                tipo: 'TEXTO_PLANO', 
+                                valor: $$[$0],
+                                loc_linea: _$[$0].first_line,
+                                loc_columna: _$[$0].first_column + 1
+                            };
+                        
+break;
+case 16:
+
+                            this.$ = { 
+                                tipo: 'VARIABLE', 
+                                nombre: $$[$0],
+                                loc_linea: _$[$0].first_line,
+                                loc_columna: _$[$0].first_column + 1
+                            };
+                        
+break;
+case 17:
+
+                            this.$ = { 
+                                tipo: 'EXPRESION_INTERPOLADA', 
+                                expresion: $$[$0-1],
+                                loc_linea: _$[$0-2].first_line,
+                                loc_columna: _$[$0-2].first_column + 1
+                            };
+                        
+break;
+case 18:
+ 
+                            this.$ = { 
+                                tipo: 'OPERACION', 
+                                operador: 'SUMA', 
+                                izq: $$[$0-2], 
+                                der: $$[$0],
+                                loc_linea: _$[$0-2].first_line, 
+                                loc_columna: _$[$0-2].first_column + 1  
+                            }; 
+                        
+break;
+case 19:
+ 
+                            this.$ = { 
+                                tipo: 'OPERACION', 
+                                operador: 'RESTA', 
+                                izq: $$[$0-2], 
+                                der: $$[$0],
+                                loc_linea: _$[$0-2].first_line, 
+                                loc_columna: _$[$0-2].first_column + 1  
+                            }; 
+                        
+break;
+case 20:
+ 
+                            this.$ = { 
+                                tipo: 'OPERACION', 
+                                operador: 'MULTIPLICACION', 
+                                izq: $$[$0-2], 
+                                der: $$[$0],
+                                loc_linea: _$[$0-2].first_line, 
+                                loc_columna: _$[$0-2].first_column + 1 
+                            }; 
+                        
+break;
+case 21:
+ 
+                            this.$ = { 
+                                tipo: 'OPERACION', 
+                                operador: 'DIVISION', 
+                                izq: $$[$0-2], 
+                                der: $$[$0],
+                                loc_linea: _$[$0-2].first_line, 
+                                loc_columna: _$[$0-2].first_column + 1 
+                            }; 
+                        
+break;
+case 22:
+ 
+                            this.$ = { 
+                                tipo: 'OPERACION', 
+                                operador: 'MODULO', 
+                                izq: $$[$0-2], 
+                                der: $$[$0],
+                                loc_linea: _$[$0-2].first_line, 
+                                loc_columna: _$[$0-2].first_column + 1 
+                            }; 
+                        
+break;
+case 23:
+ 
+                            this.$ = { 
+                                tipo: 'OPERACION', 
+                                operador: 'MAYOR', 
+                                izq: $$[$0-2], 
+                                der: $$[$0],
+                                loc_linea: _$[$0-2].first_line, 
+                                loc_columna: _$[$0-2].first_column + 1  
+                            }; 
+                        
+break;
+case 24:
+ 
+                            this.$ = { 
+                                tipo: 'OPERACION', 
+                                operador: 'MENOR', 
+                                izq: $$[$0-2], 
+                                der: $$[$0],
+                                loc_linea: _$[$0-2].first_line, 
+                                loc_columna: _$[$0-2].first_column + 1  
+                            }; 
+                        
+break;
+case 25:
+ 
+                            this.$ = { 
+                                tipo: 'OPERACION', 
+                                operador: 'MAYOR_IGUAL', 
+                                izq: $$[$0-2], 
+                                der: $$[$0],
+                                loc_linea: _$[$0-2].first_line, 
+                                loc_columna: _$[$0-2].first_column + 1  
+                            }; 
+                        
+break;
+case 26:
+ 
+                            this.$ = { 
+                                tipo: 'OPERACION', 
+                                operador: 'MENOR_IGUAL', 
+                                izq: $$[$0-2], 
+                                der: $$[$0],
+                                loc_linea: _$[$0-2].first_line, 
+                                loc_columna: _$[$0-2].first_column + 1  
+                            }; 
+                        
+break;
+case 27:
+ 
+                            this.$ = { 
+                                tipo: 'OPERACION', 
+                                operador: 'IGUALACION', 
+                                izq: $$[$0-2], 
+                                der: $$[$0],
+                                loc_linea: _$[$0-2].first_line, 
+                                loc_columna: _$[$0-2].first_column + 1  
+                            }; 
+                        
+break;
+case 28:
+ 
+                            this.$ = { 
+                                tipo: 'OPERACION', 
+                                operador: 'DIFERENCIA', 
+                                izq: $$[$0-2], 
+                                der: $$[$0],
+                                loc_linea: _$[$0-2].first_line, 
+                                loc_columna: _$[$0-2].first_column + 1  
+                            }; 
+                        
+break;
+case 29:
+ 
+                            this.$ = { 
+                                tipo: 'OPERACION', 
+                                operador: 'OR', 
+                                izq: $$[$0-2], 
+                                der: $$[$0],
+                                loc_linea: _$[$0-2].first_line, 
+                                loc_columna: _$[$0-2].first_column + 1  
+                            }; 
+                        
+break;
+case 30:
+ 
+                            this.$ = { 
+                                tipo: 'OPERACION', 
+                                operador: 'AND', 
+                                izq: $$[$0-2], 
+                                der: $$[$0],
+                                loc_linea: _$[$0-2].first_line, 
+                                loc_columna: _$[$0-2].first_column + 1  
+                            }; 
+                        
+break;
+case 31:
+ 
+                            this.$ = { 
+                                tipo: 'OPERACION_UNARIA', 
+                                operador: 'MENOS_UNARIO', 
+                                valor: $$[$0],
+                                loc_linea: _$[$0-1].first_line, 
+                                loc_columna: _$[$0-1].first_column + 1 
+                            }; 
+                        
+break;
+case 32:
+ 
+                            this.$ = { 
+                                tipo: 'OPERACION_UNARIA', 
+                                operador: 'NOT', 
+                                valor: $$[$0],
+                                loc_linea: _$[$0-1].first_line, 
+                                loc_columna: _$[$0-1].first_column + 1  
+                            }; 
+                        
+break;
+case 33:
+
+                            this.$ = $$[$0-1]; 
+                        
+break;
+case 34:
+
+                            this.$ = { 
+                                tipo: 'VALOR', 
+                                valor: Number($$[$0]),
+                                loc_linea: _$[$0].first_line, 
+                                loc_columna: _$[$0].first_column + 1 
+                            }; 
+                        
+break;
+case 35:
+
+                            this.$ = { 
+                                tipo: 'VALOR', 
+                                valor: Number($$[$0]),
+                                loc_linea: _$[$0].first_line, 
+                                loc_columna: _$[$0].first_column + 1  
+                            };                       
+                        
+break;
+case 36:
+ 
+                            this.$ = { 
+                                tipo: 'VARIABLE', 
+                                nombre: $$[$0],
+                                loc_linea: _$[$0].first_line, 
+                                loc_columna: _$[$0].first_column + 1 
+                            };
+                        
+break;
+case 37:
+ 
+                            this.$ = { 
+                                tipo: 'ACCESO_ARREGLO', 
+                                nombre: $$[$0-3],
+                                indice: $$[$0-1],
+                                loc_linea: _$[$0-3].first_line, 
+                                loc_columna: _$[$0-3].first_column + 1 
+                            };
+                        
+break;
+case 38:
+
+                            this.$  = 'ENTERA';
+                        
+break;
+case 39:
+
+                            this.$  = 'FLOAT';
+                        
+break;
+case 40:
+
+                            this.$  = 'BOOLEANA';
+                        
+break;
+case 41:
+
+                            this.$  = 'CADENA';
+                        
+break;
+case 42:
+
+                            this.$  = 'CARACTER';
+                        
+break;
+case 43:
+
+                            this.$  = 'FUNCTION';
+                        
 break;
 }
 },
-table: [{2:[1,3],3:1,4:2,5:[2,3]},{1:[3]},{5:[1,4]},{5:[1,5]},{1:[2,1]},{1:[2,2]}],
-defaultActions: {4:[2,1],5:[2,2]},
+table: [{2:[1,3],3:1,4:2,6:4,7:$V0,11:$V1},{1:[3]},{5:[1,7],6:8,7:$V0,11:$V1},{5:[1,9]},o($V2,[2,4]),{8:[1,10]},o($V2,[2,6]),{1:[2,1]},o($V2,[2,3]),{1:[2,2]},o($V3,[2,9],{9:11,13:12,14:13,41:$V4,42:$V5,43:$V6,44:$V7,45:$V8,46:$V9}),{10:[1,20],12:[1,21]},o($V3,[2,8]),{7:[1,22],15:[1,23]},o($Va,[2,38]),o($Va,[2,39]),o($Va,[2,40]),o($Va,[2,41]),o($Va,[2,42]),o($Va,[2,43]),o($V2,[2,5]),{13:24,14:13,41:$V4,42:$V5,43:$V6,44:$V7,45:$V8,46:$V9},o($V3,[2,10]),{16:[1,25]},o($V3,[2,7]),{7:[1,26]},o($V3,[2,11])],
+defaultActions: {7:[2,1],9:[2,2]},
 parseError: function parseError (str, hash) {
     if (hash.recoverable) {
         this.trace(str);
@@ -749,19 +1109,19 @@ case 2:/*Ignorar comentario de linea*/
 break;
 case 3:/*Ignorar comentario multilinea*/
 break;
-case 4:return 'INT';
+case 4:return 41;
 break;
-case 5:return 'FLOAT';
+case 5:return 42;
 break;
-case 6:return 'STRING';
+case 6:return 44;
 break;
-case 7:return 'BOOLEAN';
+case 7:return 43;
 break;
-case 8:return 'FLOAT';
+case 8:return 42;
 break;
-case 9:return 'CHAR';
+case 9:return 45;
 break;
-case 10:return 'FUNCTION';
+case 10:return 46;
 break;
 case 11:return 'LABEL';
 break;
@@ -805,73 +1165,73 @@ case 30:return 'CASE';
 break;
 case 31:return 'DEFAULT';
 break;
-case 32:return 'COMA';
+case 32:return 12;
 break;
 case 33:return 'DOS_PUNTOS';
 break;
-case 34:return 'MAS';
+case 34:return 25;
 break;
-case 35:return 'MENOS';
+case 35:return 26;
 break;
-case 36:return 'MULTIPLICACION';
+case 36:return 27;
 break;
-case 37:return 'DIVISION';
+case 37:return 28;
 break;
 case 38:return 'MODULO';
 break;
-case 39:return 'MAYOR_IGUAL';
+case 39:return 32;
 break;
-case 40:return 'MENOR_IGUAL';
+case 40:return 33;
 break;
-case 41:return 'MAYOR';
+case 41:return 30;
 break;
-case 42:return 'MENOR';
+case 42:return 31;
 break;
-case 43:return 'IGUALACION';
+case 43:return 34;
 break;
-case 44:return 'DIFERENTE';
+case 44:return 35;
 break;
-case 45:return 'OR';
+case 45:return 36;
 break;
-case 46:return 'AND';
+case 46:return 37;
 break;
-case 47:return 'NOT';
+case 47:return 38;
 break;
-case 48:return 'PARENT_APERTURA';
+case 48:return 8;
 break;
-case 49:return 'PARENT_CIERRE';
+case 49:return 10;
 break;
 case 50:return 'LLAVE_APERTURA';
 break;
 case 51:return 'LLAVE_CIERRE';
 break;
-case 52:return 'CORCHETE_APERTURA';
+case 52:return 15;
 break;
-case 53:return 'CORCHETE_CIERRE';
+case 53:return 16;
 break;
-case 54: this.pushState('string'); return 'COMILLA'; 
+case 54: this.pushState('string'); return 18; 
 break;
-case 55: this.popState(); return 'COMILLA'; 
+case 55: this.popState(); return 18; 
 break;
-case 56: return 'VARIABLE_DOLAR'; 
+case 56: return 22; 
 break;
-case 57: this.pushState('interp'); return 'BACKTICK'; 
+case 57: this.pushState('interp'); return 23; 
 break;
-case 58: this.popState(); return 'BACKTICK'; 
+case 58: this.popState(); return 23; 
 break;
-case 59: return 'TEXTO_CADENA'; 
+case 59: return 21; 
 break;
-case 60: return 'TEXTO_CADENA'; 
+case 60: return 21; 
 break;
-case 61: return 'TEXTO_CADENA'; 
+case 61: return 21; 
 break;
-case 62:return 'DECIMAL';
+case 62:return 40;
 break;
 case 63:return 'ENTERO';
 break;
-case 64:return 'VARIABLE_DOLAR';
+case 64:return 22;
 break;
-case 65:return 'IDENTIFICADOR';
+case 65:return 7;
 break;
 case 66:return 'ARROBA_VAR';
 break;
