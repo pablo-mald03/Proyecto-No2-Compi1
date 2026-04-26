@@ -111,17 +111,14 @@ case 4:
                             }; 
                         
 break;
-case 5: case 11: case 15: case 16: case 17: case 18: case 19: case 20: case 21: case 22: case 23: case 24:
+case 5:
+ this.$ = {tipo: 'MAIN', indentar: 0}; 
+break;
+case 6: case 7: case 8: case 9: case 10: case 11: case 12: case 13: case 14: case 15: case 16: case 17: case 18: case 19: case 20: case 21: case 22: case 23: case 24:
  this.$ = {tipo: 'RESERVADA', indentar: 0}; 
 break;
-case 6: case 7: case 8: case 9: case 10:
- this.$ = {tipo: 'TIPO_DATO', indentar: 0}; 
-break;
-case 12: case 13: case 14:
- this.$ = {tipo: 'COMANDO', indentar: 0}; 
-break;
-case 25: case 26:
- this.$ = {tipo: 'BOOLEANO', indentar: 0}; 
+case 25: case 26: case 52: case 53: case 54: case 55:
+ this.$ = {tipo: 'LITERAL', indentar: 0}; 
 break;
 case 27: case 29:
  this.$ = {tipo: 'DELIMITADOR', indentar: 1}; 
@@ -138,29 +135,14 @@ break;
 case 36: case 37: case 38: case 39: case 40: case 41: case 42: case 43: case 44: case 45: case 46: case 47: case 48: case 49: case 50:
  this.$ = {tipo: 'OPERADOR', indentar: 0}; 
 break;
-case 51:
+case 51: case 59:
  this.$ = {tipo: 'IDENTIFICADOR', indentar: 0}; 
 break;
-case 52:
- this.$ = {tipo: 'VARIABLE_LOCAL', indentar: 0}; 
-break;
-case 53: case 54:
- this.$ = {tipo: 'NUMERO', indentar: 0}; 
-break;
-case 55:
- this.$ = {tipo: 'CARACTER', indentar: 0}; 
-break;
-case 56:
+case 56: case 57:
  this.$ = {tipo: 'CADENA', indentar: 0}; 
 break;
-case 57: case 60:
- this.$ = {tipo: 'CADENA_TEXTO', indentar: 0}; 
-break;
-case 58:
+case 58: case 60:
  this.$ = {tipo: 'CADENA_INTERPOLACION', indentar: 0}; 
-break;
-case 59:
- this.$ = {tipo: 'VARIABLE', indentar: 0}; 
 break;
 case 61:
  this.$ = {tipo: 'COMENTARIO', indentar: 0}; 

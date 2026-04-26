@@ -233,11 +233,11 @@ unidad_token            : token_individual
 
 /*---****===== Produccion de cada token reconocido=====****---*/
 
-token_individual    : INT               {{ $$ = {tipo: 'TIPO_DATO', indentar: 0}; }}
-                    | FLOAT             {{ $$ = {tipo: 'TIPO_DATO', indentar: 0}; }}
-                    | STRING            {{ $$ = {tipo: 'TIPO_DATO', indentar: 0}; }}
-                    | BOOLEAN           {{ $$ = {tipo: 'TIPO_DATO', indentar: 0}; }}
-                    | CHAR              {{ $$ = {tipo: 'TIPO_DATO', indentar: 0}; }}
+token_individual    : INT               {{ $$ = {tipo: 'RESERVADA', indentar: 0}; }}
+                    | FLOAT             {{ $$ = {tipo: 'RESERVADA', indentar: 0}; }}
+                    | STRING            {{ $$ = {tipo: 'RESERVADA', indentar: 0}; }}
+                    | BOOLEAN           {{ $$ = {tipo: 'RESERVADA', indentar: 0}; }}
+                    | CHAR              {{ $$ = {tipo: 'RESERVADA', indentar: 0}; }}
                     | FUNCTION          {{ $$ = {tipo: 'RESERVADA', indentar: 0}; }}
                     | FOR               {{ $$ = {tipo: 'RESERVADA', indentar: 0}; }}
                     | EACH              {{ $$ = {tipo: 'RESERVADA', indentar: 0}; }}
@@ -250,20 +250,20 @@ token_individual    : INT               {{ $$ = {tipo: 'TIPO_DATO', indentar: 0}
                     | DEFAULT           {{ $$ = {tipo: 'RESERVADA', indentar: 0}; }}
                 
                     /* Componentes */
-                    | TEXT              {{ $$ = {tipo: 'COMPONENTE', indentar: 0}; }}
-                    | IMG               {{ $$ = {tipo: 'COMPONENTE', indentar: 0}; }}
-                    | FORM              {{ $$ = {tipo: 'COMPONENTE', indentar: 0}; }}
-                    | INPUT_TEXT        {{ $$ = {tipo: 'COMPONENTE', indentar: 0}; }}
-                    | INPUT_NUMBER      {{ $$ = {tipo: 'COMPONENTE', indentar: 0}; }}
-                    | INPUT_BOOL        {{ $$ = {tipo: 'COMPONENTE', indentar: 0}; }}
-                    | SUBMIT            {{ $$ = {tipo: 'COMPONENTE', indentar: 0}; }}
+                    | TEXT              {{ $$ = {tipo: 'RESERVADA', indentar: 0}; }}
+                    | IMG               {{ $$ = {tipo: 'RESERVADA', indentar: 0}; }}
+                    | FORM              {{ $$ = {tipo: 'RESERVADA', indentar: 0}; }}
+                    | INPUT_TEXT        {{ $$ = {tipo: 'RESERVADA', indentar: 0}; }}
+                    | INPUT_NUMBER      {{ $$ = {tipo: 'RESERVADA', indentar: 0}; }}
+                    | INPUT_BOOL        {{ $$ = {tipo: 'RESERVADA', indentar: 0}; }}
+                    | SUBMIT            {{ $$ = {tipo: 'RESERVADA', indentar: 0}; }}
                 
                     /* Propiedades y Valores Booleanos */
                     | LABEL             {{ $$ = {tipo: 'PROPIEDAD', indentar: 0}; }}
                     | ID                {{ $$ = {tipo: 'PROPIEDAD', indentar: 0}; }}
                     | VALUE             {{ $$ = {tipo: 'PROPIEDAD', indentar: 0}; }}
-                    | TRUE              {{ $$ = {tipo: 'BOOLEANO', indentar: 0}; }}
-                    | FALSE             {{ $$ = {tipo: 'BOOLEANO', indentar: 0}; }}
+                    | TRUE              {{ $$ = {tipo: 'LITERAL', indentar: 0}; }}
+                    | FALSE             {{ $$ = {tipo: 'LITERAL', indentar: 0}; }}
                 
                     /* Delimitadores y Agrupaciones */
                     | LLAVE_APERTURA            {{ $$ = {tipo: 'DELIMITADOR', indentar: 1}; }} 
@@ -298,16 +298,16 @@ token_individual    : INT               {{ $$ = {tipo: 'TIPO_DATO', indentar: 0}
                     | NOT               {{ $$ = {tipo: 'OPERADOR', indentar: 0}; }}
                 
                     /* Variables y Literales Numericos */
-                    | VARIABLE_DOLAR    {{ $$ = {tipo: 'VARIABLE_DOLAR', indentar: 0}; }}
-                    | ARROBA_VAR        {{ $$ = {tipo: 'VARIABLE_LOCAL', indentar: 0}; }}
+                    | VARIABLE_DOLAR    {{ $$ = {tipo: 'IDENTIFICADOR', indentar: 0}; }}
+                    | ARROBA_VAR        {{ $$ = {tipo: 'LITERAL', indentar: 0}; }}
                     | IDENTIFICADOR     {{ $$ = {tipo: 'IDENTIFICADOR', indentar: 0}; }}
-                    | ENTERO            {{ $$ = {tipo: 'NUMERO', indentar: 0}; }}
-                    | DECIMAL           {{ $$ = {tipo: 'NUMERO', indentar: 0}; }}
+                    | ENTERO            {{ $$ = {tipo: 'LITERAL', indentar: 0}; }}
+                    | DECIMAL           {{ $$ = {tipo: 'LITERAL', indentar: 0}; }}
                 
                     /* Manejo de Strings e Interpolacion */
                     | COMILLA           {{ $$ = {tipo: 'CADENA', indentar: 0}; }}
                     | BACKTICK          {{ $$ = {tipo: 'CADENA_INTERPOLACION', indentar: 0}; }}
-                    | TEXTO_CADENA      {{ $$ = {tipo: 'CADENA_TEXTO', indentar: 0}; }}
+                    | TEXTO_CADENA      {{ $$ = {tipo: 'CADENA', indentar: 0}; }}
                 
                     /* Elementos Estructurales e Ignorados */
                     | COMENTARIO        {{ $$ = {tipo: 'COMENTARIO', indentar: 0}; }}

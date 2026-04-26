@@ -241,18 +241,18 @@ unidad_token            : token_individual
 
 /*-----=====----- Mapeo Total de Tokens -----=====-----*/
 
-token_individual        : MAIN              {{ $$ = {tipo: 'RESERVADA', indentar: 0}; }}
-                        | INT               {{ $$ = {tipo: 'TIPO_DATO', indentar: 0}; }}
-                        | FLOAT             {{ $$ = {tipo: 'TIPO_DATO', indentar: 0}; }}
-                        | STRING            {{ $$ = {tipo: 'TIPO_DATO', indentar: 0}; }}
-                        | BOOLEAN           {{ $$ = {tipo: 'TIPO_DATO', indentar: 0}; }}
-                        | CHAR              {{ $$ = {tipo: 'TIPO_DATO', indentar: 0}; }}
+token_individual        : MAIN              {{ $$ = {tipo: 'MAIN', indentar: 0}; }}
+                        | INT               {{ $$ = {tipo: 'RESERVADA', indentar: 0}; }}
+                        | FLOAT             {{ $$ = {tipo: 'RESERVADA', indentar: 0}; }}
+                        | STRING            {{ $$ = {tipo: 'RESERVADA', indentar: 0}; }}
+                        | BOOLEAN           {{ $$ = {tipo: 'RESERVADA', indentar: 0}; }}
+                        | CHAR              {{ $$ = {tipo: 'RESERVADA', indentar: 0}; }}
                         | FUNCTION          {{ $$ = {tipo: 'RESERVADA', indentar: 0}; }}
 
                         /* Comandos de Contexto Especial */
-                        | IMPORT            {{ $$ = {tipo: 'COMANDO', indentar: 0}; }}
-                        | EXECUTE           {{ $$ = {tipo: 'COMANDO', indentar: 0}; }}
-                        | LOAD              {{ $$ = {tipo: 'COMANDO', indentar: 0}; }}
+                        | IMPORT            {{ $$ = {tipo: 'RESERVADA', indentar: 0}; }}
+                        | EXECUTE           {{ $$ = {tipo: 'RESERVADA', indentar: 0}; }}
+                        | LOAD              {{ $$ = {tipo: 'RESERVADA', indentar: 0}; }}
 
                         /* Estructuras de Control */
                         | WHILE             {{ $$ = {tipo: 'RESERVADA', indentar: 0}; }}
@@ -267,8 +267,8 @@ token_individual        : MAIN              {{ $$ = {tipo: 'RESERVADA', indentar
                         | DO                {{ $$ = {tipo: 'RESERVADA', indentar: 0}; }}
 
                         /* Valores Booleanos */
-                        | TRUE              {{ $$ = {tipo: 'BOOLEANO', indentar: 0}; }}
-                        | FALSE             {{ $$ = {tipo: 'BOOLEANO', indentar: 0}; }}
+                        | TRUE              {{ $$ = {tipo: 'LITERAL', indentar: 0}; }}
+                        | FALSE             {{ $$ = {tipo: 'LITERAL', indentar: 0}; }}
 
                         /* Delimitadores y Agrupaciones*/
                         | LLAVE_APERTURA    {{ $$ = {tipo: 'DELIMITADOR', indentar: 1}; }} 
@@ -304,17 +304,17 @@ token_individual        : MAIN              {{ $$ = {tipo: 'RESERVADA', indentar
 
                         /* Variables, Identificadores y Literales Numericos */
                         | IDENTIFICADOR     {{ $$ = {tipo: 'IDENTIFICADOR', indentar: 0}; }}
-                        | ARROBA_VAR        {{ $$ = {tipo: 'VARIABLE_LOCAL', indentar: 0}; }}
-                        | ENTERO            {{ $$ = {tipo: 'NUMERO', indentar: 0}; }}
-                        | DECIMAL           {{ $$ = {tipo: 'NUMERO', indentar: 0}; }}
-                        | VALOR_CHAR        {{ $$ = {tipo: 'CARACTER', indentar: 0}; }}
+                        | ARROBA_VAR        {{ $$ = {tipo: 'LITERAL', indentar: 0}; }}
+                        | ENTERO            {{ $$ = {tipo: 'LITERAL', indentar: 0}; }}
+                        | DECIMAL           {{ $$ = {tipo: 'LITERAL', indentar: 0}; }}
+                        | VALOR_CHAR        {{ $$ = {tipo: 'LITERAL', indentar: 0}; }}
 
                         /* Manejo de Strings e Interpolación */
                         | COMILLA                   {{ $$ = {tipo: 'CADENA', indentar: 0}; }}
-                        | TEXTO_PLANO               {{ $$ = {tipo: 'CADENA_TEXTO', indentar: 0}; }}
+                        | TEXTO_PLANO               {{ $$ = {tipo: 'CADENA', indentar: 0}; }}
                         | BACKTICK                  {{ $$ = {tipo: 'CADENA_INTERPOLACION', indentar: 0}; }}
-                        | VAR_INTERPOLADA           {{ $$ = {tipo: 'VARIABLE', indentar: 0}; }}
-                        | TEXTO_BACKSTRING          {{ $$ = {tipo: 'CADENA_TEXTO', indentar: 0}; }}
+                        | VAR_INTERPOLADA           {{ $$ = {tipo: 'IDENTIFICADOR', indentar: 0}; }}
+                        | TEXTO_BACKSTRING          {{ $$ = {tipo: 'CADENA_INTERPOLACION', indentar: 0}; }}
 
                         /* Elementos Estructurales e Ignorados */
                         | COMENTARIO        {{ $$ = {tipo: 'COMENTARIO', indentar: 0}; }}

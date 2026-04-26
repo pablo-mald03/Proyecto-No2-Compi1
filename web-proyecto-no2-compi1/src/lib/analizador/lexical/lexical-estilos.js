@@ -111,8 +111,8 @@ case 4:
                             }; 
                         
 break;
-case 5:
- this.$ = {tipo: 'NUMERO', indentar: 0}; 
+case 5: case 36: case 37: case 38: case 39: case 40:
+ this.$ = {tipo: 'LITERAL', indentar: 0}; 
 break;
 case 6:
  this.$ = {tipo: 'COLOR_HEX', indentar: 0}; 
@@ -120,17 +120,11 @@ break;
 case 7:
  this.$ = {tipo: 'COLOR_RESERVADO', indentar: 0}; 
 break;
-case 8:
- this.$ = {tipo: 'VARIABLE', indentar: 0}; 
-break;
-case 9:
+case 8: case 9:
  this.$ = {tipo: 'IDENTIFICADOR', indentar: 0}; 
 break;
-case 10:
+case 10: case 11: case 12: case 13: case 14:
  this.$ = {tipo: 'RESERVADA', indentar: 0}; 
-break;
-case 11: case 12: case 13: case 14:
- this.$ = {tipo: 'RESERVADA_CICLO', indentar: 0}; 
 break;
 case 15: case 16: case 17: case 18: case 19: case 20: case 21: case 22: case 23: case 24: case 25: case 26: case 27: case 28: case 29: case 30: case 31:
  this.$ = {tipo: 'PROPIEDAD', indentar: 0}; 
@@ -140,9 +134,6 @@ case 32:
 break;
 case 33: case 34: case 35:
  this.$ = {tipo: 'PRESET', indentar: 0}; 
-break;
-case 36: case 37: case 38: case 39: case 40:
- this.$ = {tipo: 'FUENTE', indentar: 0}; 
 break;
 case 41:
  this.$ = {tipo: 'DELIMITADOR', indentar: 1}; 
@@ -156,17 +147,8 @@ break;
 case 45: case 46:
  this.$ = {tipo: 'PUNTUACION', indentar: 0}; 
 break;
-case 47: case 49: case 50: case 51: case 52:
+case 47: case 48: case 49: case 50: case 51: case 52: case 53: case 54: case 55: case 56: case 57: case 58: case 59: case 60: case 61:
  this.$ = {tipo: 'OPERADOR', indentar: 0}; 
-break;
-case 48:
- this.$ = {tipo: 'UNIDAD', indentar: 0}; 
-break;
-case 53: case 54: case 55: case 56: case 57: case 58:
- this.$ = {tipo: 'OPERADOR_COMP', indentar: 0}; 
-break;
-case 59: case 60: case 61:
- this.$ = {tipo: 'OPERADOR_LOGICO', indentar: 0}; 
 break;
 case 62:
  this.$ = {tipo: 'COMENTARIO', indentar: 0}; 

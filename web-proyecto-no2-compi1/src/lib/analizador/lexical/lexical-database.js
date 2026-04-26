@@ -111,17 +111,11 @@ case 4:
                             }; 
                         
 break;
-case 5: case 6: case 7:
- this.$ = {tipo: 'COMANDO', indentar: 0}; 
-break;
-case 8:
+case 5: case 6: case 7: case 8:
  this.$ = {tipo: 'RESERVADA', indentar: 0}; 
 break;
-case 9:
- this.$ = {tipo: 'TIPO_DATO', indentar: 0}; 
-break;
-case 10:
- this.$ = {tipo: 'NUMERO', indentar: 0}; 
+case 9: case 10:
+ this.$ = {tipo: 'LITERAL', indentar: 0}; 
 break;
 case 11:
  this.$ = {tipo: 'CADENA', indentar: 0}; 
@@ -129,14 +123,8 @@ break;
 case 12:
  this.$ = {tipo: 'IDENTIFICADOR', indentar: 0}; 
 break;
-case 13: case 14: case 15: case 16: case 17: case 24:
+case 13: case 14: case 15: case 16: case 17: case 18: case 19: case 20: case 21: case 22: case 23: case 24: case 25: case 26: case 27:
  this.$ = {tipo: 'OPERADOR', indentar: 0}; 
-break;
-case 18: case 19: case 20: case 21: case 22: case 23:
- this.$ = {tipo: 'COMPARACION', indentar: 0}; 
-break;
-case 25: case 26: case 27:
- this.$ = {tipo: 'LOGICO', indentar: 0}; 
 break;
 case 28: case 29: case 30: case 31:
  this.$ = {tipo: 'DELIMITADOR', indentar: 0}; 

@@ -232,18 +232,18 @@ unidad_token            : token_individual
 
 /*-----=====----- Mapeo de Tokens para el Linter -----=====-----*/
 
-token_individual    : NUMERO            {{ $$ = {tipo: 'NUMERO', indentar: 0}; }}
+token_individual    : NUMERO            {{ $$ = {tipo: 'LITERAL', indentar: 0}; }}
                     | HEX_COLOR         {{ $$ = {tipo: 'COLOR_HEX', indentar: 0}; }}
                     | COLOR_PRESET      {{ $$ = {tipo: 'COLOR_RESERVADO', indentar: 0}; }}
-                    | VARIABLE_DOLAR    {{ $$ = {tipo: 'VARIABLE', indentar: 0}; }}
+                    | VARIABLE_DOLAR    {{ $$ = {tipo: 'IDENTIFICADOR', indentar: 0}; }}
                     | IDENTIFICADOR     {{ $$ = {tipo: 'IDENTIFICADOR', indentar: 0}; }}
 
                     /* Palabras Reservadas de Estructura */
                     | EXTENDS           {{ $$ = {tipo: 'RESERVADA', indentar: 0}; }}
-                    | FOR               {{ $$ = {tipo: 'RESERVADA_CICLO', indentar: 0}; }}
-                    | FROM              {{ $$ = {tipo: 'RESERVADA_CICLO', indentar: 0}; }}
-                    | THROUGH           {{ $$ = {tipo: 'RESERVADA_CICLO', indentar: 0}; }}
-                    | TO                {{ $$ = {tipo: 'RESERVADA_CICLO', indentar: 0}; }}
+                    | FOR               {{ $$ = {tipo: 'RESERVADA', indentar: 0}; }}
+                    | FROM              {{ $$ = {tipo: 'RESERVADA', indentar: 0}; }}
+                    | THROUGH           {{ $$ = {tipo: 'RESERVADA', indentar: 0}; }}
+                    | TO                {{ $$ = {tipo: 'RESERVADA', indentar: 0}; }}
 
                     /* Propiedades de Configuracion */
                     | BACKGROUND        {{ $$ = {tipo: 'PROPIEDAD', indentar: 0}; }}
@@ -269,11 +269,11 @@ token_individual    : NUMERO            {{ $$ = {tipo: 'NUMERO', indentar: 0}; }
                     | DIRECTION         {{ $$ = {tipo: 'PRESET', indentar: 0}; }}
                     | MARGIN_TIPO       {{ $$ = {tipo: 'PRESET', indentar: 0}; }}
                     | POSITION          {{ $$ = {tipo: 'PRESET', indentar: 0}; }}
-                    | HELVETICA         {{ $$ = {tipo: 'FUENTE', indentar: 0}; }}
-                    | SANS              {{ $$ = {tipo: 'FUENTE', indentar: 0}; }}
-                    | SERIF             {{ $$ = {tipo: 'FUENTE', indentar: 0}; }}
-                    | MONO              {{ $$ = {tipo: 'FUENTE', indentar: 0}; }}
-                    | CURSIVE           {{ $$ = {tipo: 'FUENTE', indentar: 0}; }}
+                    | HELVETICA         {{ $$ = {tipo: 'LITERAL', indentar: 0}; }}
+                    | SANS              {{ $$ = {tipo: 'LITERAL', indentar: 0}; }}
+                    | SERIF             {{ $$ = {tipo: 'LITERAL', indentar: 0}; }}
+                    | MONO              {{ $$ = {tipo: 'LITERAL', indentar: 0}; }}
+                    | CURSIVE           {{ $$ = {tipo: 'LITERAL', indentar: 0}; }}
 
                     /* Delimitadores e Indentacion */
                     | LLAVE_APERTURA    {{ $$ = {tipo: 'DELIMITADOR', indentar: 1}; }}
@@ -283,22 +283,22 @@ token_individual    : NUMERO            {{ $$ = {tipo: 'NUMERO', indentar: 0}; }
                     | COMA              {{ $$ = {tipo: 'PUNTUACION', indentar: 0}; }}
                     | PUNTO_COMA        {{ $$ = {tipo: 'PUNTUACION', indentar: 0}; }}
                     | IGUAL             {{ $$ = {tipo: 'OPERADOR', indentar: 0}; }}
-                    | PORCENTAJE        {{ $$ = {tipo: 'UNIDAD', indentar: 0}; }}
+                    | PORCENTAJE        {{ $$ = {tipo: 'OPERADOR', indentar: 0}; }}
 
                     /* Operadores Logicos y Matematicos */
                     | MAS               {{ $$ = {tipo: 'OPERADOR', indentar: 0}; }}
                     | MENOS             {{ $$ = {tipo: 'OPERADOR', indentar: 0}; }}
                     | MULTIPLICACION    {{ $$ = {tipo: 'OPERADOR', indentar: 0}; }}
                     | DIVISION          {{ $$ = {tipo: 'OPERADOR', indentar: 0}; }}
-                    | MAYOR_IGUAL       {{ $$ = {tipo: 'OPERADOR_COMP', indentar: 0}; }}
-                    | MENOR_IGUAL       {{ $$ = {tipo: 'OPERADOR_COMP', indentar: 0}; }}
-                    | MAYOR             {{ $$ = {tipo: 'OPERADOR_COMP', indentar: 0}; }}
-                    | MENOR             {{ $$ = {tipo: 'OPERADOR_COMP', indentar: 0}; }}
-                    | IGUALACION        {{ $$ = {tipo: 'OPERADOR_COMP', indentar: 0}; }}
-                    | DIFERENTE         {{ $$ = {tipo: 'OPERADOR_COMP', indentar: 0}; }}
-                    | OR                {{ $$ = {tipo: 'OPERADOR_LOGICO', indentar: 0}; }}
-                    | AND               {{ $$ = {tipo: 'OPERADOR_LOGICO', indentar: 0}; }}
-                    | NOT               {{ $$ = {tipo: 'OPERADOR_LOGICO', indentar: 0}; }}
+                    | MAYOR_IGUAL       {{ $$ = {tipo: 'OPERADOR', indentar: 0}; }}
+                    | MENOR_IGUAL       {{ $$ = {tipo: 'OPERADOR', indentar: 0}; }}
+                    | MAYOR             {{ $$ = {tipo: 'OPERADOR', indentar: 0}; }}
+                    | MENOR             {{ $$ = {tipo: 'OPERADOR', indentar: 0}; }}
+                    | IGUALACION        {{ $$ = {tipo: 'OPERADOR', indentar: 0}; }}
+                    | DIFERENTE         {{ $$ = {tipo: 'OPERADOR', indentar: 0}; }}
+                    | OR                {{ $$ = {tipo: 'OPERADOR', indentar: 0}; }}
+                    | AND               {{ $$ = {tipo: 'OPERADOR', indentar: 0}; }}
+                    | NOT               {{ $$ = {tipo: 'OPERADOR', indentar: 0}; }}
 
                     /* Otros */
                     | COMENTARIO        {{ $$ = {tipo: 'COMENTARIO', indentar: 0}; }}

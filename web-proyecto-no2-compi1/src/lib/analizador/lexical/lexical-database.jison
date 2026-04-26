@@ -154,16 +154,16 @@ unidad_token            : token_individual
 
 /*-----=====----- Mapeo de Tokens para el lenguaje -----=====-----*/
 
-token_individual            : TABLE             {{ $$ = {tipo: 'COMANDO', indentar: 0}; }}
-                            | COLUMNS           {{ $$ = {tipo: 'COMANDO', indentar: 0}; }}
-                            | DELETE            {{ $$ = {tipo: 'COMANDO', indentar: 0}; }}
+token_individual            : TABLE             {{ $$ = {tipo: 'RESERVADA', indentar: 0}; }}
+                            | COLUMNS           {{ $$ = {tipo: 'RESERVADA', indentar: 0}; }}
+                            | DELETE            {{ $$ = {tipo: 'RESERVADA', indentar: 0}; }}
                             | IN                {{ $$ = {tipo: 'RESERVADA', indentar: 0}; }}
 
                             /* Tipos de Datos */
-                            | TIPO              {{ $$ = {tipo: 'TIPO_DATO', indentar: 0}; }}
+                            | TIPO              {{ $$ = {tipo: 'LITERAL', indentar: 0}; }}
 
                             /* Literales */
-                            | NUMERO            {{ $$ = {tipo: 'NUMERO', indentar: 0}; }}
+                            | NUMERO            {{ $$ = {tipo: 'LITERAL', indentar: 0}; }}
                             | STRING            {{ $$ = {tipo: 'CADENA', indentar: 0}; }}
                             | IDENTIFICADOR     {{ $$ = {tipo: 'IDENTIFICADOR', indentar: 0}; }}
 
@@ -175,18 +175,18 @@ token_individual            : TABLE             {{ $$ = {tipo: 'COMANDO', indent
                             | MODULO            {{ $$ = {tipo: 'OPERADOR', indentar: 0}; }}
 
                             /* Operadores de Comparacion */
-                            | MAYOR_IGUAL       {{ $$ = {tipo: 'COMPARACION', indentar: 0}; }}
-                            | MENOR_IGUAL       {{ $$ = {tipo: 'COMPARACION', indentar: 0}; }}
-                            | MAYOR             {{ $$ = {tipo: 'COMPARACION', indentar: 0}; }}
-                            | MENOR             {{ $$ = {tipo: 'COMPARACION', indentar: 0}; }}
-                            | IGUALACION        {{ $$ = {tipo: 'COMPARACION', indentar: 0}; }}
-                            | DIFERENTE         {{ $$ = {tipo: 'COMPARACION', indentar: 0}; }}
+                            | MAYOR_IGUAL       {{ $$ = {tipo: 'OPERADOR', indentar: 0}; }}
+                            | MENOR_IGUAL       {{ $$ = {tipo: 'OPERADOR', indentar: 0}; }}
+                            | MAYOR             {{ $$ = {tipo: 'OPERADOR', indentar: 0}; }}
+                            | MENOR             {{ $$ = {tipo: 'OPERADOR', indentar: 0}; }}
+                            | IGUALACION        {{ $$ = {tipo: 'OPERADOR', indentar: 0}; }}
+                            | DIFERENTE         {{ $$ = {tipo: 'OPERADOR', indentar: 0}; }}
                             | IGUAL             {{ $$ = {tipo: 'OPERADOR', indentar: 0}; }}
 
                             /* Operadores Logicos */
-                            | OR                {{ $$ = {tipo: 'LOGICO', indentar: 0}; }}
-                            | AND               {{ $$ = {tipo: 'LOGICO', indentar: 0}; }}
-                            | NOT               {{ $$ = {tipo: 'LOGICO', indentar: 0}; }}
+                            | OR                {{ $$ = {tipo: 'OPERADOR', indentar: 0}; }}
+                            | AND               {{ $$ = {tipo: 'OPERADOR', indentar: 0}; }}
+                            | NOT               {{ $$ = {tipo: 'OPERADOR', indentar: 0}; }}
 
                             /* Delimitadores y Puntuacion */
                             | PARENT_APERTURA   {{ $$ = {tipo: 'DELIMITADOR', indentar: 0}; }}
