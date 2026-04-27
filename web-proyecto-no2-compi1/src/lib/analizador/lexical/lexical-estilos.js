@@ -123,7 +123,7 @@ break;
 case 8: case 9:
  this.$ = {tipo: 'IDENTIFICADOR', indentar: 0}; 
 break;
-case 10: case 11: case 12: case 13: case 14: case 33:
+case 10: case 11: case 12: case 13: case 14: case 33: case 34:
  this.$ = {tipo: 'RESERVADA', indentar: 0}; 
 break;
 case 15: case 16: case 17: case 18: case 19: case 20: case 21: case 22: case 23: case 24: case 25: case 26: case 27: case 28: case 29: case 30: case 31: case 35:
@@ -131,9 +131,6 @@ case 15: case 16: case 17: case 18: case 19: case 20: case 21: case 22: case 23:
 break;
 case 32:
  this.$ = {tipo: 'FUNCION_COLOR', indentar: 0}; 
-break;
-case 34:
- this.$ = {tipo: 'PRESET', indentar: 0}; 
 break;
 case 41:
  this.$ = {tipo: 'DELIMITADOR', indentar: 1}; 

@@ -42,16 +42,19 @@
 		cursorCol = linesBeforeCursor[linesBeforeCursor.length - 1].length + 1;
 	}
 
-	let highlightedCode = $derived(manager.highlight(safeContent, fileExtension));
+	let highlightedCode = $derived(manager.highlight(safeContent, fileExtension) + '\n');
 
 	/*Metodo que permite sincronizar el scroll de los colores lineas y textarea*/
 	function handleScroll() {
-		if (textareaRef) {
-			if (lineNumbersRef) lineNumbersRef.scrollTop = textareaRef.scrollTop;
-			if (highlightRef) {
-				highlightRef.scrollTop = textareaRef.scrollTop;
-				highlightRef.scrollLeft = textareaRef.scrollLeft;
-			}
+		if (!textareaRef) return;
+
+		if (lineNumbersRef) {
+			lineNumbersRef.scrollTop = textareaRef.scrollTop;
+		}
+
+		if (highlightRef) {
+			highlightRef.scrollTop = textareaRef.scrollTop;
+			highlightRef.scrollLeft = textareaRef.scrollLeft;
 		}
 	}
 
@@ -214,25 +217,33 @@
 		margin: 0;
 		padding: var(--padding-top) 1rem;
 		border: none;
+		box-sizing: border-box;
 
 		font-family: var(--editor-font);
 		font-size: var(--font-size);
 		line-height: var(--line-height);
 		white-space: pre;
+		word-wrap: normal;
 		tab-size: 4;
 		-moz-tab-size: 4;
 		overflow: auto;
 	}
+
 	.editor-highlight {
 		z-index: 1;
 		pointer-events: none;
 		color: #abb2bf;
 		background: transparent;
 	}
-
 	.editor-highlight code {
+		display: block;
 		font-family: inherit;
+		font-size: inherit;
+		line-height: inherit;
+		padding: 0;
+		margin: 0;
 	}
+
 	.editor-textarea {
 		z-index: 2;
 		background: transparent;
@@ -241,39 +252,6 @@
 		outline: none;
 		resize: none;
 		width: calc(100% - var(--left-gutter));
-	}
-
-	.editor-textarea.is-readonly {
-		cursor: not-allowed;
-	}
-
-	.editor-footer {
-		background-color: #0b1120;
-		border-top: 1px solid #1e293b;
-		padding: 4px 16px;
-		color: #94a3b8;
-		font-size: 0.75rem;
-		z-index: 20;
-	}
-
-	.footer-info {
-		display: flex;
-		justify-content: flex-end;
-		align-items: center;
-		gap: 20px;
-	}
-
-	.readonly-tag {
-		color: #ef4444;
-		font-weight: bold;
-	}
-
-	.file-type {
-		background: #1e293b;
-		padding: 2px 8px;
-		border-radius: 4px;
-		color: #22d3ee;
-		font-weight: bold;
 	}
 
 	:global([class^='token-']) {
@@ -286,31 +264,23 @@
 		color: #c678dd;
 		font-weight: bold;
 	}
-
-	:global(.token-literal) {
+	:global(.token-literal),
+	:global(.token-numero) {
 		color: #74e1f0;
 	}
-
 	:global(.token-cadena) {
 		color: #f3a704;
 	}
 	:global(.token-cadena_interpolacion) {
 		color: #fae206;
 	}
-
-	:global(.token-numero) {
-		color: #74e1f0;
-	}
-
 	:global(.token-variable),
 	:global(.token-propiedad) {
 		color: #a89556;
 	}
-
 	:global(.token-identificador) {
 		color: #ffffff;
 	}
-
 	:global(.token-delimitador) {
 		color: #3a7cf7;
 	}
@@ -320,16 +290,15 @@
 	:global(.token-operador) {
 		color: #30f10a;
 	}
-
 	:global(.token-comentario) {
 		color: #898f9b;
 		font-style: italic;
 	}
-
 	:global(.token-error) {
 		color: #ef4444;
 		border-bottom: 2px wavy #ef4444;
 	}
+
 	.editor-textarea::-webkit-scrollbar {
 		width: 10px;
 		height: 10px;
