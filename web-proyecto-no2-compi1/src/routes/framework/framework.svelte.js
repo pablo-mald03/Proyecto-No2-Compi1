@@ -10,6 +10,11 @@ export const db = new Dexie('YferaWorkspace');
 /*Manejador de la base de datos sqlite */
 import { dbManejador } from "$lib/modules/SqliteManager";
 
+
+/*Apartado de comunicacion con el backend */
+
+import { InterpreteSqlCodigo } from "$lib/databasemodules/InterpreteSqlCodigo";
+
 /*Definicion de la base de datos que se utilizara para definir el storage donde se mantendra la persistencia temporal del proyecto */
 /*
  * Detalles: 
@@ -24,6 +29,9 @@ db.version(1).stores({
 
 //Clase delegada para trabajar con esa interaccion por detras para poder dar las funcionalidades a la UI
 export function createFrameworkState() {
+
+    /*Inicializacion de los atributos que se comunican con el backend*/
+    const controladorSQL = new InterpreteSqlCodigo();
 
     /*Estado reactivo del arbol de trabajo */
     let _files = $state([]);
@@ -401,13 +409,38 @@ export function createFrameworkState() {
                         _currentCommand = '';
                         return;
                     }
-                    //PENDIENTE INTEGRAR LA RESPUESTA REAL DEL PARSER 'yfera run'
+
+                    if (cmd === 'manual') {
+                        _commandHistory.push({ type: 'advise', text: `> TABLE nombre_tabla COLUMNS column = type...;  -----> Crear tabla` });
+                        _commandHistory.push({ type: 'advise', text: `> nombre_tabla.nombre_columna; -----> Retornar todas las columnas de la tabla` });
+                        _commandHistory.push({ type: 'advise', text: `> nombre_tabla[nombre_columna="valor",...]; -----> Crear registro` });
+                        _commandHistory.push({ type: 'advise', text: `> nombre_tabla[nombre_columna="new value",...] IN indice; -----> Actualizar registro` });
+                        _commandHistory.push({ type: 'advise', text: `> nombre_tabla DELETE indice; -----> Eliminar registro` });
+                        _currentCommand = '';
+                        return;
+                    }
+
+                    //Delegacion de analisis de los comandos ingresados en la terminal
                     if (cmd.toLowerCase().startsWith('sql ')) {
-                        //Extraccion del prefijo
                         const query = cmd.substring(4).trim();
                         await this._ejecutarComandoSQL(query);
                     } else {
-                        _commandHistory.push({ type: 'advise', text: `Comando no reconocido: '${cmd}'. Escribe 'manual' para ver lista de comandos.` });
+
+                        this.notificarErrores([]);
+
+                        const resultado = interprete.traducirASql(cmd, this);
+
+                        if (resultado.exito) {
+
+                            this.systemLog(`> Comando ejecutado correctamente`);
+                            await this._ejecutarComandoSQL(resultado.sql);
+                        } else {
+
+                            if (resultado.errores && resultado.errores.length > 0) {
+                                this.notificarErrores(resultado.errores);
+                            }
+                            _commandHistory.push({ type: 'error', text: resultado.error });
+                        }
                     }
                 }
                 _currentCommand = '';
@@ -807,14 +840,14 @@ export function createFrameworkState() {
         },
         /*Metodo para lanzar la notificacion emergente */
         notificarErrores(nuevosErrores) {
-            _errores = nuevosErrores; 
-            
+            _errores = nuevosErrores;
+
             if (nuevosErrores.length > 0) {
-                _toast = { 
-                    mensaje: `Se encontraron ${nuevosErrores.length} errores. Click para ver.`, 
-                    visible: true 
+                _toast = {
+                    mensaje: `Se encontraron ${nuevosErrores.length} errores. Click para ver.`,
+                    visible: true
                 };
-                
+
                 setTimeout(() => {
                     if (_toast) _toast.visible = false;
                 }, 3000);
@@ -841,7 +874,7 @@ export function createFrameworkState() {
             if (!_activeFileId) return;
 
             const currentFile = _files.find(f => f.id === _activeFileId);
-            
+
             if (!currentFile || currentFile.name.endsWith('.sqlite')) {
                 this.notifyMessages('FORMATEO DENEGADO', 'No se puede dar formato a la base de datos', 'error');
                 return;
@@ -854,7 +887,7 @@ export function createFrameworkState() {
             // currentFile.content = codigoFormateado;
 
             this.systemLog(`> Formato aplicado correctamente (HARDCODEADO)`);
-            
+
         }
     };
 }
