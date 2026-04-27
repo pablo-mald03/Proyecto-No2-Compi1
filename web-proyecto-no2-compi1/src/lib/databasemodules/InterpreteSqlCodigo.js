@@ -1,9 +1,14 @@
 /*Imports de la clase */
 import parserDatabase from "$lib/analizador/compiler/database-config";
 
+import { AnalizadorSemanticoSql } from "./AnalizadorSemanticoSql";
+
 /*Clase delegada para poderse comunicar con el parser para ejecutar los comandos SQL*/
 export class InterpreteSqlCodigo {
 
+    constructor(dbManejador) {
+        this.validador = new AnalizadorSemanticoSql(dbManejador);
+    }
 
     /**
     * Metodo utilizado para generar la comunicacion con el parser de los comandos sql
@@ -11,7 +16,8 @@ export class InterpreteSqlCodigo {
     * @param {string} comando 
     * @param {Object} fs 
     */
-    traducirASql(comando, fs) {
+    traducirASql(comando) {
+
         parserYferaTerminal.yy.errores = [];
 
         let ast;
@@ -19,40 +25,41 @@ export class InterpreteSqlCodigo {
             ast = parserYferaTerminal.parse(comando);
 
             if (parserYferaTerminal.yy.errores && parserYferaTerminal.yy.errores.length > 0) {
-                fs.notificarErrores(parserYferaTerminal.yy.errores);
                 return {
                     exito: false,
-                    error: "Se encontraron errores. Revisa el panel de errores."
+                    errores: parserYferaTerminal.yy.errores,
+                    mensajeGeneral: "Errores sintacticos o lexicos encontrados."
                 };
             }
-
         } catch (error) {
-            const erroresFallback = parserYferaTerminal.yy.errores.length > 0
-                ? parserYferaTerminal.yy.errores
-                : [{
-                    lexema: "N/A", tipo: "Fatal", fila: -1, columna: -1, descripcion: error.message
-                }];
-
-            fs.notificarErrores(erroresFallback);
-            return { 
-                exito: false, 
-                error: "Error critico de sintaxis." };
+            return {
+                exito: false,
+                errores: parserYferaTerminal.yy.errores.length > 0 ? parserYferaTerminal.yy.errores : [{ tipo: 'Fatal', descripcion: error.message }],
+                mensajeGeneral: "Error fatal en el analisis de la instruccion."
+            };
         }
 
-        if (ast && ast.length > 0) {
-            let sentenciasSql = [];
+        const erroresSemanticos = this.validador.validar(ast);
 
-            for (const instruccion of ast) {
-                if (instruccion) {
-                    const sql = this.procesarNodo(instruccion);
-                    if (sql) sentenciasSql.push(sql);
-                }
-            }
-
-            return { exito: true, sql: sentenciasSql.join('\n') };
+        if (erroresSemanticos.length > 0) {
+            return {
+                exito: false,
+                errores: erroresSemanticos,
+                mensajeGeneral: "Errores semanticos encontrados. Revisa los comandos escritos."
+            };
         }
 
-        return { exito: false, error: "Comando vacio o no reconocido." };
+        let sentenciasSql = [];
+        for (const nodo of ast) {
+            if (nodo) sentenciasSql.push(this.procesarNodo(nodo));
+        }
+
+
+        return {
+            exito: true,
+            sql: sentenciasSql.join('\n'),
+            errores: []
+        };
     }
 
     /*Metodo que permite recorrer el AST que retorna el parser */
@@ -80,6 +87,49 @@ export class InterpreteSqlCodigo {
             default:
                 throw new Error(`Acción no reconocida en el lenguaje ${nodo.accion}`);
         }
+    }
+
+    /*Metodo que permite traducir las expresiones o valores primitivos a strings en SQL */
+    evaluarExpresion(expr) {
+        if (!expr) return 'NULL';
+
+        if (expr.tipo === 'VALOR') {
+            return expr.tipo_dato === 'STRING' ? `'${expr.valor}'` : expr.valor;
+        }
+
+        if (expr.tipo === 'OPERACION') {
+            const izq = this.evaluarExpresion(expr.izq);
+            const der = this.evaluarExpresion(expr.der);
+            const op = this.traducirOperador(expr.operador);
+            return `${izq} ${op} ${der}`;
+        }
+
+        if (expr.tipo === 'OPERACION_UNARIA') {
+            const val = this.evaluarExpresion(expr.valor);
+            return expr.operador === 'MENOS_UNARIO' ? `-${val}` : `NOT ${val}`;
+        }
+
+        return String(expr);
+    }
+
+    /*Metodo que permite traducir el operador a lenguaje SQL */
+    traducirOperador(opYfera) {
+        const ops = {
+            'MAS': '+',
+            'MENOS': '-',
+            'MULTIPLICACION': '*',
+            'DIVISION': '/',
+            'MODULO': '%',
+            'MAYOR': '>',
+            'MENOR': '<',
+            'MAYOR_IGUAL': '>=',
+            'MENOR_IGUAL': '<=',
+            'IGUALACION': '=',
+            'DIFERENTE': '!=',
+            'OR': 'OR',
+            'AND': 'AND'
+        };
+        return ops[opYfera] || opYfera;
     }
 
 }

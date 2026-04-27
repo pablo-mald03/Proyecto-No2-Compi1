@@ -292,6 +292,7 @@
 				disabled={!fs.activeFile || fs.activeFile.name.endsWith('.sqlite')}
 				onclick={() => (showColorPicker = true)}
 				aria-label="Selector de colores"
+				title="Insertar color"
 			>
 				<i class="bi bi-palette text-warning"></i>
 			</button>
@@ -335,6 +336,7 @@
 			<button
 				class="btn-preview fw-bold px-3"
 				onclick={() => fs.triggerMenuAction('Iniciando Preview')}
+				title="Cargar preview"
 			>
 				<i class="bi bi-play-fill"></i> PREVIEW
 			</button>
@@ -364,6 +366,7 @@
 						}
 					]);
 				}}
+				title="Generar compilado"
 			>
 				COMPILAR
 			</button>
@@ -372,6 +375,7 @@
 				class="btn-icon ms-2 position-relative {fs.errores.length > 0 ? 'text-danger' : ''}"
 				onclick={() => fs.togglePanelErrores()}
 				aria-label="Ver Errores"
+				title="Ver Errores"
 			>
 				<i class="bi bi-bug"></i>
 				{#if fs.errores.length > 0}
@@ -384,7 +388,7 @@
 				{/if}
 			</button>
 
-			<button class="btn-icon ms-2" onclick={() => fs.toggleConsole()} aria-label="Abrir terminal">
+			<button class="btn-icon ms-2" onclick={() => fs.toggleConsole()} aria-label="Abrir terminal" title="Terminal">
 				<i class="bi bi-terminal"></i>
 			</button>
 		</div>

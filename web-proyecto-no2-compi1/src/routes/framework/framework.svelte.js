@@ -31,7 +31,7 @@ db.version(1).stores({
 export function createFrameworkState() {
 
     /*Inicializacion de los atributos que se comunican con el backend*/
-    const controladorSQL = new InterpreteSqlCodigo();
+    const controladorSQL = new InterpreteSqlCodigo(dbManejador);
 
     /*Estado reactivo del arbol de trabajo */
     let _files = $state([]);
@@ -428,7 +428,7 @@ export function createFrameworkState() {
 
                         this.notificarErrores([]);
 
-                        const resultado = interprete.traducirASql(cmd, this);
+                        const resultado = interprete.traducirASql(cmd);
 
                         if (resultado.exito) {
 
@@ -439,7 +439,8 @@ export function createFrameworkState() {
                             if (resultado.errores && resultado.errores.length > 0) {
                                 this.notificarErrores(resultado.errores);
                             }
-                            _commandHistory.push({ type: 'error', text: resultado.error });
+
+                            _commandHistory.push({ type: 'error', text: `> Error: ${resultado.mensajeGeneral}` });
                         }
                     }
                 }
