@@ -761,7 +761,6 @@ break;
 case 62: this.begin('backstring'); return 61; 
 break;
 case 63: 
-    yy_.yytext = yy_.yytext.slice(1); 
     return 62; 
 
 break;

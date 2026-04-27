@@ -266,9 +266,9 @@ token_individual    : NUMERO            {{ $$ = {tipo: 'LITERAL', indentar: 0}; 
                     | RGB               {{ $$ = {tipo: 'FUNCION_COLOR', indentar: 0}; }}
 
                     /* Presets y Enums */
-                    | DIRECTION         {{ $$ = {tipo: 'PRESET', indentar: 0}; }}
+                    | DIRECTION         {{ $$ = {tipo: 'RESERVADA', indentar: 0}; }}
                     | MARGIN_TIPO       {{ $$ = {tipo: 'PRESET', indentar: 0}; }}
-                    | POSITION          {{ $$ = {tipo: 'PRESET', indentar: 0}; }}
+                    | POSITION          {{ $$ = {tipo: 'PROPIEDAD', indentar: 0}; }}
                     | HELVETICA         {{ $$ = {tipo: 'LITERAL', indentar: 0}; }}
                     | SANS              {{ $$ = {tipo: 'LITERAL', indentar: 0}; }}
                     | SERIF             {{ $$ = {tipo: 'LITERAL', indentar: 0}; }}

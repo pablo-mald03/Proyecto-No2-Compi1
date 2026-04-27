@@ -1,14 +1,24 @@
 <script>
+	import { SintaxisManager } from '$lib/modules/SintaxisManager';
 	let { fs } = $props();
+
+	/*Instancia activa del manejador de los lexers*/
+	const manager = new SintaxisManager();
 
 	/*Estados de referencia hacia el area de trabajo para detectar linea columna*/
 	let textareaRef = $state(null);
+	let highlightRef = $state(null);
 	let lineNumbersRef = $state(null);
 	let cursorRow = $state(1);
 	let cursorCol = $state(1);
 
 	/*Estado en el que se permite comparar si se esta en un archivo sqlite*/
 	let isSqlite = $derived(fs.activeFile ? fs.activeFile.name.endsWith('.sqlite') : false);
+
+	//Obtener extension del archivo
+	let fileExtension = $derived(
+		fs.activeFile ? fs.activeFile.name.split('.').pop().toLowerCase() : ''
+	);
 
 	//Proteccion en contra de edicion del archivo sqlite
 	let safeContent = $derived.by(() => {
@@ -32,26 +42,32 @@
 		cursorCol = linesBeforeCursor[linesBeforeCursor.length - 1].length + 1;
 	}
 
+	let highlightedCode = $derived(manager.highlight(safeContent, fileExtension));
+
+	/*Metodo que permite sincronizar el scroll de los colores lineas y textarea*/
 	function handleScroll() {
-		if (lineNumbersRef && textareaRef) {
-			lineNumbersRef.scrollTop = textareaRef.scrollTop;
+		if (textareaRef) {
+			if (lineNumbersRef) lineNumbersRef.scrollTop = textareaRef.scrollTop;
+			if (highlightRef) {
+				highlightRef.scrollTop = textareaRef.scrollTop;
+				highlightRef.scrollLeft = textareaRef.scrollLeft;
+			}
 		}
 	}
 
 	/*Funcion que bloquea cualquier opcion para afectar el codigo de la bd*/
 	function handleKeyDown(e) {
-
 		if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
-            e.preventDefault(); 
-            fs.saveActiveFile();
-            return;
-        }
+			e.preventDefault();
+			fs.saveActiveFile();
+			return;
+		}
 
 		if (e.shiftKey && e.altKey && (e.key === 'f' || e.key === 'F')) {
-            e.preventDefault();
-            fs.formatearArchivo();
-            return;
-        }
+			e.preventDefault();
+			fs.formatearArchivo();
+			return;
+		}
 
 		if (isSqlite) {
 			const allowedKeys = [
@@ -106,18 +122,21 @@
 			updateCursor();
 		}, 0);
 	}
-
 </script>
 
 <div class="editor-main-container">
 	{#if fs.activeFile}
 		{#key fs.activeFile.id}
-			<div class="editor-viewport">
+			<div class="editor-viewport" style="position: relative;">
 				<div bind:this={lineNumbersRef} class="line-numbers-column">
 					{#each lines as _, i}
 						<div class="line-num">{i + 1}</div>
 					{/each}
 				</div>
+
+				<pre bind:this={highlightRef} class="editor-highlight" aria-hidden="true"><code
+						class="language-{fileExtension}">{@html highlightedCode}</code
+					></pre>
 
 				<!-- svelte-ignore a11y_autofocus -->
 				<textarea
@@ -135,23 +154,6 @@
 				></textarea>
 			</div>
 		{/key}
-
-		<div class="editor-footer">
-			<div class="footer-info">
-				{#if isSqlite}
-					<span class="readonly-tag"><i class="bi bi-lock-fill"></i> MODO SOLO LECTURA</span>
-				{/if}
-				<span>Ln {cursorRow}, Col {cursorCol}</span>
-				<span class="file-type">{fs.activeFile.name.split('.').pop().toUpperCase()}</span>
-			</div>
-		</div>
-	{:else}
-		<div class="empty-state">
-			<div class="text-center">
-				<i class="bi bi-code-slash display-4"></i>
-				<h5 class="mt-3 text-uppercase letter-spacing-1">YFERA FRAMEWORK</h5>
-			</div>
-		</div>
 	{/if}
 </div>
 
@@ -159,7 +161,9 @@
 	:root {
 		--line-height: 22px;
 		--font-size: 14px;
-		--editor-font: 'Fira Code', 'Cascadia Code', 'Source Code Pro', monospace;
+		--editor-font: 'Fira Code', 'Cascadia Code', monospace;
+		--padding-top: 1rem;
+		--left-gutter: 55px;
 	}
 
 	.editor-main-container {
@@ -168,27 +172,30 @@
 		flex-grow: 1;
 		min-height: 0;
 		background-color: #030712;
+		height: 100%;
 	}
 
 	.editor-viewport {
 		display: flex;
 		flex-grow: 1;
-		overflow: hidden;
 		position: relative;
+		overflow: hidden;
 	}
 
 	.line-numbers-column {
-		min-width: 50px;
+		width: var(--left-gutter);
+		min-width: var(--left-gutter);
 		background-color: #0b1120;
 		border-right: 1px solid #1e293b;
 		color: #64748b;
 		font-family: var(--editor-font);
 		font-size: var(--font-size);
 		text-align: right;
-		padding-top: 1rem;
-		padding-bottom: 1rem;
+		padding-top: var(--padding-top);
+		padding-bottom: var(--padding-top);
 		user-select: none;
-		overflow-y: hidden;
+		z-index: 10;
+		overflow: hidden;
 	}
 
 	.line-num {
@@ -197,25 +204,47 @@
 		padding-right: 12px;
 	}
 
+	.editor-highlight,
 	.editor-textarea {
-		flex-grow: 1;
-		background: transparent;
-		color: #f8fafc;
+		position: absolute;
+		top: 0;
+		left: var(--left-gutter);
+		right: 0;
+		bottom: 0;
+		margin: 0;
+		padding: var(--padding-top) 1rem;
+		border: none;
+
 		font-family: var(--editor-font);
 		font-size: var(--font-size);
 		line-height: var(--line-height);
-		padding: 1rem;
-		border: none;
+		white-space: pre;
+		tab-size: 4;
+		-moz-tab-size: 4;
+		overflow: auto;
+	}
+	.editor-highlight {
+		z-index: 1;
+		pointer-events: none;
+		color: #abb2bf;
+		background: transparent;
+	}
+
+	.editor-highlight code {
+		font-family: inherit;
+	}
+	.editor-textarea {
+		z-index: 2;
+		background: transparent;
+		color: transparent;
+		caret-color: #22d3ee;
 		outline: none;
 		resize: none;
-		white-space: pre;
-		overflow-wrap: normal;
-		overflow-x: auto;
+		width: calc(100% - var(--left-gutter));
 	}
 
 	.editor-textarea.is-readonly {
 		cursor: not-allowed;
-		color: #94a3b8;
 	}
 
 	.editor-footer {
@@ -224,6 +253,7 @@
 		padding: 4px 16px;
 		color: #94a3b8;
 		font-size: 0.75rem;
+		z-index: 20;
 	}
 
 	.footer-info {
@@ -236,7 +266,6 @@
 	.readonly-tag {
 		color: #ef4444;
 		font-weight: bold;
-		letter-spacing: 0.5px;
 	}
 
 	.file-type {
@@ -247,15 +276,66 @@
 		font-weight: bold;
 	}
 
-	.empty-state {
-		height: 100%;
-		display: flex;
-		justify-content: center;
-		align-items: center;
-		color: #64748b;
+	:global([class^='token-']) {
+		color: #eee9a4;
+	}
+	:global(.token-espacio) {
+		background: transparent;
+	}
+	:global(.token-reservada) {
+		color: #c678dd;
+		font-weight: bold;
 	}
 
-	.line-numbers-column::-webkit-scrollbar {
-		display: none;
+	:global(.token-literal) {
+		color: #74e1f0;
+	}
+
+	:global(.token-cadena) {
+		color: #f3a704;
+	}
+	:global(.token-cadena_interpolacion) {
+		color: #fae206;
+	}
+
+	:global(.token-numero) {
+		color: #74e1f0;
+	}
+
+	:global(.token-variable),
+	:global(.token-propiedad) {
+		color: #a89556;
+	}
+
+	:global(.token-identificador) {
+		color: #ffffff;
+	}
+
+	:global(.token-delimitador) {
+		color: #3a7cf7;
+	}
+	:global(.token-puntuacion) {
+		color: #eee9a4;
+	}
+	:global(.token-operador) {
+		color: #30f10a;
+	}
+
+	:global(.token-comentario) {
+		color: #898f9b;
+		font-style: italic;
+	}
+
+	:global(.token-error) {
+		color: #ef4444;
+		border-bottom: 2px wavy #ef4444;
+	}
+	.editor-textarea::-webkit-scrollbar {
+		width: 10px;
+		height: 10px;
+	}
+	.editor-textarea::-webkit-scrollbar-thumb {
+		background: #1e293b;
+		border-radius: 5px;
 	}
 </style>

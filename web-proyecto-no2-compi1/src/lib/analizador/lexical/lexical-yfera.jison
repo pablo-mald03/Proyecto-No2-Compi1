@@ -176,7 +176,6 @@
 /* --- Reglas DENTRO del estado backstring --- */
 
 <backstring>"$"[a-zA-Z][a-zA-Z0-9_]* { 
-    yytext = yytext.slice(1); 
     return 'VAR_INTERPOLADA'; 
 }
 
