@@ -92,7 +92,7 @@
 
 [0-9]+(\.[0-9]+)?\b             return 'NUMERO';
 
-\"[^\"]*\"                  { yytext = yytext.substr(1, yyleng-2); return 'STRING'; }
+\"[^\"]*\"                  { return 'STRING'; }
 
 
 /*------***--- Reconocimiento de nombres de atributos y tablas---***------*/

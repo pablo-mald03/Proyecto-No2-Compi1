@@ -157,6 +157,23 @@
 				></textarea>
 			</div>
 		{/key}
+
+		<div class="editor-footer">
+			<div class="footer-info">
+				{#if isSqlite}
+					<span class="readonly-tag"><i class="bi bi-lock-fill"></i> MODO SOLO LECTURA</span>
+				{/if}
+				<span>Ln {cursorRow}, Col {cursorCol}</span>
+				<span class="file-type">{fs.activeFile.name.split('.').pop().toUpperCase()}</span>
+			</div>
+		</div>
+	{:else}
+		<div class="empty-state">
+			<div class="text-center">
+				<i class="bi bi-code-slash display-4"></i>
+				<h5 class="mt-3 text-uppercase letter-spacing-1">YFERA FRAMEWORK</h5>
+			</div>
+		</div>
 	{/if}
 </div>
 
@@ -167,6 +184,43 @@
 		--editor-font: 'Fira Code', 'Cascadia Code', monospace;
 		--padding-top: 1rem;
 		--left-gutter: 55px;
+	}
+
+	.empty-state {
+		height: 100%;
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		color: #64748b;
+	}
+
+	.editor-footer {
+		background-color: #0b1120;
+		border-top: 1px solid #1e293b;
+		padding: 4px 16px;
+		color: #94a3b8;
+		font-size: 0.75rem;
+	}
+
+	.footer-info {
+		display: flex;
+		justify-content: flex-end;
+		align-items: center;
+		gap: 20px;
+	}
+
+	.file-type {
+		background: #1e293b;
+		padding: 2px 8px;
+		border-radius: 4px;
+		color: #22d3ee;
+		font-weight: bold;
+	}
+
+	.readonly-tag {
+		color: #ef4444;
+		font-weight: bold;
+		letter-spacing: 0.5px;
 	}
 
 	.editor-main-container {

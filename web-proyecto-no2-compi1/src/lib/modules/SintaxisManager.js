@@ -11,7 +11,7 @@ export class SintaxisManager {
             'y': lexerYFera,
             'comp': lexerComponent,
             'styles': lexerStyles,
-            'sqlite': lexerDatabase
+            'terminal': lexerDatabase
         };
     }
 
@@ -19,12 +19,15 @@ export class SintaxisManager {
     highlight(text, extension) {
         if (!text) return '';
 
+        if (extension === 'sqlite') {
+            return this.escapeHtml(text);
+        }
+
         const parser = this.parsers[extension];
         if (!parser) return this.escapeHtml(text);
 
         try {
             const tokens = parser.parse(text);
-
             return this.tokensToHtml(tokens);
         } catch (e) {
 
@@ -38,6 +41,9 @@ export class SintaxisManager {
         return tokensObtenidos.map(token => {
             const lexemaSeguro = token.lexema ? token.lexema : '';
             const safeText = this.escapeHtml(lexemaSeguro);
+
+            console.log(`token: ${token.lexema}`)
+
             return `<span class="token-${token.tipo.toLowerCase()}">${safeText}</span>`;
         }).join('');
     }
