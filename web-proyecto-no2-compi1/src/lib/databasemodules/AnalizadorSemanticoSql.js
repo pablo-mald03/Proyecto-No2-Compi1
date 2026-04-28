@@ -13,27 +13,76 @@ export class AnalizadorSemanticoSql {
     validar(ast) {
         this.errores = [];
 
+        let nuevoAst = [];
+
         for (const nodo of ast) {
-            this.analizarNodo(nodo);
+            const nodoNuevo = this.analizarNodo(nodo);
+            if (nodoNuevo) {
+                nuevoAst.push(nodoNuevo);
+            }
         }
 
-        return this.errores;
+        return {
+            astProcesado: nuevoAst,
+            erroresEncontrados: this.errores
+        };
     }
 
     /* Metodo utilizado para analizar cada nodo que viene del AST */
-
     analizarNodo(nodo) {
-        if (!nodo) return;
+        if (!nodo) return null;
 
         switch (nodo.accion) {
             case 'CREATE':
-                this.validarCreate(nodo);
-                break;
+                return this.validarCreate(nodo);
             case 'INSERT':
-                this.validarInsert(nodo);
-                break;
-
+                return this.validarInsert(nodo);
+            case 'UPDATE':
+                return this.validarUpdate(nodo);
+            case 'DELETE':
+                return this.validarDelete(nodo);
+            case 'SELECT_COL':
+                return this.validarSelect(nodo);
         }
+        return null;
+    }
+
+    /*Metodo que permite evaluar si existe la tabla y la columna a buscar */
+    validarSelect(nodo) {
+
+        const infoTabla = this.db.execute(`PRAGMA table_info(${nodo.tabla});`);
+
+        if (!infoTabla || infoTabla.length === 0) {
+            this.agregarError(
+                nodo.tabla,
+                "Semantico",
+                `La tabla '${nodo.tabla}' no existe.`,
+                nodo.loc_linea,
+                nodo.loc_columna
+            );
+            return null;
+        }
+
+        const columnasBD = infoTabla[0].values;
+
+        const existeColumna = columnasBD.some(c => c[1] === nodo.columna);
+
+        if (!existeColumna) {
+            this.agregarError(
+                nodo.columna,
+                "Semantico",
+                `La columna '${nodo.columna}' no existe en la tabla '${nodo.tabla}'.`,
+                nodo.loc_linea,
+                nodo.loc_columna
+            );
+            return null;
+        }
+
+        return {
+            accion: 'SELECT_COL',
+            tabla: nodo.tabla,
+            columna: nodo.columna
+        };
     }
 
     /*Metodo que permite validar el metodo de crear tabla */
@@ -41,17 +90,144 @@ export class AnalizadorSemanticoSql {
 
         if (!nodo.columnas || nodo.columnas.length === 0) {
             this.agregarError(`TABLE ${nodo.tabla}`, "Semantico", `La tabla '${nodo.tabla}' debe tener al menos una columna.`, nodo.loc_linea, nodo.loc_columna);
+            return null;
+        }
+
+        const nombres = new Set();
+
+        let hayErrores = false;
+
+        for (const col of nodo.columnas) {
+            if (nombres.has(col.id)) {
+                this.agregarError(col.id, "Semantico", `La columna '${col.id}' esta duplicada en la definición de la tabla.`, nodo.loc_linea, nodo.loc_columna);
+                hayErrores = true;
+            }
+            nombres.add(col.id);
+        }
+
+        if (hayErrores === true) {
+            return null;
+        }
+
+        return {
+            accion: 'CREATE',
+            tabla: nodo.tabla,
+            columnas: nodo.columnas,
+        };
+    }
+
+    /*Metodo que permite validar un Update */
+    validarUpdate(nodo) {
+
+        const resultado = this.resolverExpresion(nodo.id);
+
+        if (!resultado) return null;
+
+        if (resultado.tipo_dato !== 'NUMERO') {
+            this.agregarError(
+                String(resultado.valor),
+                "Semantico",
+                `El ID en UPDATE debe ser numérico.`,
+                nodo.loc_linea,
+                nodo.loc_columna
+            );
+            return null;
+        }
+
+        const idEvaluado = resultado.valor;
+
+        const existeRegistro = this.verificarIdExiste(nodo.tabla, idEvaluado);
+
+        if (!existeRegistro) {
+            this.agregarError(
+                `ID: ${idEvaluado}`,
+                "Semantico",
+                `No se puede actualizar: El registro con ID ${idEvaluado} no existe en la tabla '${nodo.tabla}'.`,
+                nodo.loc_linea,
+                nodo.loc_columna
+            );
+            return null;
+        }
+
+        const nodoNormalizado = this.validarInsert(nodo);
+
+        if (!nodoNormalizado) return null;
+
+        return {
+            accion: 'UPDATE',
+            tabla: nodo.tabla,
+            id: idEvaluado,
+            valores: nodo.valores
+        };
+    }
+
+
+    /*Metodo que permite validar el Delete */
+    validarDelete(nodo) {
+
+        const infoTabla = this.db.execute(`PRAGMA table_info(${nodo.tabla});`);
+        if (!infoTabla || infoTabla.length === 0) {
+            this.agregarError(nodo.tabla, "Semantico", `La tabla '${nodo.tabla}' no existe.`, nodo.loc_linea, nodo.loc_columna);
+            return null;
+        }
+
+        const resultado = this.resolverExpresion(nodo.id);
+
+        if (!resultado) return null;
+
+        if (resultado.tipo_dato !== 'NUMERO') {
+            this.agregarError(
+                String(resultado.valor),
+                "Semantico",
+                `El ID en DELETE debe ser numérico.`,
+                nodo.loc_linea,
+                nodo.loc_columna
+            );
+            return null;
+        }
+
+        const idEvaluado = resultado.valor;
+
+        if (!this.verificarIdExiste(nodo.tabla, idEvaluado)) {
+            this.agregarError(
+                `DELETE ${idEvaluado}`,
+                "Semantico",
+                `No existe el registro ${idEvaluado} en la tabla '${nodo.tabla}'.`,
+                nodo.loc_linea,
+                nodo.loc_columna
+            );
+            return null;
+        }
+
+        return {
+            accion: 'DELETE',
+            tabla: nodo.tabla,
+            id: idEvaluado
+        };
+
+    }
+
+    /*Metodo que permite comprobar si el id existe en la tabla */
+    verificarIdExiste(tabla, id) {
+        try {
+            const res = this.db.execute(`SELECT 1 FROM ${tabla} WHERE id = ${id};`);
+            return res && res.length > 0 && res[0].values.length > 0;
+        } catch (e) {
+            return false;
         }
     }
 
     /*Metodo que permite validar el metodo de crear tabla */
     validarInsert(nodo) {
         try {
+
+            let hayErrores = false;
+
             const infoTabla = this.db.execute(`PRAGMA table_info(${nodo.tabla});`);
 
             if (!infoTabla || infoTabla.length === 0) {
                 this.agregarError(`${nodo.tabla}`, "Semantico", `La tabla '${nodo.tabla}' no existe.`, nodo.loc_linea, nodo.loc_columna);
-                return;
+                return null;
             }
 
             const columnasBD = infoTabla[0].values;
@@ -62,6 +238,7 @@ export class AnalizadorSemanticoSql {
 
                 if (!colInfo) {
                     this.agregarError(valorInsert.col, "Semantico", `La columna '${valorInsert.col}' no existe en '${nodo.tabla}'.`, valorInsert.loc_linea, valorInsert.loc_columna);
+                    hayErrores = true;
                     continue;
                 }
 
@@ -99,13 +276,20 @@ export class AnalizadorSemanticoSql {
 
                 valorInsert.valor = {
                     tipo: 'VALOR',
-                    tipo_dato: resultadoEvaluado.tipo_dato,
+                    col: resultadoEvaluado.tipo_dato,
                     valor: resultadoEvaluado.valor
                 };
             }
+
+            if (hayErrores === true) {
+                return null;
+            }
+
         } catch (e) {
             this.agregarError("Base de Datos", "Error de ejecucion", `No se pudo verificar el esquema de '${nodo.tabla}'.`);
         }
+
+        return nodo;
     }
 
     /*Metodo que permite resolver las expresiones que vienen en el AST */
@@ -113,7 +297,6 @@ export class AnalizadorSemanticoSql {
         if (!expr) return null;
 
         if (expr.tipo === 'VALOR') {
-            // Manejamos si el valor base ya es un booleano reconocido
             if (expr.tipo_dato === 'BOOLEAN') {
                 return { valor: expr.valor ? 1 : 0, tipo_dato: 'NUMERO' };
             }
@@ -206,7 +389,6 @@ export class AnalizadorSemanticoSql {
         }
         return null;
     }
-
 
     /*Metodo que permite agregar un error a la lista */
     agregarError(lexemaError, tipo, descripcion, fila = 1, columna = 1) {

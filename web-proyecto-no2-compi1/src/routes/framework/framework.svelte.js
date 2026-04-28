@@ -428,12 +428,16 @@ export function createFrameworkState() {
 
                         this.notificarErrores([]);
 
-                        const resultado = interprete.traducirSql(cmd);
+                        const resultado = controladorSQL.traducirSql(cmd);
 
                         if (resultado.exito) {
 
-                            this.systemLog(`> Comando ejecutado correctamente`);
-                            await this._ejecutarComandoSQL(resultado.sql);
+                            let contador = 1;
+                            for (const sentencia of resultado.sql) {
+                                await this._ejecutarComandoSQL(sentencia,contador);
+                                contador++;
+                            }
+
                         } else {
 
                             if (resultado.errores && resultado.errores.length > 0) {
@@ -448,12 +452,12 @@ export function createFrameworkState() {
             }
         },
         /* Metodo encargado de correr los comandos sql e irlos registrando directamente en el archivo sql*/
-        async _ejecutarComandoSQL(query) {
+        async _ejecutarComandoSQL(query, contador) {
             try {
                 const result = dbManejador.execute(query);
 
                 //Verificacion de instrucciones que modifican
-                const upperQuery = query.toUpperCase();
+                const upperQuery = query.trim();
                 const esMutacion = upperQuery.startsWith('CREATE') ||
                     upperQuery.startsWith('INSERT') ||
                     upperQuery.startsWith('UPDATE') ||
@@ -464,7 +468,6 @@ export function createFrameworkState() {
                 //Si cambio la base de datos se actualiza
                 if (esMutacion) {
                     await this.guardarBaseDeDatos();
-                    _commandHistory.push({ type: 'system', text: `> Comando ejecutado correctamente.` });
                 }
 
                 //Implementacion del select base
@@ -483,6 +486,8 @@ export function createFrameworkState() {
                 } else if (!esMutacion) {
                     _commandHistory.push({ type: 'system', text: `> Resultado vacio. (0 filas devueltas)` });
                 }
+
+                this.systemLog(`> Comando [${contador}] ejecutado correctamente`);
 
             } catch (error) {
                 _commandHistory.push({ type: 'error', text: `> Error ejecucion de comando SQL: ${error.message}` });

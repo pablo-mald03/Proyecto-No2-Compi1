@@ -235,7 +235,7 @@ instruccion     : creacion_tabla PUNTO_COMA
                 {{ 
                     $$ = $1; 
                 }}
-                | insercion_registro        
+                | insercion_registro  PUNTO_COMA      
                 {{ 
                     $$ = $1; 
                 }}
@@ -330,7 +330,7 @@ insercion_registro      : IDENTIFICADOR CORCHETE_APERTURA lista_asignaciones COR
 
 /*-----=====-----Produccion para la definicion de actualizacion de registros-----=====-----*/
 
-actualizacion_registro          : insercion_registro IN NUMERO
+actualizacion_registro          : insercion_registro IN expresion
                                 {{ 
                                     $1.accion = 'UPDATE'; 
                                     $1.id = $3; 
@@ -340,12 +340,12 @@ actualizacion_registro          : insercion_registro IN NUMERO
 
 /*-----=====-----Produccion para la definicion de eliminacion de registros-----=====-----*/
 
-eliminacion_registro            : IDENTIFICADOR R_DELETE NUMERO
+eliminacion_registro            : IDENTIFICADOR R_DELETE expresion
                                 {{ 
                                     $$ = { 
                                         accion: 'DELETE', 
                                         tabla: $1, 
-                                        id: Number($3),
+                                        id: $3,
                                         loc_linea: @1.first_line,
                                         loc_columna: @1.first_column + 1
                                     }; 

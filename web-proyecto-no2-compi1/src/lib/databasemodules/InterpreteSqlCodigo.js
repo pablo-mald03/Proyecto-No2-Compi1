@@ -18,46 +18,49 @@ export class InterpreteSqlCodigo {
     */
     traducirSql(comando) {
 
-        parserYferaTerminal.yy.errores = [];
+        parserDatabase.yy.errores = [];
 
         let ast;
         try {
-            ast = parserYferaTerminal.parse(comando);
+            ast = parserDatabase.parse(comando);
 
-            if (parserYferaTerminal.yy.errores && parserYferaTerminal.yy.errores.length > 0) {
+            if (parserDatabase.yy.errores && parserDatabase.yy.errores.length > 0) {
                 return {
                     exito: false,
-                    errores: parserYferaTerminal.yy.errores,
+                    errores: parserDatabase.yy.errores,
                     mensajeGeneral: "Errores sintacticos o lexicos encontrados."
                 };
             }
         } catch (error) {
             return {
                 exito: false,
-                errores: parserYferaTerminal.yy.errores.length > 0 ? parserYferaTerminal.yy.errores : [{ tipo: 'Fatal', descripcion: error.message }],
+                errores: parserDatabase.yy.errores.length > 0 ? parserDatabase.yy.errores : [{ tipo: 'Fatal', descripcion: error.message }],
                 mensajeGeneral: "Error fatal en el analisis de la instruccion."
             };
         }
 
-        const erroresSemanticos = this.validador.validar(ast);
+        const resultadoValidacion = this.validador.validar(ast);
 
-        if (erroresSemanticos.length > 0) {
+        if (resultadoValidacion.erroresEncontrados.length > 0) {
             return {
                 exito: false,
-                errores: erroresSemanticos,
-                mensajeGeneral: "Errores semanticos encontrados. Revisa los comandos escritos."
+                errores: resultadoValidacion.erroresEncontrados,
+                mensajeGeneral: "Se encontraron errores semanticos encontrados."
             };
         }
 
-        let sentenciasSql = [];
-        for (const nodo of ast) {
-            if (nodo) sentenciasSql.push(this.procesarNodo(nodo));
-        }
+        const astProcesado = resultadoValidacion.astProcesado;
 
+        let sentenciasSql = [];
+        for (const nodo of astProcesado) {
+            if (nodo) {
+                sentenciasSql.push(this.procesarNodo(nodo));
+            }
+        }
 
         return {
             exito: true,
-            sql: sentenciasSql.join('\n'),
+            sql: sentenciasSql,
             errores: []
         };
     }
@@ -74,11 +77,13 @@ export class InterpreteSqlCodigo {
 
             case 'INSERT':
                 const columnasInsert = nodo.valores.map(v => v.col).join(', ');
-                const valoresInsert = nodo.valores.map(v => this.evaluarExpresion(v.valor)).join(', ');
+                const valoresInsert = nodo.valores.map(v => v.valor.valor).join(', ');
                 return `INSERT INTO ${nodo.tabla} (${columnasInsert}) VALUES (${valoresInsert});`;
 
             case 'UPDATE':
-                const asignaciones = nodo.valores.map(v => `${v.col} = ${this.evaluarExpresion(v.valor)}`).join(', ');
+                const asignaciones = nodo.valores
+                    .map(v => `${v.col} = ${v.valor.valor}`)
+                    .join(', ');
                 return `UPDATE ${nodo.tabla} SET ${asignaciones} WHERE id = ${nodo.id};`;
 
             case 'DELETE':
@@ -87,49 +92,6 @@ export class InterpreteSqlCodigo {
             default:
                 throw new Error(`Accion no reconocida en el lenguaje ${nodo.accion}`);
         }
-    }
-
-    /*Metodo que permite traducir las expresiones o valores primitivos a strings en SQL */
-    evaluarExpresion(expr) {
-        if (!expr) return 'NULL';
-
-        if (expr.tipo === 'VALOR') {
-            return expr.tipo_dato === 'STRING' ? `'${expr.valor}'` : expr.valor;
-        }
-
-        if (expr.tipo === 'OPERACION') {
-            const izq = this.evaluarExpresion(expr.izq);
-            const der = this.evaluarExpresion(expr.der);
-            const op = this.traducirOperador(expr.operador);
-            return `${izq} ${op} ${der}`;
-        }
-
-        if (expr.tipo === 'OPERACION_UNARIA') {
-            const val = this.evaluarExpresion(expr.valor);
-            return expr.operador === 'MENOS_UNARIO' ? `-${val}` : `NOT ${val}`;
-        }
-
-        return String(expr);
-    }
-
-    /*Metodo que permite traducir el operador a lenguaje SQL */
-    traducirOperador(opYfera) {
-        const ops = {
-            'MAS': '+',
-            'MENOS': '-',
-            'MULTIPLICACION': '*',
-            'DIVISION': '/',
-            'MODULO': '%',
-            'MAYOR': '>',
-            'MENOR': '<',
-            'MAYOR_IGUAL': '>=',
-            'MENOR_IGUAL': '<=',
-            'IGUALACION': '=',
-            'DIFERENTE': '!=',
-            'OR': 'OR',
-            'AND': 'AND'
-        };
-        return ops[opYfera] || opYfera;
     }
 
 }
