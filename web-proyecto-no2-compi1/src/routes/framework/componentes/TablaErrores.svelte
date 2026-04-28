@@ -29,6 +29,7 @@
 		<table class="ide-table w-100">
 			<thead>
 				<tr>
+				    <th class="text-white" style="width: 20%;">ORIGEN</th>
 					<th class="text-white" style="width: 20%;">LEXEMA</th>
 					<th class="text-white" style="width: 10%;">LINEA</th>
 					<th class="text-white" style="width: 10%;">COLUMNA</th>
@@ -46,13 +47,13 @@
 				{:else}
 					{#each fs.errores as error}
 						<tr class="error-row">
-							
+							<td class="font-code text-warning fw-bold">{error.origen}</td>
 							<td class="font-code text-info fw-bold">{error.lexema}</td>
 							<td class="font-code">{error.linea}</td>
 							<td class="font-code">{error.columna}</td>
                             <td>
 								<span
-									class="badge {error.tipo.toLowerCase() === 'léxico'
+									class="badge {error.tipo.toLowerCase() === 'lexico'
 										? 'bg-warning text-dark'
 										: 'bg-danger'}"
 								>

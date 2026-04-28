@@ -16,7 +16,7 @@ export class InterpreteSqlCodigo {
     * @param {string} comando 
     * @param {Object} fs 
     */
-    traducirASql(comando) {
+    traducirSql(comando) {
 
         parserYferaTerminal.yy.errores = [];
 
@@ -85,7 +85,7 @@ export class InterpreteSqlCodigo {
                 return `DELETE FROM ${nodo.tabla} WHERE id = ${nodo.id};`;
 
             default:
-                throw new Error(`Acción no reconocida en el lenguaje ${nodo.accion}`);
+                throw new Error(`Accion no reconocida en el lenguaje ${nodo.accion}`);
         }
     }
 

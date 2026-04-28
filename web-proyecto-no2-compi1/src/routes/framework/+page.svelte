@@ -351,6 +351,7 @@
 					fs.triggerMenuAction('Compilando');
 					fs.notificarErrores([
 						{
+							origen: 'comando SQL',
 							lexema: 'intt',
 							linea: 5,
 							columna: 12,
@@ -358,6 +359,7 @@
 							descripcion: 'Palabra reservada mal escrita'
 						},
 						{
+							origen: 'coponentes.y',
 							lexema: ';',
 							linea: 10,
 							columna: 1,

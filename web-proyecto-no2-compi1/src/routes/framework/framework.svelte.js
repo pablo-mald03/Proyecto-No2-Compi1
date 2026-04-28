@@ -428,7 +428,7 @@ export function createFrameworkState() {
 
                         this.notificarErrores([]);
 
-                        const resultado = interprete.traducirASql(cmd);
+                        const resultado = interprete.traducirSql(cmd);
 
                         if (resultado.exito) {
 

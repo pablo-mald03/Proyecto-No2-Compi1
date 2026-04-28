@@ -42,8 +42,6 @@ export class SintaxisManager {
             const lexemaSeguro = token.lexema ? token.lexema : '';
             const safeText = this.escapeHtml(lexemaSeguro);
 
-            console.log(`token: ${token.lexema}`)
-
             return `<span class="token-${token.tipo.toLowerCase()}">${safeText}</span>`;
         }).join('');
     }
