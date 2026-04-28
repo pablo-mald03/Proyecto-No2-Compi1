@@ -77,12 +77,14 @@ export class InterpreteSqlCodigo {
 
             case 'INSERT':
                 const columnasInsert = nodo.valores.map(v => v.col).join(', ');
-                const valoresInsert = nodo.valores.map(v => v.valor.valor).join(', ');
+                const valoresInsert = nodo.valores
+                    .map(v => this.formatearValor(v.valor))
+                    .join(', ');
                 return `INSERT INTO ${nodo.tabla} (${columnasInsert}) VALUES (${valoresInsert});`;
 
             case 'UPDATE':
                 const asignaciones = nodo.valores
-                    .map(v => `${v.col} = ${v.valor.valor}`)
+                    .map(v => `${v.col} = ${this.formatearValor(v.valor)}`)
                     .join(', ');
                 return `UPDATE ${nodo.tabla} SET ${asignaciones} WHERE id = ${nodo.id};`;
 
@@ -92,6 +94,15 @@ export class InterpreteSqlCodigo {
             default:
                 throw new Error(`Accion no reconocida en el lenguaje ${nodo.accion}`);
         }
+    }
+
+    /*Metodo utilizado para poder encerrar dentro de comillas los strings */
+    formatearValor(valorObj) {
+        if (valorObj.col === 'STRING') {
+            const limpio = String(valorObj.valor).replace(/'/g, "''");
+            return `'${limpio}'`;
+        }
+        return valorObj.valor;
     }
 
 }

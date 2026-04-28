@@ -111,10 +111,10 @@ case 4:
                             }; 
                         
 break;
-case 5: case 6: case 7: case 8:
+case 5: case 6: case 7: case 8: case 9:
  this.$ = {tipo: 'RESERVADA', indentar: 0}; 
 break;
-case 9: case 10:
+case 10:
  this.$ = {tipo: 'LITERAL', indentar: 0}; 
 break;
 case 11:

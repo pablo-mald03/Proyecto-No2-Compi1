@@ -76,8 +76,8 @@ var parser = (function(){
 var o=function(k,v,o,l){for(o=o||{},l=k.length;l--;o[k[l]]=v);return o},$V0=[1,10],$V1=[1,11],$V2=[1,16],$V3=[2,5,13,14],$V4=[1,28],$V5=[1,29],$V6=[1,30],$V7=[1,31],$V8=[1,32],$V9=[1,37],$Va=[1,39],$Vb=[1,40],$Vc=[1,41],$Vd=[1,42],$Ve=[1,43],$Vf=[1,44],$Vg=[1,45],$Vh=[1,46],$Vi=[1,47],$Vj=[1,48],$Vk=[1,49],$Vl=[1,50],$Vm=[1,51],$Vn=[8,17,24,29,30,31,32,33,34,35,36,37,38,39,40,41,44],$Vo=[1,57],$Vp=[17,24],$Vq=[8,17],$Vr=[8,17,24,29,30,34,35,36,37,38,39,40,41,44],$Vs=[8,17,24,34,35,36,37,38,39,40,41,44],$Vt=[8,17,24,38,39,40,41,44];
 var parser = {trace: function trace () { },
 yy: {},
-symbols_: {"error":2,"inicio":3,"instrucciones":4,"EOF":5,"instruccion":6,"creacion_tabla":7,"PUNTO_COMA":8,"acceso_columna":9,"insercion_registro":10,"actualizacion_registro":11,"eliminacion_registro":12,"TABLE":13,"IDENTIFICADOR":14,"COLUMNS":15,"lista_definiciones":16,"COMA":17,"definicion":18,"IGUAL":19,"TIPO":20,"PUNTO":21,"CORCHETE_APERTURA":22,"lista_asignaciones":23,"CORCHETE_CIERRE":24,"IN":25,"expresion":26,"R_DELETE":27,"asignacion":28,"MAS":29,"MENOS":30,"MULTIPLICACION":31,"DIVISION":32,"MODULO":33,"MAYOR":34,"MENOR":35,"MAYOR_IGUAL":36,"MENOR_IGUAL":37,"IGUALACION":38,"DIFERENTE":39,"OR":40,"AND":41,"NOT":42,"PARENT_APERTURA":43,"PARENT_CIERRE":44,"STRING":45,"NUMERO":46,"$accept":0,"$end":1},
-terminals_: {2:"error",5:"EOF",8:"PUNTO_COMA",13:"TABLE",14:"IDENTIFICADOR",15:"COLUMNS",17:"COMA",19:"IGUAL",20:"TIPO",21:"PUNTO",22:"CORCHETE_APERTURA",24:"CORCHETE_CIERRE",25:"IN",27:"R_DELETE",29:"MAS",30:"MENOS",31:"MULTIPLICACION",32:"DIVISION",33:"MODULO",34:"MAYOR",35:"MENOR",36:"MAYOR_IGUAL",37:"MENOR_IGUAL",38:"IGUALACION",39:"DIFERENTE",40:"OR",41:"AND",42:"NOT",43:"PARENT_APERTURA",44:"PARENT_CIERRE",45:"STRING",46:"NUMERO"},
+symbols_: {"error":2,"inicio":3,"instrucciones":4,"EOF":5,"instruccion":6,"creacion_tabla":7,"PUNTO_COMA":8,"acceso_columna":9,"insercion_registro":10,"actualizacion_registro":11,"eliminacion_registro":12,"TABLE":13,"IDENTIFICADOR":14,"COLUMNS":15,"lista_definiciones":16,"COMA":17,"definicion":18,"IGUAL":19,"TIPO":20,"PUNTO":21,"CORCHETE_APERTURA":22,"lista_asignaciones":23,"CORCHETE_CIERRE":24,"IN":25,"expresion":26,"DELETE":27,"asignacion":28,"MAS":29,"MENOS":30,"MULTIPLICACION":31,"DIVISION":32,"MODULO":33,"MAYOR":34,"MENOR":35,"MAYOR_IGUAL":36,"MENOR_IGUAL":37,"IGUALACION":38,"DIFERENTE":39,"OR":40,"AND":41,"NOT":42,"PARENT_APERTURA":43,"PARENT_CIERRE":44,"STRING":45,"NUMERO":46,"$accept":0,"$end":1},
+terminals_: {2:"error",5:"EOF",8:"PUNTO_COMA",13:"TABLE",14:"IDENTIFICADOR",15:"COLUMNS",17:"COMA",19:"IGUAL",20:"TIPO",21:"PUNTO",22:"CORCHETE_APERTURA",24:"CORCHETE_CIERRE",25:"IN",27:"DELETE",29:"MAS",30:"MENOS",31:"MULTIPLICACION",32:"DIVISION",33:"MODULO",34:"MAYOR",35:"MENOR",36:"MAYOR_IGUAL",37:"MENOR_IGUAL",38:"IGUALACION",39:"DIFERENTE",40:"OR",41:"AND",42:"NOT",43:"PARENT_APERTURA",44:"PARENT_CIERRE",45:"STRING",46:"NUMERO"},
 productions_: [0,[3,2],[3,2],[4,2],[4,1],[6,2],[6,2],[6,2],[6,2],[6,2],[6,2],[7,4],[16,3],[16,1],[18,3],[9,3],[10,4],[11,3],[12,3],[23,3],[23,1],[28,3],[26,3],[26,3],[26,3],[26,3],[26,3],[26,3],[26,3],[26,3],[26,3],[26,3],[26,3],[26,3],[26,3],[26,2],[26,2],[26,3],[26,1],[26,1]],
 performAction: function anonymous(yytext, yyleng, yylineno, yy, yystate /* action[1] */, $$ /* vstack */, _$ /* lstack */) {
 /* this == yyval */
@@ -1072,7 +1072,7 @@ case 4:return 13;
 break;
 case 5:return 15;
 break;
-case 6:return 'DELETE';
+case 6:return 27;
 break;
 case 7:return 25;
 break;

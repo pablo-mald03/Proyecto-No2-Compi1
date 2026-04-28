@@ -160,7 +160,7 @@ token_individual            : TABLE             {{ $$ = {tipo: 'RESERVADA', inde
                             | IN                {{ $$ = {tipo: 'RESERVADA', indentar: 0}; }}
 
                             /* Tipos de Datos */
-                            | TIPO              {{ $$ = {tipo: 'LITERAL', indentar: 0}; }}
+                            | TIPO              {{ $$ = {tipo: 'RESERVADA', indentar: 0}; }}
 
                             /* Literales */
                             | NUMERO            {{ $$ = {tipo: 'LITERAL', indentar: 0}; }}

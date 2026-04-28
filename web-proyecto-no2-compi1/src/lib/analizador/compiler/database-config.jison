@@ -340,7 +340,7 @@ actualizacion_registro          : insercion_registro IN expresion
 
 /*-----=====-----Produccion para la definicion de eliminacion de registros-----=====-----*/
 
-eliminacion_registro            : IDENTIFICADOR R_DELETE expresion
+eliminacion_registro            : IDENTIFICADOR DELETE expresion
                                 {{ 
                                     $$ = { 
                                         accion: 'DELETE', 
