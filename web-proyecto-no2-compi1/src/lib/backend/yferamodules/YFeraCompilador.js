@@ -74,8 +74,6 @@ export class YFeraCompilador {
         const orquestador = archivosConProfundidad[0].file;
         const nivel = archivosConProfundidad[0].profundidad;
 
-        this.frontState.systemLog(`> Archivo main detectado: ${orquestador.name} (Profundidad: ${nivel})`);
-
         return orquestador;
     }
 
@@ -106,7 +104,7 @@ export class YFeraCompilador {
             const nodosImport = ast.filter(n => n.tipo === 'INSTRUCCION_IMPORT');
 
             for (const nodo of nodosImport) {
-                const rutaLimpia = nodo.ruta.replace(/['"]/g, '').trim();
+                const rutaLimpia = nodo.ruta.valor.trim();
                 const archivoImportado = await this.resolverPathRelativo(rutaLimpia, archivoY.parentId);
 
                 if (!archivoImportado) {
@@ -137,14 +135,14 @@ export class YFeraCompilador {
         for (const nodo of nodos) {
             if (!nodo) continue;
 
-            if (nodo.tipo === 'INSTRUCCION_LOAD') {
-                const rutaLoad = nodo.ruta.replace(/['"]/g, '').trim();
+            if (nodo.tipo === 'LOAD_ARCHIVO') {
+                const rutaLoad = nodo.uri.valor.trim();
+
                 const archivoSiguiente = await this.resolverPathRelativo(rutaLoad, archivoPadre.parentId);
 
                 if (archivoSiguiente) {
                     this.frontState.systemLog(`> Orquestando: ${archivoPadre.name} -> ${archivoSiguiente.name}`);
 
-                    // Llamada recursiva a la Fase 1 para el nuevo archivo detectado
                     await this.faseRecolectarImports(archivoSiguiente);
                 } else {
                     this.frontState.notificarErrores([{

@@ -854,24 +854,6 @@ valor_arreglo               : expresion_logica
                             {{
                                 $$ = $1;
                             }}
-                            | IDENTIFICADOR
-                            {{
-                                $$ = { 
-                                    tipo: 'ID', 
-                                    valor: $1, 
-                                    linea: @1.first_line, 
-                                    columna: @1.first_column + 1 
-                                };
-                            }}
-                            | ENTERO
-                            {{
-                                $$ = { 
-                                    tipo: 'ENTERO', 
-                                    valor: parseInt($1), 
-                                    linea: @1.first_line, 
-                                    columna: @1.first_column + 1 
-                                };
-                            }}
                             ;
 
 /*-----=====-----Produccion principal para las expresiones permitidas en el lenguaje (precedencia OR) en .y-----=====-----*/
@@ -1000,7 +982,7 @@ expresion_aditiva           : expresion_aditiva MAS expresion_multiplicativa
                                     der: $3 
                                 }; 
                             }}
-                            | exp_multiplicativa
+                            | expresion_multiplicativa
                             {{ 
                                 $$ = $1; 
                             }}
@@ -1035,7 +1017,7 @@ expresion_multiplicativa        : expresion_multiplicativa MULTIPLICACION expres
                                         der: $3 
                                     }; 
                                 }}
-                                | exp_unaria
+                                | expresion_unaria
                                 {{ 
                                     $$ = $1; 
                                 }}
@@ -1145,6 +1127,15 @@ cadena_texto            : COMILLA contenido_cadena COMILLA
                                 columna: @1.first_column + 1
                             };
                         }}
+                        | COMILLA COMILLA 
+                        {{
+                            $$ = {
+                                tipo: 'VALOR_CADENA',
+                                valor: "",
+                                linea: @1.first_line,
+                                columna: @1.first_column + 1
+                            };
+                        }}
                         ;
 
 /*-----=====-----Produccion que define los textos concatenados .y-----=====-----*/
@@ -1153,9 +1144,9 @@ contenido_cadena        : contenido_cadena TEXTO_PLANO
                         {{
                             $$ = $1 + $2; 
                         }}
-                        | /* vacio */
+                        | TEXTO_PLANO                 
                         {{
-                            $$ = "";
+                            $$ = $1; 
                         }}
                         ;
 
