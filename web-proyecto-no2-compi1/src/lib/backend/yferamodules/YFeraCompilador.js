@@ -1,5 +1,7 @@
 import parserYfera from "$lib/analizador/compiler/yfera-config";
 
+import { ModuloYFera } from "./ModuloYFera";
+
 /*Clase Delegada para manejar toda la logica principal para poder generar el analisis sintactico del lenguaje orquestador*/
 
 export class YFeraCompilador {
@@ -9,14 +11,9 @@ export class YFeraCompilador {
         this.dataBase = db;
         this.frontState = fs;
 
-        this.archivosVisitados = new Set();
-
+        this.modulosCache = new Map();
         this.erroresGlobales = [];
-
-        this.recursosGlobales = {
-            componentes: "",
-            estilos: ""
-        };
+        this.arbolEjecucion = null;
     }
 
     /*Metodo que permite compilar el proyecto*/
@@ -29,13 +26,14 @@ export class YFeraCompilador {
         const mainFile = await this.buscarArchivoRaiz();
 
         if (!mainFile) {
-            this.frontState.notificarErrores([{ origen: 'Compilacion', lexema: 'error', tipo: 'Estructural', linea: -1, columna: -1, descripcion: 'No se encontro un archivo .y en la raiz del proyecto.' }]);
+            this.agregarError('Compilacion', 'error', 'Estructural', 'No se encontro un archivo .y en la raiz del proyecto.');
+            this.frontState.notificarErrores(this.erroresGlobales);
             return;
         }
 
         this.frontState.systemLog(`> Archivo raiz detectado: ${mainFile.name}`);
 
-        await this.faseRecolectarImports(mainFile);
+        this.arbolEjecucion = await this.procesarModuloY(mainFile);
 
         if (this.erroresGlobales.length > 0) {
             this.frontState.notificarErrores(this.erroresGlobales);
@@ -78,17 +76,19 @@ export class YFeraCompilador {
     }
 
     /*Metodo recursivo que lee cada archivo buscando los imports y generando el merge*/
-    async faseRecolectarImports(archivoY) {
-        if (this.archivosVisitados.has(archivoY.id)) {
-            return;
+    async procesarModuloY(archivoY) {
+
+        if (this.modulosCache.has(archivoY.id)) {
+            return this.modulosCache.get(archivoY.id);
         }
-        this.archivosVisitados.add(archivoY.id);
+
+        this.modulosCache.set(archivoY.id, null);
 
         try {
             parserYfera.yy.errores = [];
             const ast = parserYfera.parse(archivoY.content || "");
 
-            if (parserYfera.yy.errores && parserYfera.yy.errores.length > 0) {
+            if (parserYfera.yy.errores.length > 0) {
                 const reporte = parserYfera.yy.errores.map(err => ({
                     origen: archivoY.name,
                     lexema: err.lexema || 'N/A',
@@ -98,8 +98,12 @@ export class YFeraCompilador {
                     descripcion: err.descripcion
                 }));
                 this.agregarErrores(reporte);
-                return;
+                return null;
             }
+
+            const moduloActual = new ModuloYFera(archivoY, ast);
+
+            this.modulosCache.set(archivoY.id, moduloActual);
 
             const nodosImport = ast.filter(n => n.tipo === 'INSTRUCCION_IMPORT');
 
@@ -112,57 +116,56 @@ export class YFeraCompilador {
                     continue;
                 }
 
+                if (moduloActual.importsVisitados.has(archivoImportado.id)) continue;
+                moduloActual.importsVisitados.add(archivoImportado.id);
+
                 if (archivoImportado.name.endsWith('.styles')) {
-                    this.recursosGlobales.estilos += `\n/* source: ${rutaLimpia} */\n${archivoImportado.content}\n`;
+                    moduloActual.recursos.estilos += `\n/* source: ${rutaLimpia} */\n${archivoImportado.content}\n`;
                 } else if (archivoImportado.name.endsWith('.comp')) {
-                    this.recursosGlobales.componentes += `\n/* source: ${rutaLimpia} */\n${archivoImportado.content}\n`;
+                    moduloActual.recursos.componentes += `\n/* source: ${rutaLimpia} */\n${archivoImportado.content}\n`;
                 }
             }
 
-            // PENDIENTE LA SEGUNDA PASADA
-            //await this.buscarLoadsRecursivos(ast, archivoY);
+            //PENDIENTE FASE 2
+            await this.buscarLoadsRecursivos(ast, archivoY, moduloActual);
+
+            return moduloActual;
 
         } catch (error) {
-
-            this.agregarError(archivoY.name, 'N/A', 'Compilacion', error.message);
+            this.agregarError(archivoY.name, 'N/A','Compilacion',  error.message);
+            return null;
         }
     }
 
     /* Método para navegar el AST buscando instrucciones 'load' */
-    async buscarLoadsRecursivos(nodos, archivoPadre) {
+   async buscarLoadsRecursivos(nodos, archivoPadre, moduloActual) { 
         if (!nodos || !Array.isArray(nodos)) return;
 
         for (const nodo of nodos) {
             if (!nodo) continue;
 
             if (nodo.tipo === 'LOAD_ARCHIVO') {
-                const rutaLoad = nodo.uri.valor.trim();
+                if (nodo.uri.tipo === 'VALOR_CADENA') {
+                    const rutaLoad = nodo.uri.valor.replace(/['"]/g, '').trim();
+                    const archivoSiguiente = await this.resolverPathRelativo(rutaLoad, archivoPadre.parentId);
 
-                const archivoSiguiente = await this.resolverPathRelativo(rutaLoad, archivoPadre.parentId);
-
-                if (archivoSiguiente) {
-                    this.frontState.systemLog(`> Orquestando: ${archivoPadre.name} -> ${archivoSiguiente.name}`);
-
-                    await this.faseRecolectarImports(archivoSiguiente);
-                } else {
-                    this.frontState.notificarErrores([{
-                        origen: archivoPadre.name,
-                        lexema: rutaLoad,
-                        tipo: 'Semantico',
-                        linea: nodo.linea,
-                        columna: nodo.columna,
-                        descripcion: `Error de Load: No se encontró el archivo '${rutaLoad}'.`
-                    }]);
-                }
+                    if (archivoSiguiente) {
+                        const moduloHijo = await this.procesarModuloY(archivoSiguiente);
+                        
+                        if (moduloHijo) {
+                            // Ahora moduloActual sí existe aquí dentro
+                            moduloActual.modulosHijos.push(moduloHijo);
+                        }
+                    } else {
+                        this.agregarError(archivoPadre.name, rutaLoad, 'Semantico', `Error de Load: No se encontró '${rutaLoad}'.`, nodo.linea, nodo.columna);
+                    }
+                } 
             }
 
-            /*if (nodo.tipo === 'DEFINICION_FUNCION' && nodo.cuerpo) {
-                await this.buscarLoadsRecursivos(nodo.cuerpo, archivoPadre);
+            // AQUÍ EL FIX: Pasamos el tercer parámetro a la llamada recursiva
+            if (nodo.tipo === 'DEFINICION_FUNCION' && nodo.cuerpo) {
+                await this.buscarLoadsRecursivos(nodo.cuerpo, archivoPadre, moduloActual);
             }
-
-            // 3. Si tienes IFs o WHILEs en el futuro, también deberías entrar en sus bloques
-            if (nodo.instrucciones_if) await this.buscarLoadsRecursivos(nodo.instrucciones_if, archivoPadre);
-            if (nodo.instrucciones_else) await this.buscarLoadsRecursivos(nodo.instrucciones_else, archivoPadre);*/
         }
     }
 
