@@ -341,32 +341,10 @@
 				<i class="bi bi-play-fill"></i> PREVIEW
 			</button>
 
-			<!-- <button class="btn-compile fw-bold px-4" onclick={() => fs.triggerMenuAction('Compilando')}
-				>COMPILAR</button
-			>-->
-
 			<button
 				class="btn-compile fw-bold px-4"
 				onclick={() => {
 					fs.triggerMenuAction('Compilando');
-					fs.notificarErrores([
-						{
-							origen: 'comando SQL',
-							lexema: 'intt',
-							linea: 5,
-							columna: 12,
-							tipo: 'Léxico',
-							descripcion: 'Palabra reservada mal escrita'
-						},
-						{
-							origen: 'coponentes.y',
-							lexema: ';',
-							linea: 10,
-							columna: 1,
-							tipo: 'Sintáctico',
-							descripcion: 'Se esperaba un ; al final de la sentencia'
-						}
-					]);
 				}}
 				title="Generar compilado"
 			>

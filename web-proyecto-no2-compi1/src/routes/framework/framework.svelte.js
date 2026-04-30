@@ -15,6 +15,8 @@ import { dbManejador } from "$lib/modules/SqliteManager";
 
 import { InterpreteSqlCodigo } from "$lib/databasemodules/InterpreteSqlCodigo";
 
+import { YFeraCompilador } from "$lib/backend/yferamodules/YFeraCompilador";
+
 /*Definicion de la base de datos que se utilizara para definir el storage donde se mantendra la persistencia temporal del proyecto */
 /*
  * Detalles: 
@@ -333,10 +335,17 @@ export function createFrameworkState() {
             }
         },
         //Metodo que permite tener el controlador central de las acciones del menu
-        triggerMenuAction(action) {
+        async triggerMenuAction(action) {
             this.showConsole = true;
 
-            if (action === 'Nuevo_Proyecto') {
+
+            if (action == 'Compilando') {
+                await this.saveActiveFile();
+
+                /*Delegacion al backend PATRON EXPERTO */
+                await this.compilerProyecto();
+            }
+            else if (action === 'Nuevo_Proyecto') {
                 this.createNewProject();
             }
             else if (action === 'Abrir_Proyecto') {
@@ -386,6 +395,13 @@ export function createFrameworkState() {
                 this.systemLog(`> Acción "${action}" no implementada.`);
             }
         },
+
+        /*Metodo que permite generar toda la comunicacion con el backend para que se reciba la compilacion */
+        async compilerProyecto() {
+
+            const compilador = new YFeraCompilador(db, this);
+            await compilador.compilarProyecto();
+        },
         /*Metodo que permite ejecutar un comando en la consola*/
         async handleCommand(event) {
             if (event.key === 'Enter') {
@@ -434,7 +450,7 @@ export function createFrameworkState() {
 
                             let contador = 1;
                             for (const sentencia of resultado.sql) {
-                                await this._ejecutarComandoSQL(sentencia,contador);
+                                await this._ejecutarComandoSQL(sentencia, contador);
                                 contador++;
                             }
 
