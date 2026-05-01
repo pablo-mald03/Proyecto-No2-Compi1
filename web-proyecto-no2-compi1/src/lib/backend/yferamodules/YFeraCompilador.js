@@ -2,6 +2,8 @@ import parserYfera from "$lib/analizador/compiler/yfera-config";
 
 import { ModuloYFera } from "./ModuloYFera";
 
+import { ValidadorSemanticoYfera } from "./ValidadorSemanticoYfera";
+
 /*Clase Delegada para manejar toda la logica principal para poder generar el analisis sintactico del lenguaje orquestador*/
 
 export class YFeraCompilador {
@@ -126,46 +128,15 @@ export class YFeraCompilador {
                 }
             }
 
-            //PENDIENTE FASE 2
-            await this.buscarLoadsRecursivos(ast, archivoY, moduloActual);
+            //DELEGACION A LA VALIDACION SEMANTICA DE TIPOS Y LOADS (PATRON EXPERTO)
+            const validador = new ValidadorSemanticoYfera(this, moduloActual);
+            await validador.analizar();
 
             return moduloActual;
 
         } catch (error) {
             this.agregarError(archivoY.name, 'N/A','Compilacion',  error.message);
             return null;
-        }
-    }
-
-    /* Método para navegar el AST buscando instrucciones 'load' */
-   async buscarLoadsRecursivos(nodos, archivoPadre, moduloActual) { 
-        if (!nodos || !Array.isArray(nodos)) return;
-
-        for (const nodo of nodos) {
-            if (!nodo) continue;
-
-            if (nodo.tipo === 'LOAD_ARCHIVO') {
-                if (nodo.uri.tipo === 'VALOR_CADENA') {
-                    const rutaLoad = nodo.uri.valor.replace(/['"]/g, '').trim();
-                    const archivoSiguiente = await this.resolverPathRelativo(rutaLoad, archivoPadre.parentId);
-
-                    if (archivoSiguiente) {
-                        const moduloHijo = await this.procesarModuloY(archivoSiguiente);
-                        
-                        if (moduloHijo) {
-                            // Ahora moduloActual sí existe aquí dentro
-                            moduloActual.modulosHijos.push(moduloHijo);
-                        }
-                    } else {
-                        this.agregarError(archivoPadre.name, rutaLoad, 'Semantico', `Error de Load: No se encontró '${rutaLoad}'.`, nodo.linea, nodo.columna);
-                    }
-                } 
-            }
-
-            // AQUÍ EL FIX: Pasamos el tercer parámetro a la llamada recursiva
-            if (nodo.tipo === 'DEFINICION_FUNCION' && nodo.cuerpo) {
-                await this.buscarLoadsRecursivos(nodo.cuerpo, archivoPadre, moduloActual);
-            }
         }
     }
 
