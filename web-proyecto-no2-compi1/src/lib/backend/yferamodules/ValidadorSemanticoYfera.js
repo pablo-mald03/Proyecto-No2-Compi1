@@ -1,5 +1,7 @@
 import { TablaSimbolos } from "../semanticsyfera/TablaSimbolos";
 
+import { Simbolo } from "../semanticsyfera/Simbolo";
+
 /*Clase delegada para poder actuar como validador semantico para todo el lenguaje yfera (.y) */
 export class ValidadorSemanticoYfera {
 
@@ -56,10 +58,23 @@ export class ValidadorSemanticoYfera {
 
         /*pendiente validacion de tipos */
        
-
         const nuevoSimbolo = new Simbolo(nodo.id, nodo.tipoDato, nodo.valor, nodo.linea, nodo.columna, nodo.esArreglo);
 
         entorno.setVariable(nuevoSimbolo);
+    }
+
+    async validarFuncion(nodo, entornoActual) {
+
+        const entornoLocal = new TablaSimbolos(entornoActual);
+
+        if (nodo.parametros) {
+            for (const param of nodo.parametros) {
+                const simParam = new Simbolo(param.id, param.tipado, null, param.linea, param.columna);
+                entornoLocal.setVariable(simParam);
+            }
+        }
+
+        await this.recorrerAST(nodo.cuerpo, entornoLocal);
     }
 
 }

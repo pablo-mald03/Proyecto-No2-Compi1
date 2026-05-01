@@ -332,7 +332,7 @@ cuerpo_lenguaje             : IMPORT cadena_texto PUNTO_COMA
                                     columna: @1.first_column + 1
                                 };
                             }}
-                            | FUNCTION IDENTIFICADOR CORCHETE_APERTURA lista_parametros_def CORCHETE_CIERRE LLAVE_APERTURA cuerpo_funciones LLAVE_CIERRE
+                            | FUNCTION IDENTIFICADOR PARENT_APERTURA lista_parametros_def PARENT_CIERRE LLAVE_APERTURA cuerpo_funciones LLAVE_CIERRE
                             {{
                                 $$ = {
                                     tipo: 'FUNCION',
@@ -359,6 +359,17 @@ cuerpo_lenguaje             : IMPORT cadena_texto PUNTO_COMA
                                     tipado: $1,
                                     id: $2, 
                                     valor: $4,
+                                    linea: @1.first_line,
+                                    columna: @1.first_column + 1
+                                };
+                            }}
+                            | tipo_variable IDENTIFICADOR PUNTO_COMA
+                            {{
+                                $$ = {
+                                    tipo: 'INICIALIZACION_VARIABLE',
+                                    tipado: $1,
+                                    id: $2, 
+                                    valor: null,
                                     linea: @1.first_line,
                                     columna: @1.first_column + 1
                                 };
