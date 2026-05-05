@@ -50,4 +50,63 @@ export class SintaxisManager {
         return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     }
 
+    /*Metodo que permite formatear el codigo (auto identacion)*/ 
+    formatear(text, extension) {
+        if (!text) return '';
+        if (extension === 'sqlite') return text;
+
+        const parser = this.parsers[extension];
+        if (!parser) return text;
+
+        try {
+            const tokens = parser.parse(text);
+            let codigoFormateado = '';
+            let indentLevel = 0;
+            let startOfLine = true; 
+
+            const getIndent = (level) => '    '.repeat(Math.max(0, level));
+
+            for (let i = 0; i < tokens.length; i++) {
+                const token = tokens[i];
+
+                if (token.indentar < 0) {
+                    indentLevel += token.indentar;
+                }
+
+                if (token.tipo === 'ESPACIO') {
+                    if (token.lexema.includes('\n')) {
+                        const saltos = token.lexema.match(/\n/g);
+                        if (saltos) codigoFormateado += saltos.join('');
+                        startOfLine = true; 
+                    } else if (!startOfLine) {
+
+                        codigoFormateado += token.lexema;
+                    }
+                    
+                    continue; 
+                }
+
+                if (startOfLine) {
+                    codigoFormateado += getIndent(indentLevel);
+                    startOfLine = false;
+                }
+
+                codigoFormateado += token.lexema;
+
+                if (token.indentar > 0) {
+                    indentLevel += token.indentar;
+                }
+
+                if (token.lexema.endsWith('\n')) {
+                    startOfLine = true;
+                }
+            }
+
+            return codigoFormateado;
+
+        } catch (e) {
+            return text;
+        }
+    }
+
 }

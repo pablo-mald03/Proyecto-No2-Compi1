@@ -17,6 +17,9 @@ import { InterpreteSqlCodigo } from "$lib/databasemodules/InterpreteSqlCodigo";
 
 import { YFeraCompilador } from "$lib/backend/yferamodules/YFeraCompilador";
 
+/*Apartado del manejador de sintaxis*/
+import { SintaxisManager } from "$lib/modules/SintaxisManager";
+
 /*Definicion de la base de datos que se utilizara para definir el storage donde se mantendra la persistencia temporal del proyecto */
 /*
  * Detalles: 
@@ -34,6 +37,9 @@ export function createFrameworkState() {
 
     /*Inicializacion de los atributos que se comunican con el backend*/
     const controladorSQL = new InterpreteSqlCodigo(dbManejador);
+
+    /*Atributo que permite comunicarse con la clase que maneja la sintaxis y el pintado dinamico*/
+    const formateadorManager = new SintaxisManager();
 
     /*Estado reactivo del arbol de trabajo */
     let _files = $state([]);
@@ -902,14 +908,16 @@ export function createFrameworkState() {
                 return;
             }
 
+            const extension = currentFile.name.split('.').pop().toLowerCase();
 
-            // PENDIENTE LA INTEGRACION REAL DE FORMATEO QUEMADO
-            // let codigo = currentFile.content;
-            // let codigoFormateado = tuLogicaMagica(codigo);
-            // currentFile.content = codigoFormateado;
+            let codigo = currentFile.content;
+            let codigoFormateado = formateadorManager.formatear(codigo, extension);
 
-            this.systemLog(`> Formato aplicado correctamente (HARDCODEADO)`);
-
+            if (codigoFormateado && codigoFormateado !== codigo) {
+                currentFile.content = codigoFormateado;
+            } else {
+                this.systemLog(`> El archivo ya esta formateado`);
+            }
         }
     };
 }

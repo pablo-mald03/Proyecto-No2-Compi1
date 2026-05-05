@@ -1063,7 +1063,7 @@ expresion_unaria        : NOT expresion_unaria
 /*-----=====-----Produccion principal para los valores a los que se pueden optar permitidos en el lenguaje  en .y-----=====-----*/
 
 valor_primario              : ENTERO        
-                            {{ 
+                            {{  
                                 $$ = { 
                                     tipo: 'INT', 
                                     valor: $1,
@@ -1078,6 +1078,15 @@ valor_primario              : ENTERO
                                     valor: $1,
                                     linea: @1.first_line,
                                     columna: @1.first_column + 1 
+                                }; 
+                            }}
+                            | VALOR_CHAR        
+                            {{ 
+                                $$ = { 
+                                    tipo: 'CHAR', 
+                                    valor: $1,
+                                    linea: @1.first_line,
+                                    columna: @1.first_column + 1  
                                 }; 
                             }}
                             | TRUE          
