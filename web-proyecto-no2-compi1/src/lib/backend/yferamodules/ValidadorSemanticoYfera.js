@@ -11,6 +11,9 @@ export class ValidadorSemanticoYfera {
 
         this.modulo.tablaSimbolos = new TablaSimbolos();
         this.loadsDetectados = [];
+
+        this.nodosLoadPendientes = [];
+        this.simbolosPendientesBD = [];
     }
 
     /*Metodo de inicio de analisis */
@@ -42,8 +45,11 @@ export class ValidadorSemanticoYfera {
 
                 case 'LOAD_ARCHIVO':
                 case 'LOAD_ID':
-                    await this.validarLoad(nodo, entornoActual);
+                    this.nodosLoadPendientes.push({ nodo, entorno: entornoActual });
                     break;
+                case 'DATABASE_QUERY':
+                    const queryProcesada = this.procesarBackticks(nodo.valor, entorno);
+                    return { valor: queryProcesada, tipo: 'QUERY_PENDIENTE' };
             }
         }
     }
@@ -71,7 +77,8 @@ export class ValidadorSemanticoYfera {
             infoExpresion.valor = this.valorPorDefecto(nodo.tipado);
         }
 
-        const nuevoSimbolo = new Simbolo(nodo.id, nodo.tipado, infoExpresion.valor, nodo.linea, nodo.columna, nodo.esArreglo || false);
+        const nuevoSimbolo = new Simbolo(nodo.id, nodo.tipado, infoExpresion.valor, nodo.linea, nodo.columna, false);
+
         entorno.setVariable(nuevoSimbolo);
     }
 
@@ -145,6 +152,29 @@ export class ValidadorSemanticoYfera {
             case 'DATABASE_QUERY':
                 const queryProcesada = this.procesarBackticks(nodo.valor, entorno);
                 return { valor: queryProcesada, tipo: 'QUERY_PENDIENTE' };
+
+            case 'QUERY_TEMPLATE':
+                let queryArmada = "";
+
+                for (const fragmento of nodo.fragmentos) {
+
+                    if (fragmento.tipo === 'TEXTO_QUERY') {
+                        queryArmada += fragmento.valor;
+                    }
+                    else if (fragmento.tipo === 'VAR_INTERPOLADA') {
+                        const nombreVar = fragmento.id.replace('$', '').trim();
+
+                        const variable = entorno.getVariable(nombreVar);
+
+                        if (!variable) {
+                            this.compilador.agregarError(this.modulo.nombre, fragmento.id, 'Semantico SQL', `Variable interpolada '${fragmento.id}' no ha sido declarada.`, fragmento.linea, fragmento.columna);
+                            return null;
+                        }
+
+                        queryArmada += variable.valor;
+                    }
+                }
+                return { valor: queryArmada, tipo: 'QUERY_PENDIENTE' };
             default:
 
                 return { valor: null, tipo: 'DESCONOCIDO' };
@@ -235,7 +265,7 @@ export class ValidadorSemanticoYfera {
 
         if (nodo.tipo === 'ARREGLO_VACIO') {
             const tamano = this.resolverExpresion(nodo.amplitud, entorno);
-            
+
             if (!tamano || tamano.tipo !== 'ENTERA') {
                 this.compilador.agregarError(this.modulo.nombre, nodo.id, 'Semantico', `La amplitud del arreglo debe ser un número ENTERO.`, nodo.linea, nodo.columna);
                 return;
@@ -244,15 +274,15 @@ export class ValidadorSemanticoYfera {
             const valorDefecto = this.valorPorDefecto(nodo.tipado);
             arregloJS = new Array(tamano.valor).fill(valorDefecto);
 
-        } 
+        }
         else if (nodo.tipo === 'ARREGLO_INICIALIZADO') {
 
             arregloJS = [];
-            
+
             for (const valNodo of nodo.valores) {
                 const infoVal = this.resolverExpresion(valNodo, entorno);
-                
-                if (!infoVal) continue; 
+
+                if (!infoVal) continue;
 
                 if (!this.sonTiposCompatibles(nodo.tipado, infoVal.tipo)) {
                     this.compilador.agregarError(this.modulo.nombre, nodo.id, 'Semantico', `Tipo incompatible en arreglo. Se esperaba ${nodo.tipado} pero se encontró ${infoVal.tipo}.`, nodo.linea, nodo.columna);
@@ -261,19 +291,25 @@ export class ValidadorSemanticoYfera {
                 }
             }
 
-        } 
-        else if (nodo.tipo === 'ARREGLO_QUERY') {
-            arregloJS = nodo.query; 
+        }
+       else if (nodo.tipo === 'ARREGLO_QUERY') {
+            
+            const infoQuery = this.resolverExpresion(nodo.query, entorno);
+            
+            if (infoQuery) {
+                arregloJS = infoQuery.valor;
+            }
+            
             esQueryPendiente = true; 
         }
 
         const nuevoSimbolo = new Simbolo(
-            nodo.id, 
-            nodo.tipado, 
-            arregloJS, 
-            nodo.linea, 
-            nodo.columna, 
-            true 
+            nodo.id,
+            nodo.tipado,
+            arregloJS,
+            nodo.linea,
+            nodo.columna,
+            true
         );
 
         if (esQueryPendiente) {
@@ -281,6 +317,52 @@ export class ValidadorSemanticoYfera {
         }
 
         entorno.setVariable(nuevoSimbolo);
+    }
+
+    async resolverQueriesPendientes(interpreteSQL) {
+        for (const simbolo of this.simbolosPendientesBD) {
+            const queryStr = simbolo.valor;
+
+            const response = await interpreteSQL.ejecutarCodigo(queryStr);
+
+            if (!response.exito) {
+                this.compilador.agregarError(this.modulo.nombre, "EXECUTE", 'Semantico SQL', `Error BD: ${response.errores[0].descripcion}`, simbolo.linea, simbolo.columna);
+                continue;
+            }
+
+            const resultadoSQL = response.resultados[0];
+
+            if (resultadoSQL && resultadoSQL.valores) {
+                const tipoTraducido = this.mapearTipoSQL(resultadoSQL.tipo);
+
+                if (!this.sonTiposCompatibles(simbolo.tipoDato, tipoTraducido)) {
+                    this.compilador.agregarError(this.modulo.nombre, simbolo.id, 'Semantico', `El tipo de BD (${tipoTraducido}) no coincide con el arreglo de tipo ${simbolo.tipoDato}`, simbolo.linea, simbolo.columna);
+                } else {
+                    simbolo.valor = resultadoSQL.valores;
+                }
+            }
+
+            simbolo.esperandoRespuestaBD = false;
+        }
+    }
+
+    /*Metodo que permite procesar todos los loads pendientes*/
+    async procesarLoadsPendientes() {
+        for (const item of this.nodosLoadPendientes) {
+            await this.validarLoad(item.nodo, item.entorno);
+        }
+    }
+
+    /*Metodo que permite mapear tipos retornados de sql al lenguaje yfera*/
+    mapearTipoSQL(tipoSQL) {
+        switch (tipoSQL) {
+            case 'INT': return 'ENTERA';
+            case 'FLOAT': return 'FLOAT';
+            case 'BOOLEAN': return 'BOOLEANA';
+            case 'CHAR': return 'CARACTER';
+            case 'STRING': return 'CADENA';
+            default: return 'DESCONOCIDO';
+        }
     }
 
 }

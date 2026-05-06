@@ -4,6 +4,8 @@ import { ModuloYFera } from "./ModuloYFera";
 
 import { ValidadorSemanticoYfera } from "./ValidadorSemanticoYfera";
 
+import { InterpreteSqlCodigo } from "$lib/databasemodules/InterpreteSqlCodigo";
+
 /*Clase Delegada para manejar toda la logica principal para poder generar el analisis sintactico del lenguaje orquestador*/
 
 export class YFeraCompilador {
@@ -132,6 +134,12 @@ export class YFeraCompilador {
             const validador = new ValidadorSemanticoYfera(this, moduloActual);
             await validador.analizar();
 
+            const interprete = new InterpreteSqlCodigo(this.dataBase);
+            await validador.resolverQueriesPendientes(interprete);
+
+            await validador.procesarLoadsPendientes();
+
+
             for (const loadObj of validador.loadsDetectados) {
                 const archivoSiguiente = await this.resolverPathRelativo(loadObj.ruta, archivoY.parentId);
 
@@ -141,14 +149,14 @@ export class YFeraCompilador {
                         moduloActual.modulosHijos.push(moduloHijo);
                     }
                 } else {
-                    this.agregarError(archivoY.name, loadObj.ruta, 'Semantico', `Error de Load: No se encontró el archivo '${loadObj.ruta}'.`, loadObj.linea, loadObj.columna);
+                    this.agregarError(archivoY.name, loadObj.ruta, 'Semantico', `Error de Load: No se encontro el archivo '${loadObj.ruta}'.`, loadObj.linea, loadObj.columna);
                 }
             }
 
             return moduloActual;
 
         } catch (error) {
-            this.agregarError(archivoY.name, 'N/A','Compilacion',  error.message);
+            this.agregarError(archivoY.name, 'N/A', 'Compilacion', error.message);
             return null;
         }
     }

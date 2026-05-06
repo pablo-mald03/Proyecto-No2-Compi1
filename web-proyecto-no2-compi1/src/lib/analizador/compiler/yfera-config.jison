@@ -343,7 +343,7 @@ cuerpo_lenguaje             : IMPORT cadena_texto PUNTO_COMA
                                     columna: @1.first_column + 1
                                 };
                             }}
-                            | MAIN LLAVE_APERTURA cuerpo_main LLAVE_CIERRE
+                            | MAIN LLAVE_APERTURA bloque_instrucciones LLAVE_CIERRE
                             {{
                                 $$ = {
                                     tipo: 'FUNCION_MAIN',
@@ -428,9 +428,24 @@ cuerpo_lenguaje             : IMPORT cadena_texto PUNTO_COMA
                             ;
 
 
+
+/*-----=====-----Produccion que permite representar las instrucciones dentro de la funcion main-----=====-----*/
+
+bloque_instrucciones
+                                : lista_instrucciones
+                                {{
+                                    $$ = $1;
+                                }}
+                                | /* vacio */
+                                {{
+                                    $$ = [];
+                                }}
+                                ;
+
+
 /*-----=====-----Produccion que permite representar listado de instrucciones dentro de la funcion main-----=====-----*/
 
-bloque_instrucciones            : bloque_instrucciones instruccion
+lista_instrucciones            : lista_instrucciones instruccion
                                 {{
                                     $1.push($2);
                                     $$ = $1;
@@ -438,10 +453,6 @@ bloque_instrucciones            : bloque_instrucciones instruccion
                                 | instruccion
                                 {{
                                     $$ = [$1];
-                                }}
-                                | /* vacio */
-                                {{
-                                    $$ = [];
                                 }}
                                 ;
 
@@ -699,16 +710,6 @@ parametro               : expresion_logica
                         {{
                             $$ = $1;
                         }}
-                        | IDENTIFICADOR CORCHETE_APERTURA expresion_logica CORCHETE_CIERRE
-                        {{
-                            $$ = {
-                                tipo: 'ACCESO_ARREGLO',
-                                id: $1,
-                                indice: $3,
-                                linea: @1.first_line,
-                                columna: @1.first_column + 1
-                            };
-                        }}
                         | error
                         {{
                             reportarError(yy, {
@@ -930,7 +931,7 @@ expresion_igualdad              : expresion_igualdad IGUALACION expresion_relaci
 
 /*-----=====-----Produccion principal para las expresiones permitidas en el lenguaje (mayores y menores) en .y-----=====-----*/
 
-expresion_relacional            : expresion_relacional MAYOR expresion_aditiva
+expresion_relacional            : expresion_relacional MAYOR expresion_aritmetica
                                 {{ 
                                     $$ = { 
                                         tipo: 'RELACIONAL', 
@@ -939,16 +940,16 @@ expresion_relacional            : expresion_relacional MAYOR expresion_aditiva
                                         der: $3 
                                     }; 
                                 }}
-                                | expresion_relacional MENOR expresion_aditiva
+                                | expresion_relacional MENOR expresion_aritmetica
                                 {{ 
                                     $$ = { 
                                         tipo: 'RELACIONAL', 
                                         op: 'MENOR', 
                                         izq: $1, 
                                         der: $3 
-                                    }; 
+                                        }; 
                                 }}
-                                | expresion_relacional MAYOR_IGUAL expresion_aditiva
+                                | expresion_relacional MAYOR_IGUAL expresion_aritmetica
                                 {{ 
                                     $$ = { 
                                         tipo: 'RELACIONAL', 
@@ -957,7 +958,7 @@ expresion_relacional            : expresion_relacional MAYOR expresion_aditiva
                                         der: $3 
                                     }; 
                                 }}
-                                | expresion_relacional MENOR_IGUAL expresion_aditiva
+                                | expresion_relacional MENOR_IGUAL expresion_aritmetica
                                 {{ 
                                     $$ = { 
                                         tipo: 'RELACIONAL', 
@@ -966,7 +967,7 @@ expresion_relacional            : expresion_relacional MAYOR expresion_aditiva
                                         der: $3 
                                     }; 
                                 }}
-                                | expresion_aditiva
+                                | expresion_aritmetica
                                 {{ 
                                     $$ = $1; 
                                 }}
@@ -975,29 +976,29 @@ expresion_relacional            : expresion_relacional MAYOR expresion_aditiva
 
 /*-----=====-----Produccion principal para las expresiones permitidas en el lenguaje (sumas y restas) en .y-----=====-----*/
 
-expresion_aditiva           : expresion_aditiva MAS expresion_multiplicativa
-                            {{ 
-                                $$ = { 
-                                    tipo: 'ARITMETICA', 
-                                    op: 'SUMA', 
-                                    izq: $1, 
-                                    der: $3 
-                                }; 
-                            }}
-                            | expresion_aditiva MENOS expresion_multiplicativa
-                            {{ 
-                                $$ = { 
-                                    tipo: 'ARITMETICA', 
-                                    op: 'RESTA', 
-                                    izq: $1, 
-                                    der: $3 
-                                }; 
-                            }}
-                            | expresion_multiplicativa
-                            {{ 
-                                $$ = $1; 
-                            }}
-                            ;
+expresion_aritmetica            : expresion_aritmetica MAS expresion_multiplicativa
+                                {{ 
+                                    $$ = { 
+                                        tipo: 'ARITMETICA', 
+                                        op: 'SUMA', 
+                                        izq: $1, 
+                                        der: $3 
+                                    }; 
+                                }}
+                                | expresion_aritmetica MENOS expresion_multiplicativa
+                                {{ 
+                                    $$ = { 
+                                        tipo: 'ARITMETICA', 
+                                        op: 'RESTA', 
+                                        izq: $1, 
+                                        der: $3 
+                                    }; 
+                                }}
+                                | expresion_multiplicativa
+                                {{ 
+                                    $$ = $1; 
+                                }}
+                                ;
 
 /*-----=====-----Produccion principal para las expresiones permitidas en el lenguaje (multiplicacion, division, modulo) en .y-----=====-----*/
 
@@ -1005,8 +1006,8 @@ expresion_multiplicativa        : expresion_multiplicativa MULTIPLICACION expres
                                 {{ 
                                     $$ = { 
                                         tipo: 'ARITMETICA', 
-                                        op: 'MULTIPLICACION', izq: 
-                                        $1, 
+                                        op: 'MULTIPLICACION', 
+                                        izq: $1, 
                                         der: $3 
                                     }; 
                                 }}
@@ -1037,27 +1038,27 @@ expresion_multiplicativa        : expresion_multiplicativa MULTIPLICACION expres
 /*-----=====-----Produccion principal para las expresiones permitidas en el lenguaje (unarias. Valores fijos o negativos) en .y-----=====-----*/
 
 
-expresion_unaria        : NOT expresion_unaria
-                        {{ 
-                            $$ = { 
-                                tipo: 'UNARIA', 
-                                op: 'NOT', 
-                                valor: $2 
-                            }; 
-                        }}
-                        | MENOS expresion_unaria
-                        {{ 
-                            $$ = { 
-                                tipo: 'UNARIA', 
-                                op: 'MENOS', 
-                                valor: $2 
-                            }; 
-                        }}
-                        | valor_primario
-                        {{ 
-                            $$ = $1; 
-                        }}
-                        ;
+expresion_unaria                : MENOS valor_primario %prec UMENOS
+                                {{ 
+                                    $$ = { 
+                                        tipo: 'UNARIA', 
+                                        op: 'NEGATIVO', 
+                                        der: $2 
+                                    }; 
+                                }}
+                                | NOT valor_primario
+                                {{ 
+                                    $$ = { 
+                                        tipo: 'UNARIA', 
+                                        op: 'NOT', 
+                                        der: $2 
+                                    }; 
+                                }}
+                                | valor_primario
+                                {{ 
+                                    $$ = $1; 
+                                }}
+                                ;
 
 
 /*-----=====-----Produccion principal para los valores a los que se pueden optar permitidos en el lenguaje  en .y-----=====-----*/
