@@ -132,6 +132,19 @@ export class YFeraCompilador {
             const validador = new ValidadorSemanticoYfera(this, moduloActual);
             await validador.analizar();
 
+            for (const loadObj of validador.loadsDetectados) {
+                const archivoSiguiente = await this.resolverPathRelativo(loadObj.ruta, archivoY.parentId);
+
+                if (archivoSiguiente) {
+                    const moduloHijo = await this.procesarModuloY(archivoSiguiente);
+                    if (moduloHijo) {
+                        moduloActual.modulosHijos.push(moduloHijo);
+                    }
+                } else {
+                    this.agregarError(archivoY.name, loadObj.ruta, 'Semantico', `Error de Load: No se encontró el archivo '${loadObj.ruta}'.`, loadObj.linea, loadObj.columna);
+                }
+            }
+
             return moduloActual;
 
         } catch (error) {
