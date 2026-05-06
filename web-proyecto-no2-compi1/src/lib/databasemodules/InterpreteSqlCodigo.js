@@ -8,6 +8,7 @@ export class InterpreteSqlCodigo {
 
     constructor(dbManejador) {
         this.validador = new AnalizadorSemanticoSql(dbManejador);
+        this.db = dbManejador;
     }
 
     /**
@@ -103,6 +104,103 @@ export class InterpreteSqlCodigo {
             return `'${limpio}'`;
         }
         return valorObj.valor;
+    }
+
+
+    /*Metodo que permite leer el AST directamente*/
+    async ejecutarCodigo(comando) {
+        parserDatabase.yy.errores = [];
+        let ast;
+
+        try {
+            ast = parserDatabase.parse(comando);
+            if (parserDatabase.yy.errores && parserDatabase.yy.errores.length > 0) {
+                return { exito: false, errores: parserDatabase.yy.errores };
+            }
+        } catch (error) {
+            return { exito: false, errores: [{ tipo: 'Fatal', descripcion: error.message }] };
+        }
+
+        const resultadoValidacion = this.validador.validar(ast);
+        if (resultadoValidacion.erroresEncontrados.length > 0) {
+            return { exito: false, errores: resultadoValidacion.erroresEncontrados };
+        }
+
+        let resultados = [];
+        for (const nodo of resultadoValidacion.astProcesado) {
+            if (nodo) {
+                const res = await this.procesarNodoRequest(nodo);
+                resultados.push(res);
+            }
+        }
+
+        return { exito: true, resultados: resultados, errores: [] };
+    }
+
+    /*Metodo que permite ejecutar cada nodo del AST parseado para poder generar las querys*/
+    async procesarNodoRequest(nodo) {
+        switch (nodo.accion) {
+            case 'SELECT_COL':
+                const registros = await this.db[nodo.tabla].toArray();
+
+                const valoresColumna = registros.map(fila => fila[nodo.columna]);
+                
+                return new ResultadoTipado(valoresColumna);
+
+            case 'INSERT':
+                let nuevoRegistro = {};
+                nodo.valores.forEach(v => {
+                    nuevoRegistro[v.col] = this.extraerValorReal(v.valor); 
+                });
+
+                await this.db[nodo.tabla].add(nuevoRegistro);
+                return { mensaje: `Registro insertado en ${nodo.tabla}`, accion: 'INSERT' };
+
+            case 'UPDATE':
+                let cambios = {};
+                nodo.valores.forEach(v => {
+                    cambios[v.col] = this.extraerValorReal(v.valor);
+                });
+
+                await this.db[nodo.tabla].update(nodo.id, cambios);
+                return { mensaje: `Registro ${nodo.id} actualizado`, accion: 'UPDATE' };
+
+            case 'DELETE':
+                await this.db[nodo.tabla].delete(nodo.id);
+                return { mensaje: `Registro ${nodo.id} eliminado`, accion: 'DELETE' };
+
+            case 'CREATE':
+                return { 
+                    mensaje: "Para CREATE en Dexie, se requiere actualizar db.version().stores()", 
+                    accion: 'CREATE', 
+                    nodo: nodo 
+                };
+
+            default:
+                throw new Error(`Acción no reconocida: ${nodo.accion}`);
+        }
+    }
+
+    /*Metodo que permite extraer el valor y poder guardarlo*/
+    extraerValorReal(valorObj) {
+        let valor = valorObj.valor;
+
+        switch (valorObj.col) {
+            case 'INT':
+                return parseInt(valor, 10);
+            case 'FLOAT':
+                return parseFloat(valor);
+            case 'BOOLEAN':
+                return valor === 'true' || valor === true;
+            case 'STRING':
+            case 'CHAR':
+                if (typeof valor === 'string' && valor.startsWith("'") && valor.endsWith("'")) {
+                    return valor.slice(1, -1);
+                }
+                return String(valor);
+            default:
+                return valor;
+        }
     }
 
 }

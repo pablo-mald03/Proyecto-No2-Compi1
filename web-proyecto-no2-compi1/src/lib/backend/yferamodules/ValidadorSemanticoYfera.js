@@ -30,28 +30,20 @@ export class ValidadorSemanticoYfera {
                 case 'INICIALIZACION_VARIABLE':
                     this.validarDeclaracion(nodo, entornoActual);
                     break;
+                case 'ARREGLO_VACIO':
+                case 'ARREGLO_INICIALIZADO':
+                case 'ARREGLO_QUERY':
+                    this.validarArreglo(nodo, entornoActual);
+                    break;
 
                 case 'FUNCION':
                     await this.validarFuncion(nodo, entornoActual);
                     break;
 
-                case 'FUNCION_MAIN':
-                    const entornoMain = new TablaSimbolos(entornoActual);
-
-                    await this.recorrerAST(nodo.cuerpo, entornoMain);
-                    break;
-
-                case 'CICLO_WHILE':
-                case 'CICLO_DO_WHILE':
-                    const entornoCiclo = new TablaSimbolos(entornoActual);
-                    await this.recorrerAST(nodo.cuerpo, entornoCiclo);
-                    break;
-
                 case 'LOAD_ARCHIVO':
+                case 'LOAD_ID':
                     await this.validarLoad(nodo, entornoActual);
                     break;
-
-                //Pendiente demas codigo
             }
         }
     }
@@ -127,24 +119,32 @@ export class ValidadorSemanticoYfera {
 
                 return { valor: resultado, tipo: tipoResultante };
 
-            case 'DATABASE_QUERY':
-            case 'QUERY_TEMPLATE':
-            case 'LLAMADA_ARROBA_VAR':
-            case 'ACCESO_ARREGLO':
-                return { valor: null, tipo: 'DINAMICO' };
-
             case 'ARREGLO_INICIALIZADO':
-                const valoresResueltos = nodo.valores.map(valNodo => {
-                    const res = this.resolverExpresion(valNodo, entorno);
-                    return res ? res.valor : null;
-                });
-                return { valor: valoresResueltos, tipo: nodo.tipado };
+                const valores = nodo.valores.map(v => this.resolverExpresion(v, entorno).valor);
+                return { valor: valores, tipo: nodo.tipado, esArreglo: true };
 
             case 'ARREGLO_VACIO':
-             
-                const amplitud = this.resolverExpresion(nodo.amplitud, entorno).valor;
-                const arrayVacio = new Array(amplitud).fill(this.valorPorDefecto(nodo.tipado));
-                return { valor: arrayVacio, tipo: nodo.tipado };
+                const tam = this.resolverExpresion(nodo.amplitud, entorno).valor;
+                const defecto = this.valorPorDefecto(nodo.tipado);
+                const arrayFisico = new Array(tam).fill(defecto);
+                return { valor: arrayFisico, tipo: nodo.tipado, esArreglo: true };
+
+            case 'ACCESO_ARREGLO':
+                const symArr = entorno.getVariable(nodo.id);
+                if (!symArr || !symArr.esArreglo) {
+                    this.compilador.agregarError(this.modulo.nombre, nodo.id, 'Semantico', ` '${nodo.id}' no es un arreglo.`, nodo.linea, nodo.columna);
+                    return null;
+                }
+                const index = this.resolverExpresion(nodo.indice, entorno).valor;
+                if (typeof index === 'number' && (index < 0 || index >= symArr.valor.length)) {
+                    this.compilador.agregarError(this.modulo.nombre, nodo.id, 'Semantico', `Índice ${index} fuera de límites para el arreglo '${nodo.id}'.`, nodo.linea, nodo.columna);
+                    return null;
+                }
+                return { valor: symArr.valor[index], tipo: symArr.tipoDato };
+
+            case 'DATABASE_QUERY':
+                const queryProcesada = this.procesarBackticks(nodo.valor, entorno);
+                return { valor: queryProcesada, tipo: 'QUERY_PENDIENTE' };
             default:
 
                 return { valor: null, tipo: 'DESCONOCIDO' };
@@ -194,11 +194,25 @@ export class ValidadorSemanticoYfera {
 
     /*Metodo que permite validar las expresiones dentro del load*/
     async validarLoad(nodo, entornoActual) {
+        let infoRuta = null;
 
-        const infoRuta = this.resolverExpresion(nodo.uri, entornoActual);
+        if (nodo.tipo === 'LOAD_ARCHIVO') {
+            infoRuta = this.resolverExpresion(nodo.uri, entornoActual);
+        }
+
+        else if (nodo.tipo === 'LOAD_ID') {
+            const variable = entornoActual.getVariable(nodo.id);
+
+            if (!variable) {
+                this.compilador.agregarError(this.modulo.nombre, nodo.id, 'Semantico', `Variable '${nodo.id}' no definida.`, nodo.linea, nodo.columna);
+                return;
+            }
+
+            infoRuta = { valor: variable.valor, tipo: variable.tipoDato };
+        }
 
         if (!infoRuta || infoRuta.tipo !== 'CADENA' || !infoRuta.valor) {
-            this.compilador.agregarError(this.modulo.nombre, "LOAD", 'Semantico', `El LOAD requiere una ruta STRING valida y constante.`, nodo.linea, nodo.columna);
+            this.compilador.agregarError(this.modulo.nombre, "load", 'Semantico', `El LOAD requiere una ruta tipo STRING.`, nodo.linea, nodo.columna);
             return;
         }
 
@@ -207,6 +221,66 @@ export class ValidadorSemanticoYfera {
             linea: nodo.linea,
             columna: nodo.columna
         });
+    }
+
+    /* Validacion especifica para Arreglos*/
+    validarArreglo(nodo, entorno) {
+        if (entorno.existeLocal(nodo.id)) {
+            this.compilador.agregarError(this.modulo.nombre, nodo.id, 'Semantico', `El arreglo '${nodo.id}' ya fue declarado.`, nodo.linea, nodo.columna);
+            return;
+        }
+
+        let arregloJS = null;
+        let esQueryPendiente = false;
+
+        if (nodo.tipo === 'ARREGLO_VACIO') {
+            const tamano = this.resolverExpresion(nodo.amplitud, entorno);
+            
+            if (!tamano || tamano.tipo !== 'ENTERA') {
+                this.compilador.agregarError(this.modulo.nombre, nodo.id, 'Semantico', `La amplitud del arreglo debe ser un número ENTERO.`, nodo.linea, nodo.columna);
+                return;
+            }
+
+            const valorDefecto = this.valorPorDefecto(nodo.tipado);
+            arregloJS = new Array(tamano.valor).fill(valorDefecto);
+
+        } 
+        else if (nodo.tipo === 'ARREGLO_INICIALIZADO') {
+
+            arregloJS = [];
+            
+            for (const valNodo of nodo.valores) {
+                const infoVal = this.resolverExpresion(valNodo, entorno);
+                
+                if (!infoVal) continue; 
+
+                if (!this.sonTiposCompatibles(nodo.tipado, infoVal.tipo)) {
+                    this.compilador.agregarError(this.modulo.nombre, nodo.id, 'Semantico', `Tipo incompatible en arreglo. Se esperaba ${nodo.tipado} pero se encontró ${infoVal.tipo}.`, nodo.linea, nodo.columna);
+                } else {
+                    arregloJS.push(infoVal.valor);
+                }
+            }
+
+        } 
+        else if (nodo.tipo === 'ARREGLO_QUERY') {
+            arregloJS = nodo.query; 
+            esQueryPendiente = true; 
+        }
+
+        const nuevoSimbolo = new Simbolo(
+            nodo.id, 
+            nodo.tipado, 
+            arregloJS, 
+            nodo.linea, 
+            nodo.columna, 
+            true 
+        );
+
+        if (esQueryPendiente) {
+            nuevoSimbolo.esperandoRespuestaBD = true;
+        }
+
+        entorno.setVariable(nuevoSimbolo);
     }
 
 }
