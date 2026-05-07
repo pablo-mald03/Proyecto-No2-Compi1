@@ -4,12 +4,15 @@ import { ModuloYFera } from "./ModuloYFera";
 
 import { ValidadorSemanticoYfera } from "./ValidadorSemanticoYfera";
 
-/*Clase Delegada para manejar toda la logica principal para poder generar el analisis sintactico del lenguaje orquestador*/
+import { RecursoImportado } from "../semanticsyfera/RecursoImportado";
 
+import { ValidadorSemanticoStyles } from "../stylesmodules/ValidadorSemanticoStyles";
+
+/*Clase Delegada para manejar toda la logica principal para poder generar el analisis sintactico del lenguaje orquestador*/
 export class YFeraCompilador {
 
     /*Constructor que permite obteber los datos para operar con la base de datos */
-    constructor(db, fs,manejadorDb) {
+    constructor(db, fs, manejadorDb) {
         this.dataBase = db;
         this.frontState = fs;
 
@@ -26,7 +29,7 @@ export class YFeraCompilador {
         this.erroresGlobales = [];
         this.frontState.notificarErrores([]);
 
-        //Buscar el archivo .y en la raiz del proyecto
+        /*Primera fase de compilacion : Busqueda de la raiz*/
         const mainFile = await this.buscarArchivoRaiz();
 
         if (!mainFile) {
@@ -39,12 +42,22 @@ export class YFeraCompilador {
 
         this.arbolEjecucion = await this.procesarModuloY(mainFile);
 
+        /*Segunda fase de compilacion: Busqueda de imports y loads (ENCADENAMIENTO) */
+
         if (this.erroresGlobales.length > 0) {
             this.frontState.notificarErrores(this.erroresGlobales);
-            this.frontState.systemLog('> Compilacion abortada por errores.');
+            this.frontState.systemLog('> Compilacion abortada por errores en el main.');
             return;
         }
 
+        const validadorStyles = new ValidadorSemanticoStyles(this, this.manejadorDatabase);
+        await validadorStyles.validarEstilos(this.arbolEjecucion);
+
+        if (this.erroresGlobales.length > 0) {
+            this.frontState.notificarErrores(this.erroresGlobales);
+            this.frontState.systemLog('> Compilacion abortada por errores en estilos.');
+            return;
+        }
     }
 
     /* Busca un archivo .y el primero que se atraviesa para poder usarlo como orquestador */
@@ -123,9 +136,13 @@ export class YFeraCompilador {
                 moduloActual.importsVisitados.add(archivoImportado.id);
 
                 if (archivoImportado.name.endsWith('.styles')) {
-                    moduloActual.recursos.estilos += `\n/* source: ${rutaLimpia} */\n${archivoImportado.content}\n`;
+                    moduloActual.recursos.estilos.push(
+                        new RecursoImportado(archivoImportado.name, rutaLimpia, archivoImportado.content, archivoImportado.id)
+                    );
                 } else if (archivoImportado.name.endsWith('.comp')) {
-                    moduloActual.recursos.componentes += `\n/* source: ${rutaLimpia} */\n${archivoImportado.content}\n`;
+                    moduloActual.recursos.componentes.push(
+                        new RecursoImportado(archivoImportado.name, rutaLimpia, archivoImportado.content, archivoImportado.id)
+                    );
                 }
             }
 

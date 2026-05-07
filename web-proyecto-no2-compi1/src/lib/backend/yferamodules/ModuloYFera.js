@@ -8,18 +8,33 @@ export class ModuloYFera {
         this.parentId = archivoRaiz.parentId;
         this.nombre = archivoRaiz.name;
         this.ast = ast;
-        
+
         // Aquí guardaremos los hijos (los archivos cargados por LOAD estáticos)
-        this.modulosHijos = []; 
+        this.modulosHijos = [];
 
         this.importsVisitados = new Set();
         this.recursos = {
-            componentes: "",
-            estilos: ""
+            componentes: [],
+            estilos: []
         };
 
-     
-        this.tablaSimbolos = new TablaSimbolos(); 
+
+        this.tablaSimbolos = new TablaSimbolos();
+        this.tablaSimbolosComponentes = new TablaSimbolos();
+        this.tablaSimbolosEstilos = new TablaSimbolos();
     }
 
+    /*Metodos getter que permiten retornar la ruta del recurso de estilos */
+    get estilosMergeados() {
+        return this.recursos.estilos
+            .map(r => `/* source: ${r.rutaRelativa} */\n${r.contenido}`)
+            .join('\n');
+    }
+
+    /*Metodos getter que permiten retornar la ruta del recurso de componentes */
+    get componentesMergeados() {
+        return this.recursos.componentes
+            .map(r => `/* source: ${r.rutaRelativa} */\n${r.contenido}`)
+            .join('\n');
+    }
 }

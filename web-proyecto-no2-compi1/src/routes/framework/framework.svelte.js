@@ -346,7 +346,7 @@ export function createFrameworkState() {
 
 
             if (action == 'Compilando') {
-                await this.saveActiveFile();
+                await this.saveAllFiles();
 
                 /*Delegacion al backend PATRON EXPERTO */
                 await this.compilerProyecto();
@@ -375,7 +375,7 @@ export function createFrameworkState() {
             }
             else if (action === 'Cerrar_Proyecto') {
                 if (_files.length === 0) {
-                    // Si no hay archivos se muestra alerta
+                    /*Si no hay archivos se muestra alerta*/
                     _infoModalConfig = {
                         show: true,
                         tipo: 'error',
@@ -383,7 +383,7 @@ export function createFrameworkState() {
                         mensaje: 'No se puede cerrar el proyecto porque el area de trabajo ya esta vacia.'
                     };
                 } else {
-                    //Si hay archivos se pide confirmacion
+                    /*Si hay archivos se pide confirmacion*/
                     _confirmModalConfig = {
                         show: true,
                         titulo: 'Cerrar Proyecto',
@@ -401,7 +401,26 @@ export function createFrameworkState() {
                 this.systemLog(`> Acción "${action}" no implementada.`);
             }
         },
+        /*Metodo que permite guardar todos los archivos */
+        async saveAllFiles() {
+            try {
+                const archivos = _files.filter(f => f.type === 'file');
 
+                if (archivos.length === 0) {
+                    this.systemLog('> El area de trabajo no tiene archivos para guardar.');
+                    return;
+                }
+
+                await Promise.all(archivos.map(archivo => 
+                    db.files.update(archivo.id, { content: archivo.content })
+                ));
+
+                this.systemLog(`> Estado sincronizado: ${archivos.length} archivos guardados correctamente.`);
+
+            } catch (error) {
+                this.systemLog(`> Error critico al guardar los archivos: ${error.message}`);
+            }
+        },
         /*Metodo que permite generar toda la comunicacion con el backend para que se reciba la compilacion */
         async compilerProyecto() {
 
@@ -587,7 +606,7 @@ export function createFrameworkState() {
                     try {
                         content = await fileHandle.text();
                     } catch (e) {
-                        content = '// Archivo binario o no legible por texto';
+                        content = '/* Archivo binario o no legible por texto*/';
                     }
 
                     let icon = 'bi-file-earmark-code';
@@ -697,7 +716,7 @@ export function createFrameworkState() {
                             try {
                                 content = await file.text();
                             } catch (err) {
-                                content = '// Archivo binario o no legible';
+                                content = '/* Archivo binario o no legible*/';
                             }
 
                             let icon = 'bi-file-earmark-code';
