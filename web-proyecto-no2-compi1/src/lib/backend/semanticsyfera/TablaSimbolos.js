@@ -2,7 +2,7 @@
 export class TablaSimbolos {
 
     constructor(padre = null) {
-        this.padre = padre; 
+        this.padre = padre;
         this.variables = new Map();
     }
 
@@ -11,7 +11,13 @@ export class TablaSimbolos {
         this.variables.set(simbolo.id, simbolo);
     }
 
-    /*Busqueda de variables dentro del ambito tanto local como global */
+    /*Metodo que permite insertar por id y valor*/
+    insertar(id, simbolo) {
+        simbolo.id = id;
+        this.variables.set(id, simbolo);
+    }
+
+    /*Metodo que busca una variable en el ámbito local y luego en el padre */
     getVariable(id) {
         let entornoActual = this;
         while (entornoActual !== null) {
@@ -20,11 +26,21 @@ export class TablaSimbolos {
             }
             entornoActual = entornoActual.padre;
         }
-        return null; 
+        return null;
     }
 
-    /*Metodo que permite buscar variables ya declaradas dentro del ambito global*/
+    /* Metodo que permite ser el alieas de getVariable para compatibilidad */
+    obtener(id) {
+        return this.getVariable(id);
+    }
+
+    /*Metodo que verifica si existe en el ámbito local */
     existeLocal(id) {
         return this.variables.has(id);
+    }
+
+    /* Verifica si existe la variable en cualquier ambito (local + padres)*/
+    existeGlobal(id) {
+        return this.getVariable(id) !== null;
     }
 }
