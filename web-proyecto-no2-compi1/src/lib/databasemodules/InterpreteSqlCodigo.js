@@ -144,6 +144,48 @@ export class InterpreteSqlCodigo {
         return { exito: true, resultados: resultados, errores: [] };
     }
 
+    /* Metodo que valida que es una query sin ejecutarla */
+    validarAccion(comando) {
+        parserDatabase.yy.errores = [];
+        let ast;
+
+        try {
+            ast = parserDatabase.parse(comando);
+            if (parserDatabase.yy.errores && parserDatabase.yy.errores.length > 0) {
+                return {
+                    esSelect: false,
+                    accion: null,
+                    error: parserDatabase.yy.errores[0].descripcion
+                };
+            }
+        } catch (error) {
+            return {
+                esSelect: false,
+                accion: null,
+                error: error.message
+            };
+        }
+
+        const resultadoValidacion = this.validador.validar(ast);
+
+        if (resultadoValidacion.erroresEncontrados.length > 0) {
+            return {
+                esSelect: false,
+                accion: null,
+                error: resultadoValidacion.erroresEncontrados[0].descripcion
+            };
+        }
+
+        const nodo = resultadoValidacion.astProcesado[0];
+        const accion = nodo ? nodo.accion : null;
+
+        return {
+            esSelect: accion === 'SELECT_COL',
+            accion: accion,
+            error: null
+        };
+    }
+
     /*Metodo que permite ejecutar cada nodo del AST parseado para poder generar las querys*/
     async procesarNodoRequest(nodo) {
         switch (nodo.accion) {

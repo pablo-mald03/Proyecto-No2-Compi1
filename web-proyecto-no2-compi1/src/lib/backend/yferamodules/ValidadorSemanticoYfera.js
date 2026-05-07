@@ -123,14 +123,7 @@ export class ValidadorSemanticoYfera {
             const queryStr = simbolo.queryPendiente;
 
             if (!queryStr || queryStr.trim() === '') {
-                this.compilador.agregarError(
-                    this.modulo.nombre,
-                    simbolo.id,
-                    'Semantico SQL',
-                    `Query vacía para el arreglo '${simbolo.id}'`,
-                    simbolo.linea,
-                    simbolo.columna
-                );
+                this.compilador.agregarError(this.modulo.nombre, simbolo.id, 'Semantico SQL', `Query vacía para el arreglo '${simbolo.id}'`, simbolo.linea, simbolo.columna);
                 simbolo.valor = [];
                 simbolo.tamano = 0;
                 simbolo.esperandoRespuestaBD = false;
@@ -139,111 +132,122 @@ export class ValidadorSemanticoYfera {
 
             const queryFormatedString = `${queryStr};`;
 
+            if (!this.esQueryArreglo(queryFormatedString, simbolo, interpreteSQL)) {
+                continue;
+            }
+
             let response;
             try {
                 response = await interpreteSQL.ejecutarCodigo(queryFormatedString);
             } catch (error) {
-                this.compilador.agregarError(
-                    this.modulo.nombre,
-                    simbolo.id,
-                    'Semantico SQL',
-                    `Error al ejecutar query: ${error.message}`,
-                    simbolo.linea,
-                    simbolo.columna
-                );
+                this.compilador.agregarError(this.modulo.nombre, simbolo.id, 'Semantico SQL', `Error al ejecutar query: ${error.message}`, simbolo.linea, simbolo.columna);
                 simbolo.valor = [];
                 simbolo.tamano = 0;
                 simbolo.esperandoRespuestaBD = false;
                 continue;
             }
 
-            if (!response.exito) {
-                const errorMsg = response.errores && response.errores.length > 0
-                    ? response.errores[0].descripcion
-                    : 'Error desconocido en BD';
-
-                this.compilador.agregarError(
-                    this.modulo.nombre,
-                    simbolo.id,
-                    'Semantico SQL',
-                    `Error BD en arreglo '${simbolo.id}': ${errorMsg}`,
-                    simbolo.linea,
-                    simbolo.columna
-                );
-                simbolo.valor = [];
-                simbolo.tamano = 0;
-                simbolo.esperandoRespuestaBD = false;
-                continue;
-            }
-
-            if (!response.resultados || response.resultados.length === 0) {
-                this.compilador.agregarError(
-                    this.modulo.nombre,
-                    simbolo.id,
-                    'Semantico',
-                    `La consulta para '${simbolo.id}' no retornó resultados.`,
-                    simbolo.linea,
-                    simbolo.columna
-                );
-                simbolo.valor = [];
-                simbolo.tamano = 0;
-                simbolo.esperandoRespuestaBD = false;
-                continue;
-            }
-
-            const resultado = response.resultados[0];
-
-            if (!(resultado instanceof ResultadoTipado)) {
-                this.compilador.agregarError(
-                    this.modulo.nombre,
-                    simbolo.id,
-                    'Semantico',
-                    `Resultado inesperado para '${simbolo.id}'.`,
-                    simbolo.linea,
-                    simbolo.columna
-                );
-                simbolo.valor = [];
-                simbolo.tamano = 0;
-                simbolo.esperandoRespuestaBD = false;
-                continue;
-            }
-
-            if (resultado.accion !== 'SELECT_COL') {
-                this.compilador.agregarError(
-                    this.modulo.nombre,
-                    simbolo.id,
-                    'Semantico',
-                    `No se puede inicializar '${simbolo.id}' con ${resultado.accion}. Solo se permiten SELECT de columna.`,
-                    simbolo.linea,
-                    simbolo.columna
-                );
-                simbolo.valor = [];
-                simbolo.tamano = 0;
-                simbolo.esperandoRespuestaBD = false;
-                continue;
-            }
+            const resultado = this.esResponseValido(response, simbolo);
+            if (!resultado) continue;
 
             const tipoTraducido = this.mapearTipoSQL(resultado.tipo);
 
             if (!this.sonTiposCompatibles(simbolo.tipoDato, tipoTraducido)) {
-                this.compilador.agregarError(
-                    this.modulo.nombre,
-                    simbolo.id,
-                    'Semantico',
-                    `El tipo de BD (${tipoTraducido}) no coincide con el arreglo '${simbolo.id}' de tipo ${simbolo.tipoDato}`,
-                    simbolo.linea,
-                    simbolo.columna
-                );
+                this.compilador.agregarError(this.modulo.nombre, simbolo.id, 'Semantico', `El tipo de BD (${tipoTraducido}) no coincide con el arreglo '${simbolo.id}' de tipo ${simbolo.tipoDato}`, simbolo.linea, simbolo.columna);
             }
 
             simbolo.valor = resultado.valores || [];
             simbolo.tamano = resultado.valores.length;
             simbolo.esperandoRespuestaBD = false;
-
-            console.log(`Arreglo '${simbolo.id}' inicializado con ${simbolo.tamano} valores de tipo ${tipoTraducido}`);
         }
 
         this.simbolosPendientesBD = [];
+    }
+
+    /*Metodo que permite validar si fue una respuesta valida*/
+    esResponseValido(response, simbolo) {
+        if (!response.exito) {
+            const errorMsg = response.errores && response.errores.length > 0
+                ? response.errores[0].descripcion
+                : 'Error desconocido en BD';
+            this.compilador.agregarError(this.modulo.nombre, simbolo.id, 'Semantico SQL', `Error BD en arreglo '${simbolo.id}': ${errorMsg}`, simbolo.linea, simbolo.columna);
+            simbolo.valor = [];
+            simbolo.tamano = 0;
+            simbolo.esperandoRespuestaBD = false;
+            return null;
+        }
+
+        if (!response.resultados || response.resultados.length === 0) {
+            this.compilador.agregarError(this.modulo.nombre, simbolo.id, 'Semantico', `La consulta para '${simbolo.id}' no retorno resultados.`, simbolo.linea, simbolo.columna);
+            simbolo.valor = [];
+            simbolo.tamano = 0;
+            simbolo.esperandoRespuestaBD = false;
+            return null;
+        }
+
+        const resultado = response.resultados[0];
+
+        if (!(resultado instanceof ResultadoTipado)) {
+            this.compilador.agregarError(this.modulo.nombre, simbolo.id, 'Semantico', `Resultado inesperado para '${simbolo.id}'.`, simbolo.linea, simbolo.columna);
+            simbolo.valor = [];
+            simbolo.tamano = 0;
+            simbolo.esperandoRespuestaBD = false;
+            return null;
+        }
+
+        if (resultado.valores.length === 0) {
+            this.compilador.agregarError(
+                this.modulo.nombre,
+                simbolo.id,
+                'Semantico',
+                `La tabla '${resultado.tabla}' no tiene registros.`,
+                simbolo.linea,
+                simbolo.columna
+            );
+            simbolo.valor = [];
+            simbolo.tamano = 0;
+            simbolo.esperandoRespuestaBD = false;
+            return null;
+        }
+
+        return resultado;
+    }
+
+    /*Metodo que permite validar si una query es valida para arreglo (solo SELECT) */
+    esQueryArreglo(queryFormatedString, simbolo, interpreteSQL) {  // ★ Recibir parámetros ★
+        const validacion = interpreteSQL.validarAccion(queryFormatedString);
+
+        if (validacion.error) {
+            this.compilador.agregarError(
+                this.modulo.nombre,
+                simbolo.id,
+                'Semantico SQL',
+                `Error en query: ${validacion.error}`,
+                simbolo.linea,
+                simbolo.columna
+            );
+            simbolo.valor = [];
+            simbolo.tamano = 0;
+            simbolo.esperandoRespuestaBD = false;
+            return false;
+        }
+
+        if (!validacion.esSelect) {
+            this.compilador.agregarError(
+                this.modulo.nombre,
+                simbolo.id,
+                'Semantico',
+                `No se puede inicializar '${simbolo.id}' con ${validacion.accion}. Solo se permiten SELECT de columna.`,
+                simbolo.linea,
+                simbolo.columna
+            );
+            simbolo.valor = [];
+            simbolo.tamano = 0;
+            simbolo.esperandoRespuestaBD = false;
+            return false;
+        }
+
+        return true;
     }
 
 
@@ -586,7 +590,6 @@ export class ValidadorSemanticoYfera {
 
         this.simbolosPendientesBD.push(simbolo);
 
-        console.log(`   ✅ Query pendiente registrada: ${queryStr}`);
     }
 
     /*Metodo que permite resolver las expresiones */
