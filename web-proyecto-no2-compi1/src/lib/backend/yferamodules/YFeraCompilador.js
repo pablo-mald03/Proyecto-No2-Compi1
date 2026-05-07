@@ -4,20 +4,20 @@ import { ModuloYFera } from "./ModuloYFera";
 
 import { ValidadorSemanticoYfera } from "./ValidadorSemanticoYfera";
 
-import { InterpreteSqlCodigo } from "$lib/databasemodules/InterpreteSqlCodigo";
-
 /*Clase Delegada para manejar toda la logica principal para poder generar el analisis sintactico del lenguaje orquestador*/
 
 export class YFeraCompilador {
 
     /*Constructor que permite obteber los datos para operar con la base de datos */
-    constructor(db, fs) {
+    constructor(db, fs,manejadorDb) {
         this.dataBase = db;
         this.frontState = fs;
 
         this.modulosCache = new Map();
         this.erroresGlobales = [];
         this.arbolEjecucion = null;
+
+        this.manejadorDatabase = manejadorDb;
     }
 
     /*Metodo que permite compilar el proyecto*/
@@ -130,7 +130,7 @@ export class YFeraCompilador {
             }
 
             //DELEGACION A LA VALIDACION SEMANTICA DE TIPOS Y LOADS (PATRON EXPERTO)
-            const validador = new ValidadorSemanticoYfera(this, moduloActual);
+            const validador = new ValidadorSemanticoYfera(this, moduloActual, this.manejadorDatabase);
             await validador.analizar();
 
             // En procesarModuloY, antes de cargar un módulo hijo:

@@ -405,7 +405,7 @@ export function createFrameworkState() {
         /*Metodo que permite generar toda la comunicacion con el backend para que se reciba la compilacion */
         async compilerProyecto() {
 
-            const compilador = new YFeraCompilador(db, this);
+            const compilador = new YFeraCompilador(db, this, dbManejador);
             await compilador.compilarProyecto();
         },
         /*Metodo que permite ejecutar un comando en la consola*/

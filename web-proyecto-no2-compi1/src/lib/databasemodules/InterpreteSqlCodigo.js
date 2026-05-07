@@ -3,6 +3,7 @@ import parserDatabase from "$lib/analizador/compiler/database-config";
 
 import { AnalizadorSemanticoSql } from "./AnalizadorSemanticoSql";
 
+import { ResultadoTipado } from "$lib/modules/ResultadoTipado";
 /*Clase delegada para poderse comunicar con el parser para ejecutar los comandos SQL*/
 export class InterpreteSqlCodigo {
 
@@ -64,6 +65,12 @@ export class InterpreteSqlCodigo {
             sql: sentenciasSql,
             errores: []
         };
+    }
+
+
+    /*Metodo que permite retornar el parser*/
+    getParser() {
+        return this.parserDatabase
     }
 
     /*Metodo que permite recorrer el AST que retorna el parser */
@@ -140,41 +147,71 @@ export class InterpreteSqlCodigo {
     /*Metodo que permite ejecutar cada nodo del AST parseado para poder generar las querys*/
     async procesarNodoRequest(nodo) {
         switch (nodo.accion) {
-            case 'SELECT_COL':
-                const registros = await this.db[nodo.tabla].toArray();
+            case 'SELECT_COL': {
+                const query = `SELECT ${nodo.columna} FROM ${nodo.tabla};`;
+                const resultado = this.db.execute(query);
 
-                const valoresColumna = registros.map(fila => fila[nodo.columna]);
-                
-                return new ResultadoTipado(valoresColumna);
+                const valoresColumna = [];
+                if (resultado.length > 0 && resultado[0].values) {
+                    for (const row of resultado[0].values) {
+                        valoresColumna.push(row[0]);
+                    }
+                }
 
-            case 'INSERT':
-                let nuevoRegistro = {};
-                nodo.valores.forEach(v => {
-                    nuevoRegistro[v.col] = this.extraerValorReal(v.valor); 
-                });
+                const res = new ResultadoTipado(valoresColumna);
+                res.accion = 'SELECT_COL';
+                res.tabla = nodo.tabla;
+                res.columna = nodo.columna;
+                return res;
+            }
 
-                await this.db[nodo.tabla].add(nuevoRegistro);
-                return { mensaje: `Registro insertado en ${nodo.tabla}`, accion: 'INSERT' };
+            case 'INSERT': {
+                const columnas = nodo.valores.map(v => v.col).join(', ');
+                const valores = nodo.valores
+                    .map(v => this.formatearValor(v.valor))
+                    .join(', ');
 
-            case 'UPDATE':
-                let cambios = {};
-                nodo.valores.forEach(v => {
-                    cambios[v.col] = this.extraerValorReal(v.valor);
-                });
+                this.db.execute(`INSERT INTO ${nodo.tabla} (${columnas}) VALUES (${valores});`);
 
-                await this.db[nodo.tabla].update(nodo.id, cambios);
-                return { mensaje: `Registro ${nodo.id} actualizado`, accion: 'UPDATE' };
+                const res = new ResultadoTipado([]);
+                res.accion = 'INSERT';
+                res.mensaje = `Registro insertado en ${nodo.tabla}`;
+                return res;
+            }
 
-            case 'DELETE':
-                await this.db[nodo.tabla].delete(nodo.id);
-                return { mensaje: `Registro ${nodo.id} eliminado`, accion: 'DELETE' };
+            case 'UPDATE': {
+                const asignaciones = nodo.valores
+                    .map(v => `${v.col} = ${this.formatearValor(v.valor)}`)
+                    .join(', ');
 
-            case 'CREATE':
-                return { 
-                    mensaje: "Para CREATE en Dexie, se requiere actualizar db.version().stores()", 
-                    accion: 'CREATE', 
-                    nodo: nodo 
-                };
+                this.db.execute(`UPDATE ${nodo.tabla} SET ${asignaciones} WHERE id = ${nodo.id};`);
+
+                const res = new ResultadoTipado([]);
+                res.accion = 'UPDATE';
+                res.mensaje = `Registro ${nodo.id} actualizado en ${nodo.tabla}`;
+                return res;
+            }
+
+            case 'DELETE': {
+                this.db.execute(`DELETE FROM ${nodo.tabla} WHERE id = ${nodo.id};`);
+
+                const res = new ResultadoTipado([]);
+                res.accion = 'DELETE';
+                res.mensaje = `Registro ${nodo.id} eliminado de ${nodo.tabla}`;
+                return res;
+            }
+
+            case 'CREATE': {
+                const definiciones = nodo.columnas
+                    .map(col => `${col.id} ${col.tipo}`)
+                    .join(', ');
+                this.db.execute(`CREATE TABLE IF NOT EXISTS ${nodo.tabla} (id INTEGER PRIMARY KEY AUTOINCREMENT, ${definiciones});`);
+
+                const res = new ResultadoTipado([]);
+                res.accion = 'CREATE';
+                res.mensaje = `Tabla ${nodo.tabla} creada`;
+                return res;
+            }
 
             default:
                 throw new Error(`Acción no reconocida: ${nodo.accion}`);

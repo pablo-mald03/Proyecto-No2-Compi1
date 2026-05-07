@@ -2,11 +2,20 @@ import { TablaSimbolos } from "../semanticsyfera/TablaSimbolos";
 
 import { Simbolo } from "../semanticsyfera/Simbolo";
 
+import { InterpreteSqlCodigo } from "$lib/databasemodules/InterpreteSqlCodigo";
+
+import { ResultadoTipado } from "$lib/modules/ResultadoTipado";
+
+import parserData from "$lib/analizador/compiler/database-config";
+
 /*Clase delegada para poder actuar como validador semantico para todo el lenguaje yfera (.y) */
 export class ValidadorSemanticoYfera {
 
-    constructor(compilador, moduloActual) {
+    constructor(compilador, moduloActual, manejadorDb) {
         this.compilador = compilador;
+
+        this.manejadorBase = manejadorDb;
+
         this.modulo = moduloActual;
 
         this.modulo.tablaSimbolos = new TablaSimbolos();
@@ -29,7 +38,7 @@ export class ValidadorSemanticoYfera {
             await this.pasadaInicializacionGlobal(this.modulo.ast, this.modulo.tablaSimbolos);
 
             if (this.simbolosPendientesBD.length > 0) {
-                const interprete = new InterpreteSqlCodigo(this.compilador.dataBase);
+                const interprete = new InterpreteSqlCodigo(this.manejadorBase);
                 await this.resolverQueriesPendientes(interprete);
             }
 
@@ -38,10 +47,6 @@ export class ValidadorSemanticoYfera {
             }
 
             await this.procesarLoadsPendientes();
-
-            console.log('Tabla de símbolos globales completa:',
-                Array.from(this.modulo.tablaSimbolos.simbolos?.entries() || [])
-            );
 
         } catch (error) {
             this.compilador.agregarError(
@@ -53,7 +58,196 @@ export class ValidadorSemanticoYfera {
         }
     }
 
+    /*Metodo que permite evaluar una query template dentro de una instruccion excecute*/
+    resolverQueryTemplate(nodoQuery, entorno) {
+        if (!nodoQuery || nodoQuery.tipo !== 'QUERY_TEMPLATE') {
+            return null;
+        }
 
+        if (!nodoQuery.fragmentos || !Array.isArray(nodoQuery.fragmentos)) {
+            return null;
+        }
+
+        let queryArmada = "";
+
+        for (const fragmento of nodoQuery.fragmentos) {
+            if (fragmento.tipo === 'TEXTO_QUERY') {
+                queryArmada += fragmento.valor;
+            }
+            else if (fragmento.tipo === 'VAR_INTERPOLADA') {
+                const nombreVar = fragmento.id.replace('$', '').trim();
+
+                const variable = entorno.getVariable(nombreVar);
+
+                if (!variable) {
+                    this.compilador.agregarError(
+                        this.modulo.nombre,
+                        fragmento.id,
+                        'Semantico SQL',
+                        `Variable interpolada '${fragmento.id}' no ha sido declarada.`,
+                        fragmento.linea,
+                        fragmento.columna
+                    );
+                    return null;
+                }
+
+                if (variable.valor === null || variable.valor === undefined) {
+                    this.compilador.agregarError(
+                        this.modulo.nombre,
+                        fragmento.id,
+                        'Semantico SQL',
+                        `Variable interpolada '${fragmento.id}' no ha sido inicializada.`,
+                        fragmento.linea,
+                        fragmento.columna
+                    );
+                    return null;
+                }
+
+                let valorStr = variable.valor;
+                if (typeof valorStr === 'string') {
+                    valorStr = `'${valorStr}'`;
+                } else if (typeof valorStr === 'boolean') {
+                    valorStr = valorStr ? '1' : '0';
+                }
+
+                queryArmada += valorStr;
+            }
+        }
+
+        return queryArmada;
+    }
+
+    /*Metodo que permite resolver las querys pendientes */
+    async resolverQueriesPendientes(interpreteSQL) {
+        for (const simbolo of this.simbolosPendientesBD) {
+            const queryStr = simbolo.queryPendiente;
+
+            if (!queryStr || queryStr.trim() === '') {
+                this.compilador.agregarError(
+                    this.modulo.nombre,
+                    simbolo.id,
+                    'Semantico SQL',
+                    `Query vacía para el arreglo '${simbolo.id}'`,
+                    simbolo.linea,
+                    simbolo.columna
+                );
+                simbolo.valor = [];
+                simbolo.tamano = 0;
+                simbolo.esperandoRespuestaBD = false;
+                continue;
+            }
+
+            const queryFormatedString = `${queryStr};`;
+
+            let response;
+            try {
+                response = await interpreteSQL.ejecutarCodigo(queryFormatedString);
+            } catch (error) {
+                this.compilador.agregarError(
+                    this.modulo.nombre,
+                    simbolo.id,
+                    'Semantico SQL',
+                    `Error al ejecutar query: ${error.message}`,
+                    simbolo.linea,
+                    simbolo.columna
+                );
+                simbolo.valor = [];
+                simbolo.tamano = 0;
+                simbolo.esperandoRespuestaBD = false;
+                continue;
+            }
+
+            if (!response.exito) {
+                const errorMsg = response.errores && response.errores.length > 0
+                    ? response.errores[0].descripcion
+                    : 'Error desconocido en BD';
+
+                this.compilador.agregarError(
+                    this.modulo.nombre,
+                    simbolo.id,
+                    'Semantico SQL',
+                    `Error BD en arreglo '${simbolo.id}': ${errorMsg}`,
+                    simbolo.linea,
+                    simbolo.columna
+                );
+                simbolo.valor = [];
+                simbolo.tamano = 0;
+                simbolo.esperandoRespuestaBD = false;
+                continue;
+            }
+
+            if (!response.resultados || response.resultados.length === 0) {
+                this.compilador.agregarError(
+                    this.modulo.nombre,
+                    simbolo.id,
+                    'Semantico',
+                    `La consulta para '${simbolo.id}' no retornó resultados.`,
+                    simbolo.linea,
+                    simbolo.columna
+                );
+                simbolo.valor = [];
+                simbolo.tamano = 0;
+                simbolo.esperandoRespuestaBD = false;
+                continue;
+            }
+
+            const resultado = response.resultados[0];
+
+            if (!(resultado instanceof ResultadoTipado)) {
+                this.compilador.agregarError(
+                    this.modulo.nombre,
+                    simbolo.id,
+                    'Semantico',
+                    `Resultado inesperado para '${simbolo.id}'.`,
+                    simbolo.linea,
+                    simbolo.columna
+                );
+                simbolo.valor = [];
+                simbolo.tamano = 0;
+                simbolo.esperandoRespuestaBD = false;
+                continue;
+            }
+
+            if (resultado.accion !== 'SELECT_COL') {
+                this.compilador.agregarError(
+                    this.modulo.nombre,
+                    simbolo.id,
+                    'Semantico',
+                    `No se puede inicializar '${simbolo.id}' con ${resultado.accion}. Solo se permiten SELECT de columna.`,
+                    simbolo.linea,
+                    simbolo.columna
+                );
+                simbolo.valor = [];
+                simbolo.tamano = 0;
+                simbolo.esperandoRespuestaBD = false;
+                continue;
+            }
+
+            const tipoTraducido = this.mapearTipoSQL(resultado.tipo);
+
+            if (!this.sonTiposCompatibles(simbolo.tipoDato, tipoTraducido)) {
+                this.compilador.agregarError(
+                    this.modulo.nombre,
+                    simbolo.id,
+                    'Semantico',
+                    `El tipo de BD (${tipoTraducido}) no coincide con el arreglo '${simbolo.id}' de tipo ${simbolo.tipoDato}`,
+                    simbolo.linea,
+                    simbolo.columna
+                );
+            }
+
+            simbolo.valor = resultado.valores || [];
+            simbolo.tamano = resultado.valores.length;
+            simbolo.esperandoRespuestaBD = false;
+
+            console.log(`Arreglo '${simbolo.id}' inicializado con ${simbolo.tamano} valores de tipo ${tipoTraducido}`);
+        }
+
+        this.simbolosPendientesBD = [];
+    }
+
+
+    /*Metodo que permite generar la primera pasada de validacion global */
     async pasadaDeclaracionGlobal(nodos, entorno) {
         if (!nodos || !Array.isArray(nodos)) return;
 
@@ -152,7 +346,7 @@ export class ValidadorSemanticoYfera {
         }
     }
 
-
+    /*Metodo que permite generar la primera pasada que inicializa todas las variables con su respectivo valor predeterminado*/
     async pasadaInicializacionGlobal(nodos, entorno) {
         if (!nodos || !Array.isArray(nodos)) return;
 
@@ -178,8 +372,6 @@ export class ValidadorSemanticoYfera {
                 case 'ARREGLO_QUERY':
                     await this.inicializarArregloQuery(nodo, entorno);
                     break;
-
-
                 case 'FUNCION':
                 case 'FUNCION_MAIN':
                 case 'INSTRUCCION_IMPORT':
@@ -188,6 +380,7 @@ export class ValidadorSemanticoYfera {
         }
     }
 
+    /*Metodo que permite recolectar todo lo que este dentro del load */
     async recolectarLoadsDeFuncion(cuerpo, entorno) {
         if (!cuerpo || !Array.isArray(cuerpo)) return;
 
@@ -197,11 +390,14 @@ export class ValidadorSemanticoYfera {
             switch (instruccion.tipo) {
                 case 'LOAD_ARCHIVO':
                 case 'LOAD_ID':
-                    // Recolectar el load para procesarlo después
                     this.loadsEnInicializacion.push({
                         nodo: instruccion,
                         entorno: entorno
                     });
+                    break;
+
+                case 'DATABASE_QUERY':
+                    await this.validarQueryEnFuncion(instruccion, entorno);
                     break;
 
                 default:
@@ -210,6 +406,56 @@ export class ValidadorSemanticoYfera {
         }
     }
 
+    /*Metodo que permite validar una query en una funcion*/
+    async validarQueryEnFuncion(nodoQuery, entorno) {
+
+        const queryStr = this.resolverQueryTemplate(nodoQuery.query, entorno);
+
+        if (!queryStr) {
+            this.compilador.agregarError(
+                this.modulo.nombre,
+                nodoQuery.query,
+                'Semantico ',
+                `No se pudo armar query parametros sin valor`,
+                nodoQuery.linea,
+                nodoQuery.columna
+            );
+            return;
+        }
+
+        try {
+            const parserDatabase = parserData;
+
+            if (parserDatabase) {
+                parserDatabase.yy.errores = [];
+                parserDatabase.parse(queryStr);
+
+                if (parserDatabase.yy.errores && parserDatabase.yy.errores.length > 0) {
+                    for (const err of parserDatabase.yy.errores) {
+                        this.compilador.agregarError(
+                            this.modulo.nombre,
+                            queryStr,
+                            'Semantico SQL',
+                            `Error en query: ${err.descripcion || 'Error de sintaxis'}`,
+                            nodoQuery.linea,
+                            nodoQuery.columna
+                        );
+                    }
+                }
+            }
+        } catch (error) {
+            this.compilador.agregarError(
+                this.modulo.nombre,
+                queryStr,
+                'Semantico SQL',
+                `Error de sintaxis SQL: ${error.message}`,
+                nodoQuery.linea,
+                nodoQuery.columna
+            );
+        }
+    }
+
+    /*Metodo que inicializa las variables simples */
     async inicializarVariableSimple(nodo, entorno) {
         const simbolo = entorno.getVariable(nodo.id);
         if (!simbolo || simbolo.valor !== null) return;
@@ -233,6 +479,7 @@ export class ValidadorSemanticoYfera {
         simbolo.valor = valorResuelto.valor;
     }
 
+    /*Metodo qu permite inicializar un arreglo vacio */
     async inicializarArregloVacio(nodo, entorno) {
         const simbolo = entorno.getVariable(nodo.id);
         if (!simbolo || simbolo.valor !== null) return;
@@ -256,6 +503,7 @@ export class ValidadorSemanticoYfera {
         simbolo.tamano = tamanoResuelto.valor;
     }
 
+    /*Metodo que permite inicializar un arreglo con valores */
     async inicializarArregloConValores(nodo, entorno) {
         const simbolo = entorno.getVariable(nodo.id);
         if (!simbolo || simbolo.valor !== null) return;
@@ -288,19 +536,60 @@ export class ValidadorSemanticoYfera {
         simbolo.tamano = valores.length;
     }
 
+    /*Metodo que permite inicializar un arreglo con una query */
     async inicializarArregloQuery(nodo, entorno) {
         const simbolo = entorno.getVariable(nodo.id);
-        if (!simbolo || simbolo.valor !== null) return;
+        if (!simbolo) {
+            this.compilador.agregarError(
+                this.modulo.nombre,
+                nodo.id,
+                'Semantico',
+                `Variable '${nodo.id}' no definida.`,
+                nodo.linea,
+                nodo.columna
+            );
+            return;
+        }
 
+        if (simbolo.valor !== null) {
+            this.compilador.agregarError(
+                this.modulo.nombre,
+                nodo.id,
+                'Semantico',
+                `Ya tiene valor: '${simbolo.valor}' no definida.`,
+                nodo.linea,
+                nodo.columna
+            );
+            return;
+        }
+
+        const queryStr = this.resolverQueryTemplate(nodo.query, entorno);
+
+        if (!queryStr) {
+            this.compilador.agregarError(
+                this.modulo.nombre,
+                nodo.id,
+                'Semantico',
+                `No se pudo armar el query string`,
+                nodo.linea,
+                nodo.columna
+            );
+            simbolo.valor = [];
+            simbolo.tamano = 0;
+            return;
+        }
+
+        simbolo.queryPendiente = queryStr;
         simbolo.valor = [];
         simbolo.tamano = 0;
         simbolo.esperandoRespuestaBD = true;
 
         this.simbolosPendientesBD.push(simbolo);
+
+        console.log(`   ✅ Query pendiente registrada: ${queryStr}`);
     }
 
-
-
+    /*Metodo que permite resolver las expresiones */
     async resolverExpresionSimple(nodo, entorno) {
         if (!nodo) return null;
 
@@ -457,8 +746,6 @@ export class ValidadorSemanticoYfera {
     sonTiposCompatibles(tipoDestino, tipoValor) {
         if (tipoDestino === tipoValor) return true;
         if (tipoValor === 'DINAMICO') return true;
-
-        // Promociones y conversiones permitidas por tu lenguaje
         if (tipoDestino === 'FLOAT' && tipoValor === 'ENTERA') return true;
         if (tipoDestino === 'ENTERA' && tipoValor === 'CARACTER') return true;
         if (tipoDestino === 'CARACTER' && tipoValor === 'ENTERA') return true;
@@ -478,7 +765,6 @@ export class ValidadorSemanticoYfera {
             default: return null;
         }
     }
-
 
     /*Metodo que permite validar las expresiones dentro del load*/
     async validarLoad(nodo, entornoActual) {
