@@ -13,16 +13,48 @@ export class ValidadorSemanticoYfera {
         this.loadsDetectados = [];
 
         this.nodosLoadPendientes = [];
+
         this.simbolosPendientesBD = [];
+
+        this.asignacionesPendientes = [];
+
+        this.loadsEnInicializacion = [];
     }
 
     /*Metodo de inicio de analisis */
     async analizar() {
-        await this.recorrerAST(this.modulo.ast, this.modulo.tablaSimbolos);
+        try {
+            await this.pasadaDeclaracionGlobal(this.modulo.ast, this.modulo.tablaSimbolos);
+
+            await this.pasadaInicializacionGlobal(this.modulo.ast, this.modulo.tablaSimbolos);
+
+            if (this.simbolosPendientesBD.length > 0) {
+                const interprete = new InterpreteSqlCodigo(this.compilador.dataBase);
+                await this.resolverQueriesPendientes(interprete);
+            }
+
+            for (const item of this.loadsEnInicializacion) {
+                await this.validarLoad(item.nodo, item.entorno);
+            }
+
+            await this.procesarLoadsPendientes();
+
+            console.log('Tabla de símbolos globales completa:',
+                Array.from(this.modulo.tablaSimbolos.simbolos?.entries() || [])
+            );
+
+        } catch (error) {
+            this.compilador.agregarError(
+                this.modulo.nombre,
+                'N/A',
+                'Compilacion',
+                `Error en análisis semántico: ${error.message}`
+            );
+        }
     }
 
-    /*Recorrido por el AST para poder ir validando */
-    async recorrerAST(nodos, entornoActual) {
+
+    async pasadaDeclaracionGlobal(nodos, entorno) {
         if (!nodos || !Array.isArray(nodos)) return;
 
         for (const nodo of nodos) {
@@ -31,153 +63,393 @@ export class ValidadorSemanticoYfera {
             switch (nodo.tipo) {
                 case 'DECLARACION_VARIABLE':
                 case 'INICIALIZACION_VARIABLE':
-                    this.validarDeclaracion(nodo, entornoActual);
+                    if (entorno.existeLocal(nodo.id)) {
+                        this.compilador.agregarError(
+                            this.modulo.nombre,
+                            nodo.id,
+                            'Semantico',
+                            `La variable global '${nodo.id}' ya fue declarada.`,
+                            nodo.linea,
+                            nodo.columna
+                        );
+                        continue;
+                    }
+
+                    const simboloVar = new Simbolo(
+                        nodo.id,
+                        nodo.tipado,
+                        null,
+                        nodo.linea,
+                        nodo.columna,
+                        false
+                    );
+                    entorno.setVariable(simboloVar);
                     break;
+
                 case 'ARREGLO_VACIO':
                 case 'ARREGLO_INICIALIZADO':
                 case 'ARREGLO_QUERY':
-                    this.validarArreglo(nodo, entornoActual);
+                    if (entorno.existeLocal(nodo.id)) {
+                        this.compilador.agregarError(
+                            this.modulo.nombre,
+                            nodo.id,
+                            'Semantico',
+                            `El arreglo global '${nodo.id}' ya fue declarado.`,
+                            nodo.linea,
+                            nodo.columna
+                        );
+                        continue;
+                    }
+
+                    const simboloArr = new Simbolo(
+                        nodo.id,
+                        nodo.tipado,
+                        null,
+                        nodo.linea,
+                        nodo.columna,
+                        true
+                    );
+                    entorno.setVariable(simboloArr);
                     break;
 
                 case 'FUNCION':
-                    await this.validarFuncion(nodo, entornoActual);
+                    if (entorno.existeLocal(nodo.id)) {
+                        this.compilador.agregarError(
+                            this.modulo.nombre,
+                            nodo.id,
+                            'Semantico',
+                            `La función '${nodo.id}' ya fue declarada.`,
+                            nodo.linea,
+                            nodo.columna
+                        );
+                        continue;
+                    }
+
+                    const simboloFunc = new Simbolo(
+                        nodo.id,
+                        'FUNCION',
+                        nodo,
+                        nodo.linea,
+                        nodo.columna,
+                        false
+                    );
+                    entorno.setVariable(simboloFunc);
+
+                    await this.recolectarLoadsDeFuncion(nodo.cuerpo, entorno);
+                    break;
+
+                case 'FUNCION_MAIN':
                     break;
 
                 case 'LOAD_ARCHIVO':
                 case 'LOAD_ID':
-                    this.nodosLoadPendientes.push({ nodo, entorno: entornoActual });
+                    this.loadsEnInicializacion.push({ nodo, entorno });
                     break;
-                case 'DATABASE_QUERY':
-                    const queryProcesada = this.procesarBackticks(nodo.valor, entorno);
-                    return { valor: queryProcesada, tipo: 'QUERY_PENDIENTE' };
+
+                case 'INSTRUCCION_IMPORT':
+                    break;
             }
         }
     }
 
-    /*Validacion de declaraciones de variables */
-    validarDeclaracion(nodo, entorno) {
-        if (entorno.existeLocal(nodo.id)) {
-            this.compilador.agregarError(this.modulo.nombre, nodo.id, 'Semantico', `La variable '${nodo.id}' ya fue declarada.`, nodo.linea, nodo.columna);
+
+    async pasadaInicializacionGlobal(nodos, entorno) {
+        if (!nodos || !Array.isArray(nodos)) return;
+
+        for (const nodo of nodos) {
+            if (!nodo) continue;
+
+            switch (nodo.tipo) {
+                case 'DECLARACION_VARIABLE':
+                case 'INICIALIZACION_VARIABLE':
+                    if (nodo.valor) {
+                        await this.inicializarVariableSimple(nodo, entorno);
+                    }
+                    break;
+
+                case 'ARREGLO_VACIO':
+                    await this.inicializarArregloVacio(nodo, entorno);
+                    break;
+
+                case 'ARREGLO_INICIALIZADO':
+                    await this.inicializarArregloConValores(nodo, entorno);
+                    break;
+
+                case 'ARREGLO_QUERY':
+                    await this.inicializarArregloQuery(nodo, entorno);
+                    break;
+
+
+                case 'FUNCION':
+                case 'FUNCION_MAIN':
+                case 'INSTRUCCION_IMPORT':
+                    break;
+            }
+        }
+    }
+
+    async recolectarLoadsDeFuncion(cuerpo, entorno) {
+        if (!cuerpo || !Array.isArray(cuerpo)) return;
+
+        for (const instruccion of cuerpo) {
+            if (!instruccion) continue;
+
+            switch (instruccion.tipo) {
+                case 'LOAD_ARCHIVO':
+                case 'LOAD_ID':
+                    // Recolectar el load para procesarlo después
+                    this.loadsEnInicializacion.push({
+                        nodo: instruccion,
+                        entorno: entorno
+                    });
+                    break;
+
+                default:
+                    break;
+            }
+        }
+    }
+
+    async inicializarVariableSimple(nodo, entorno) {
+        const simbolo = entorno.getVariable(nodo.id);
+        if (!simbolo || simbolo.valor !== null) return;
+
+        const valorResuelto = await this.resolverExpresionSimple(nodo.valor, entorno);
+
+        if (!valorResuelto) return;
+
+        if (!this.sonTiposCompatibles(nodo.tipado, valorResuelto.tipo)) {
+            this.compilador.agregarError(
+                this.modulo.nombre,
+                nodo.id,
+                'Semantico',
+                `Tipo incompatible: no se puede asignar ${valorResuelto.tipo} a '${nodo.id}' de tipo ${nodo.tipado}.`,
+                nodo.linea,
+                nodo.columna
+            );
             return;
         }
 
-        let infoExpresion = { valor: null, tipo: nodo.tipado };
-
-        if (nodo.tipo === 'DECLARACION_VARIABLE' && nodo.valor) {
-            infoExpresion = this.resolverExpresion(nodo.valor, entorno);
-
-            if (!infoExpresion) return;
-
-            if (!this.sonTiposCompatibles(nodo.tipado, infoExpresion.tipo)) {
-                this.compilador.agregarError(this.modulo.nombre, nodo.id, 'Semantico', `Tipo incompatible: No se puede asignar un valor ${infoExpresion.tipo} a la variable '${nodo.id}' de tipo ${nodo.tipado}.`, nodo.linea, nodo.columna);
-                return;
-            }
-        }
-        else {
-            infoExpresion.valor = this.valorPorDefecto(nodo.tipado);
-        }
-
-        const nuevoSimbolo = new Simbolo(nodo.id, nodo.tipado, infoExpresion.valor, nodo.linea, nodo.columna, false);
-
-        entorno.setVariable(nuevoSimbolo);
+        simbolo.valor = valorResuelto.valor;
     }
 
-    /*Metodo que permite resolver las expresiones dentro de una variable*/
-    resolverExpresion(nodo, entorno) {
+    async inicializarArregloVacio(nodo, entorno) {
+        const simbolo = entorno.getVariable(nodo.id);
+        if (!simbolo || simbolo.valor !== null) return;
+
+        const tamanoResuelto = await this.resolverExpresionSimple(nodo.amplitud, entorno);
+
+        if (!tamanoResuelto || tamanoResuelto.tipo !== 'ENTERA') {
+            this.compilador.agregarError(
+                this.modulo.nombre,
+                nodo.id,
+                'Semantico',
+                `La amplitud del arreglo debe ser un número ENTERO.`,
+                nodo.linea,
+                nodo.columna
+            );
+            return;
+        }
+
+        const valorDefecto = this.valorPorDefecto(nodo.tipado);
+        simbolo.valor = new Array(tamanoResuelto.valor).fill(valorDefecto);
+        simbolo.tamano = tamanoResuelto.valor;
+    }
+
+    async inicializarArregloConValores(nodo, entorno) {
+        const simbolo = entorno.getVariable(nodo.id);
+        if (!simbolo || simbolo.valor !== null) return;
+
+        const valores = [];
+
+        for (const exp of nodo.valores) {
+            const resuelto = await this.resolverExpresionSimple(exp, entorno);
+
+            if (!resuelto) {
+                valores.push(this.valorPorDefecto(nodo.tipado));
+                continue;
+            }
+
+            if (!this.sonTiposCompatibles(nodo.tipado, resuelto.tipo)) {
+                this.compilador.agregarError(
+                    this.modulo.nombre,
+                    nodo.id,
+                    'Semantico',
+                    `Tipo incompatible en arreglo. Se esperaba ${nodo.tipado} pero se encontró ${resuelto.tipo}.`,
+                    nodo.linea,
+                    nodo.columna
+                );
+            }
+
+            valores.push(resuelto.valor);
+        }
+
+        simbolo.valor = valores;
+        simbolo.tamano = valores.length;
+    }
+
+    async inicializarArregloQuery(nodo, entorno) {
+        const simbolo = entorno.getVariable(nodo.id);
+        if (!simbolo || simbolo.valor !== null) return;
+
+        simbolo.valor = [];
+        simbolo.tamano = 0;
+        simbolo.esperandoRespuestaBD = true;
+
+        this.simbolosPendientesBD.push(simbolo);
+    }
+
+
+
+    async resolverExpresionSimple(nodo, entorno) {
         if (!nodo) return null;
 
         switch (nodo.tipo) {
-            case 'INT': return { valor: parseInt(nodo.valor), tipo: 'ENTERA' };
-            case 'FLOAT': return { valor: parseFloat(nodo.valor), tipo: 'FLOAT' };
-            case 'CHAR': return { valor: nodo.valor.replace(/[']/g, ''), tipo: 'CARACTER' };
-            case 'BOOL': return { valor: nodo.valor, tipo: 'BOOLEANA' };
-            case 'VALOR_CADENA': return { valor: nodo.valor, tipo: 'CADENA' };
+            case 'INT':
+                return { valor: parseInt(nodo.valor), tipo: 'ENTERA' };
+            case 'FLOAT':
+                return { valor: parseFloat(nodo.valor), tipo: 'FLOAT' };
+            case 'VALOR_CADENA':
+                return { valor: nodo.valor, tipo: 'CADENA' };
+            case 'CHAR':
+                return { valor: nodo.valor.replace(/[']/g, ''), tipo: 'CARACTER' };
+            case 'BOOL':
+                return { valor: nodo.valor === true || nodo.valor === 'true', tipo: 'BOOLEANA' };
 
             case 'ID':
                 const variable = entorno.getVariable(nodo.valor);
                 if (!variable) {
-                    this.compilador.agregarError(this.modulo.nombre, nodo.valor, 'Semantico', `Variable '${nodo.valor}' no definida.`, nodo.linea, nodo.columna);
+                    this.compilador.agregarError(
+                        this.modulo.nombre,
+                        nodo.valor,
+                        'Semantico',
+                        `Variable '${nodo.valor}' no definida.`,
+                        nodo.linea,
+                        nodo.columna
+                    );
                     return null;
                 }
+
+                if (variable.valor === null) {
+                    this.compilador.agregarError(
+                        this.modulo.nombre,
+                        nodo.valor,
+                        'Semantico',
+                        `Variable '${nodo.valor}' no ha sido inicializada.`,
+                        nodo.linea,
+                        nodo.columna
+                    );
+                    return null;
+                }
+
                 return { valor: variable.valor, tipo: variable.tipoDato };
 
+            case 'ACCESO_ARREGLO':
+                const arreglo = entorno.getVariable(nodo.valor || nodo.id);
+                if (!arreglo) {
+                    this.compilador.agregarError(
+                        this.modulo.nombre,
+                        nodo.valor || nodo.id,
+                        'Semantico',
+                        `Variable '${nodo.valor || nodo.id}' no definida.`,
+                        nodo.linea,
+                        nodo.columna
+                    );
+                    return null;
+                }
+
+                if (!arreglo.esArreglo) {
+                    this.compilador.agregarError(
+                        this.modulo.nombre,
+                        nodo.valor || nodo.id,
+                        'Semantico',
+                        `'${nodo.valor || nodo.id}' no es un arreglo.`,
+                        nodo.linea,
+                        nodo.columna
+                    );
+                    return null;
+                }
+
+                if (!arreglo.valor) {
+                    return { valor: this.valorPorDefecto(arreglo.tipoDato), tipo: arreglo.tipoDato };
+                }
+
+                const indice = await this.resolverExpresionSimple(nodo.indice, entorno);
+                if (!indice || typeof indice.valor !== 'number') {
+                    return null;
+                }
+
+                if (indice.valor < 0 || indice.valor >= arreglo.valor.length) {
+                    this.compilador.agregarError(
+                        this.modulo.nombre,
+                        nodo.valor || nodo.id,
+                        'Semantico',
+                        `Índice ${indice.valor} fuera de límites [0-${arreglo.valor.length - 1}].`,
+                        nodo.linea,
+                        nodo.columna
+                    );
+                    return null;
+                }
+
+                return { valor: arreglo.valor[indice.valor], tipo: arreglo.tipoDato };
+
             case 'ARITMETICA':
-                const izq = this.resolverExpresion(nodo.izq, entorno);
-                const der = this.resolverExpresion(nodo.der, entorno);
+                const izq = await this.resolverExpresionSimple(nodo.izq, entorno);
+                const der = await this.resolverExpresionSimple(nodo.der, entorno);
 
                 if (!izq || !der) return null;
+                if (izq.valor === null || der.valor === null) return null;
 
-                let resultado = null;
-                if (nodo.op === 'SUMA') resultado = izq.valor + der.valor;
-                else if (nodo.op === 'RESTA') resultado = izq.valor - der.valor;
-                else if (nodo.op === 'MULTIPLICACION') resultado = izq.valor * der.valor;
-                else if (nodo.op === 'DIVISION') {
-                    if (der.valor === 0) {
-                        this.compilador.agregarError(this.modulo.nombre, "0", 'Semantico', `División por cero detectada en tiempo de compilación.`, nodo.linea, nodo.columna);
-                        return null;
-                    }
-                    resultado = izq.valor / der.valor;
-                }
-                else if (nodo.op === 'MODULO') resultado = izq.valor % der.valor;
-
-                let tipoResultante = 'ENTERA';
-                if (izq.tipo === 'FLOAT' || der.tipo === 'FLOAT') tipoResultante = 'FLOAT';
-                if (izq.tipo === 'CADENA' || der.tipo === 'CADENA') tipoResultante = 'CADENA';
-
-                return { valor: resultado, tipo: tipoResultante };
-
-            case 'ARREGLO_INICIALIZADO':
-                const valores = nodo.valores.map(v => this.resolverExpresion(v, entorno).valor);
-                return { valor: valores, tipo: nodo.tipado, esArreglo: true };
-
-            case 'ARREGLO_VACIO':
-                const tam = this.resolverExpresion(nodo.amplitud, entorno).valor;
-                const defecto = this.valorPorDefecto(nodo.tipado);
-                const arrayFisico = new Array(tam).fill(defecto);
-                return { valor: arrayFisico, tipo: nodo.tipado, esArreglo: true };
-
-            case 'ACCESO_ARREGLO':
-                const symArr = entorno.getVariable(nodo.id);
-                if (!symArr || !symArr.esArreglo) {
-                    this.compilador.agregarError(this.modulo.nombre, nodo.id, 'Semantico', ` '${nodo.id}' no es un arreglo.`, nodo.linea, nodo.columna);
-                    return null;
-                }
-                const index = this.resolverExpresion(nodo.indice, entorno).valor;
-                if (typeof index === 'number' && (index < 0 || index >= symArr.valor.length)) {
-                    this.compilador.agregarError(this.modulo.nombre, nodo.id, 'Semantico', `Índice ${index} fuera de límites para el arreglo '${nodo.id}'.`, nodo.linea, nodo.columna);
-                    return null;
-                }
-                return { valor: symArr.valor[index], tipo: symArr.tipoDato };
-
-            case 'DATABASE_QUERY':
-                const queryProcesada = this.procesarBackticks(nodo.valor, entorno);
-                return { valor: queryProcesada, tipo: 'QUERY_PENDIENTE' };
-
-            case 'QUERY_TEMPLATE':
-                let queryArmada = "";
-
-                for (const fragmento of nodo.fragmentos) {
-
-                    if (fragmento.tipo === 'TEXTO_QUERY') {
-                        queryArmada += fragmento.valor;
-                    }
-                    else if (fragmento.tipo === 'VAR_INTERPOLADA') {
-                        const nombreVar = fragmento.id.replace('$', '').trim();
-
-                        const variable = entorno.getVariable(nombreVar);
-
-                        if (!variable) {
-                            this.compilador.agregarError(this.modulo.nombre, fragmento.id, 'Semantico SQL', `Variable interpolada '${fragmento.id}' no ha sido declarada.`, fragmento.linea, fragmento.columna);
+                let resultado;
+                switch (nodo.op) {
+                    case 'SUMA': resultado = izq.valor + der.valor; break;
+                    case 'RESTA': resultado = izq.valor - der.valor; break;
+                    case 'MULTIPLICACION': resultado = izq.valor * der.valor; break;
+                    case 'DIVISION':
+                        if (der.valor === 0) {
+                            this.compilador.agregarError(
+                                this.modulo.nombre, "0", 'Semantico',
+                                'División por cero detectada.',
+                                nodo.linea, nodo.columna
+                            );
                             return null;
                         }
-
-                        queryArmada += variable.valor;
-                    }
+                        resultado = izq.valor / der.valor;
+                        break;
+                    case 'MODULO':
+                        if (der.valor === 0) {
+                            this.compilador.agregarError(
+                                this.modulo.nombre, "0", 'Semantico',
+                                'Módulo por cero detectado.',
+                                nodo.linea, nodo.columna
+                            );
+                            return null;
+                        }
+                        resultado = izq.valor % der.valor;
+                        break;
+                    default: return null;
                 }
-                return { valor: queryArmada, tipo: 'QUERY_PENDIENTE' };
-            default:
 
-                return { valor: null, tipo: 'DESCONOCIDO' };
+                const tipo = (izq.tipo === 'FLOAT' || der.tipo === 'FLOAT') ? 'FLOAT' :
+                    (izq.tipo === 'CADENA' || der.tipo === 'CADENA') ? 'CADENA' : 'ENTERA';
+
+                return { valor: resultado, tipo };
+
+            case 'UNARIA':
+                if (nodo.op === 'NEGATIVO') {
+                    const derUnario = await this.resolverExpresionSimple(nodo.der, entorno);
+                    if (!derUnario) return null;
+                    return { valor: -derUnario.valor, tipo: derUnario.tipo };
+                }
+                if (nodo.op === 'NOT') {
+                    const derNot = await this.resolverExpresionSimple(nodo.der, entorno);
+                    if (!derNot) return null;
+                    return { valor: !derNot.valor, tipo: 'BOOLEANA' };
+                }
+                return null;
+
+            default:
+                return null;
         }
     }
 
@@ -207,34 +479,26 @@ export class ValidadorSemanticoYfera {
         }
     }
 
-    /*Metodo que permite validar la semantica dentro de una funcion*/
-    async validarFuncion(nodo, entornoActual) {
-
-        const entornoLocal = new TablaSimbolos(entornoActual);
-
-        if (nodo.parametros) {
-            for (const param of nodo.parametros) {
-                const simParam = new Simbolo(param.id, param.tipado, null, param.linea, param.columna);
-                entornoLocal.setVariable(simParam);
-            }
-        }
-
-        await this.recorrerAST(nodo.cuerpo, entornoLocal);
-    }
 
     /*Metodo que permite validar las expresiones dentro del load*/
     async validarLoad(nodo, entornoActual) {
         let infoRuta = null;
 
         if (nodo.tipo === 'LOAD_ARCHIVO') {
-            infoRuta = this.resolverExpresion(nodo.uri, entornoActual);
+            infoRuta = await this.resolverExpresionSimple(nodo.uri, entornoActual);
         }
-
         else if (nodo.tipo === 'LOAD_ID') {
             const variable = entornoActual.getVariable(nodo.id);
 
             if (!variable) {
-                this.compilador.agregarError(this.modulo.nombre, nodo.id, 'Semantico', `Variable '${nodo.id}' no definida.`, nodo.linea, nodo.columna);
+                this.compilador.agregarError(
+                    this.modulo.nombre,
+                    nodo.id,
+                    'Semantico',
+                    `Variable '${nodo.id}' no definida.`,
+                    nodo.linea,
+                    nodo.columna
+                );
                 return;
             }
 
@@ -242,7 +506,14 @@ export class ValidadorSemanticoYfera {
         }
 
         if (!infoRuta || infoRuta.tipo !== 'CADENA' || !infoRuta.valor) {
-            this.compilador.agregarError(this.modulo.nombre, "load", 'Semantico', `El LOAD requiere una ruta tipo STRING.`, nodo.linea, nodo.columna);
+            this.compilador.agregarError(
+                this.modulo.nombre,
+                "load",
+                'Semantico',
+                `El LOAD requiere una ruta tipo STRING.`,
+                nodo.linea,
+                nodo.columna
+            );
             return;
         }
 
@@ -251,99 +522,6 @@ export class ValidadorSemanticoYfera {
             linea: nodo.linea,
             columna: nodo.columna
         });
-    }
-
-    /* Validacion especifica para Arreglos*/
-    validarArreglo(nodo, entorno) {
-        if (entorno.existeLocal(nodo.id)) {
-            this.compilador.agregarError(this.modulo.nombre, nodo.id, 'Semantico', `El arreglo '${nodo.id}' ya fue declarado.`, nodo.linea, nodo.columna);
-            return;
-        }
-
-        let arregloJS = null;
-        let esQueryPendiente = false;
-
-        if (nodo.tipo === 'ARREGLO_VACIO') {
-            const tamano = this.resolverExpresion(nodo.amplitud, entorno);
-
-            if (!tamano || tamano.tipo !== 'ENTERA') {
-                this.compilador.agregarError(this.modulo.nombre, nodo.id, 'Semantico', `La amplitud del arreglo debe ser un número ENTERO.`, nodo.linea, nodo.columna);
-                return;
-            }
-
-            const valorDefecto = this.valorPorDefecto(nodo.tipado);
-            arregloJS = new Array(tamano.valor).fill(valorDefecto);
-
-        }
-        else if (nodo.tipo === 'ARREGLO_INICIALIZADO') {
-
-            arregloJS = [];
-
-            for (const valNodo of nodo.valores) {
-                const infoVal = this.resolverExpresion(valNodo, entorno);
-
-                if (!infoVal) continue;
-
-                if (!this.sonTiposCompatibles(nodo.tipado, infoVal.tipo)) {
-                    this.compilador.agregarError(this.modulo.nombre, nodo.id, 'Semantico', `Tipo incompatible en arreglo. Se esperaba ${nodo.tipado} pero se encontró ${infoVal.tipo}.`, nodo.linea, nodo.columna);
-                } else {
-                    arregloJS.push(infoVal.valor);
-                }
-            }
-
-        }
-       else if (nodo.tipo === 'ARREGLO_QUERY') {
-            
-            const infoQuery = this.resolverExpresion(nodo.query, entorno);
-            
-            if (infoQuery) {
-                arregloJS = infoQuery.valor;
-            }
-            
-            esQueryPendiente = true; 
-        }
-
-        const nuevoSimbolo = new Simbolo(
-            nodo.id,
-            nodo.tipado,
-            arregloJS,
-            nodo.linea,
-            nodo.columna,
-            true
-        );
-
-        if (esQueryPendiente) {
-            nuevoSimbolo.esperandoRespuestaBD = true;
-        }
-
-        entorno.setVariable(nuevoSimbolo);
-    }
-
-    async resolverQueriesPendientes(interpreteSQL) {
-        for (const simbolo of this.simbolosPendientesBD) {
-            const queryStr = simbolo.valor;
-
-            const response = await interpreteSQL.ejecutarCodigo(queryStr);
-
-            if (!response.exito) {
-                this.compilador.agregarError(this.modulo.nombre, "EXECUTE", 'Semantico SQL', `Error BD: ${response.errores[0].descripcion}`, simbolo.linea, simbolo.columna);
-                continue;
-            }
-
-            const resultadoSQL = response.resultados[0];
-
-            if (resultadoSQL && resultadoSQL.valores) {
-                const tipoTraducido = this.mapearTipoSQL(resultadoSQL.tipo);
-
-                if (!this.sonTiposCompatibles(simbolo.tipoDato, tipoTraducido)) {
-                    this.compilador.agregarError(this.modulo.nombre, simbolo.id, 'Semantico', `El tipo de BD (${tipoTraducido}) no coincide con el arreglo de tipo ${simbolo.tipoDato}`, simbolo.linea, simbolo.columna);
-                } else {
-                    simbolo.valor = resultadoSQL.valores;
-                }
-            }
-
-            simbolo.esperandoRespuestaBD = false;
-        }
     }
 
     /*Metodo que permite procesar todos los loads pendientes*/

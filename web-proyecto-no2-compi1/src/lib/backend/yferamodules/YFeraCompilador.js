@@ -45,7 +45,6 @@ export class YFeraCompilador {
             return;
         }
 
-        // PENDIENTE LA SEGUNDA PASADA
     }
 
     /* Busca un archivo .y el primero que se atraviesa para poder usarlo como orquestador */
@@ -134,22 +133,37 @@ export class YFeraCompilador {
             const validador = new ValidadorSemanticoYfera(this, moduloActual);
             await validador.analizar();
 
-            const interprete = new InterpreteSqlCodigo(this.dataBase);
-            await validador.resolverQueriesPendientes(interprete);
-
-            await validador.procesarLoadsPendientes();
-
-
+            // En procesarModuloY, antes de cargar un módulo hijo:
             for (const loadObj of validador.loadsDetectados) {
                 const archivoSiguiente = await this.resolverPathRelativo(loadObj.ruta, archivoY.parentId);
 
                 if (archivoSiguiente) {
+
+                    if (archivoSiguiente.id === archivoY.id) {
+                        this.agregarError(
+                            archivoY.name,
+                            loadObj.ruta,
+                            'Semantico',
+                            `Load cíclico detectado: '${loadObj.ruta}' carga el mismo archivo.`,
+                            loadObj.linea,
+                            loadObj.columna
+                        );
+                        continue;
+                    }
+
                     const moduloHijo = await this.procesarModuloY(archivoSiguiente);
                     if (moduloHijo) {
                         moduloActual.modulosHijos.push(moduloHijo);
                     }
                 } else {
-                    this.agregarError(archivoY.name, loadObj.ruta, 'Semantico', `Error de Load: No se encontro el archivo '${loadObj.ruta}'.`, loadObj.linea, loadObj.columna);
+                    this.agregarError(
+                        archivoY.name,
+                        loadObj.ruta,
+                        'Semantico',
+                        `Error de Load: No se encontro el archivo '${loadObj.ruta}'.`,
+                        loadObj.linea,
+                        loadObj.columna
+                    );
                 }
             }
 
