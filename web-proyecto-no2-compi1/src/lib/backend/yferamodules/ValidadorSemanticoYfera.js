@@ -28,13 +28,14 @@ export class ValidadorSemanticoYfera {
         this.asignacionesPendientes = [];
 
         this.loadsEnInicializacion = [];
+
+        this.variablesDependientesDeQuery = [];
     }
 
     /*Metodo de inicio de analisis */
     async analizar() {
         try {
             await this.pasadaDeclaracionGlobal(this.modulo.ast, this.modulo.tablaSimbolos);
-
             await this.pasadaInicializacionGlobal(this.modulo.ast, this.modulo.tablaSimbolos);
 
             if (this.simbolosPendientesBD.length > 0) {
@@ -42,19 +43,40 @@ export class ValidadorSemanticoYfera {
                 await this.resolverQueriesPendientes(interprete);
             }
 
+            await this.inicializarVariablesDependientes();
+
             for (const item of this.loadsEnInicializacion) {
                 await this.validarLoad(item.nodo, item.entorno);
             }
-
             await this.procesarLoadsPendientes();
 
         } catch (error) {
             this.compilador.agregarError(
-                this.modulo.nombre,
-                'N/A',
-                'Compilacion',
+                this.modulo.nombre, 'N/A', 'Compilacion',
                 `Error en análisis semántico: ${error.message}`
             );
+        }
+    }
+
+    /*Metodo que permite evaluar las variables pendientes de arreglos con querys */
+    async inicializarVariablesDependientes() {
+        for (const { nodo, entorno } of this.variablesDependientesDeQuery) {
+            const simbolo = entorno.getVariable(nodo.id);
+            if (!simbolo || simbolo.valor !== null) continue;
+
+            const valorResuelto = await this.resolverExpresionSimple(nodo.valor, entorno);
+            if (!valorResuelto) continue;
+
+            if (!this.sonTiposCompatibles(nodo.tipado, valorResuelto.tipo)) {
+                this.compilador.agregarError(
+                    this.modulo.nombre, nodo.id, 'Semantico',
+                    `Tipo incompatible: no se puede asignar ${valorResuelto.tipo} a '${nodo.id}' de tipo ${nodo.tipado}.`,
+                    nodo.linea, nodo.columna
+                );
+                continue;
+            }
+
+            simbolo.valor = valorResuelto.valor;
         }
     }
 
@@ -464,23 +486,41 @@ export class ValidadorSemanticoYfera {
         const simbolo = entorno.getVariable(nodo.id);
         if (!simbolo || simbolo.valor !== null) return;
 
-        const valorResuelto = await this.resolverExpresionSimple(nodo.valor, entorno);
+        if (this.dependeDeQueryPendiente(nodo.valor, entorno)) {
+            this.variablesDependientesDeQuery.push({ nodo, entorno });
+            return;
+        }
 
+        const valorResuelto = await this.resolverExpresionSimple(nodo.valor, entorno);
         if (!valorResuelto) return;
 
         if (!this.sonTiposCompatibles(nodo.tipado, valorResuelto.tipo)) {
             this.compilador.agregarError(
-                this.modulo.nombre,
-                nodo.id,
-                'Semantico',
+                this.modulo.nombre, nodo.id, 'Semantico',
                 `Tipo incompatible: no se puede asignar ${valorResuelto.tipo} a '${nodo.id}' de tipo ${nodo.tipado}.`,
-                nodo.linea,
-                nodo.columna
+                nodo.linea, nodo.columna
             );
             return;
         }
 
         simbolo.valor = valorResuelto.valor;
+    }
+
+    /*Metodo que permite validar si es una variable que depende de arreglo*/
+    dependeDeQueryPendiente(nodo, entorno) {
+        if (!nodo) return false;
+
+        if (nodo.tipo === 'ACCESO_ARREGLO') {
+            const arreglo = entorno.getVariable(nodo.valor || nodo.id);
+            if (arreglo && arreglo.esArreglo && arreglo.esperandoRespuestaBD) {
+                return true;
+            }
+        }
+
+        if (nodo.izq && this.dependeDeQueryPendiente(nodo.izq, entorno)) return true;
+        if (nodo.der && this.dependeDeQueryPendiente(nodo.der, entorno)) return true;
+
+        return false;
     }
 
     /*Metodo qu permite inicializar un arreglo vacio */
@@ -676,7 +716,7 @@ export class ValidadorSemanticoYfera {
                         this.modulo.nombre,
                         nodo.valor || nodo.id,
                         'Semantico',
-                        `Índice ${indice.valor} fuera de límites [0-${arreglo.valor.length - 1}].`,
+                        `Indice ${indice.valor} fuera de límites [0-${arreglo.valor.length - 1}].`,
                         nodo.linea,
                         nodo.columna
                     );
