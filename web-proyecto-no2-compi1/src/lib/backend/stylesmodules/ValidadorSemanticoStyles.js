@@ -103,7 +103,6 @@ export class ValidadorSemanticoStyles {
         }
 
         moduloYFera.recursosCompilados.compiledStyles = cssCompilado;
-        console.log(cssCompilado);
     }
 
     /*Metodo que permite generar un bloque css */

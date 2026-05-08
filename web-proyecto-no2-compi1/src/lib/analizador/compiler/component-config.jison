@@ -174,9 +174,14 @@
 
 "$"[a-zA-Z_][a-zA-Z0-9_]* return 'VARIABLE_DOLAR';
 
-[a-zA-Z][a-zA-Z0-9_]* return 'IDENTIFICADOR';
-
 "@"[a-zA-Z][a-zA-Z0-9_]* return 'ARROBA_VAR';
+
+
+[a-zA-Z][a-zA-Z0-9_-]*[a-zA-Z0-9] return 'IDENTIFICADOR';
+
+[a-zA-Z]                          return 'IDENTIFICADOR';
+
+
 
 
 .                           {
@@ -332,7 +337,7 @@ definicion_lenguaje : definicion_lenguaje cuerpo_lenguaje
 
 /*-----=====-----Produccion principal de todo lo que puede tener un archivo .comp-----=====-----*/
 
-cuerpo_lenguaje         : IDENTIFICADOR PARENT_APERTURA lista_parametros PARENT_CIERRE LLAVE_APERTURA cuerpo_componentes LLAVE_CIERRE
+cuerpo_lenguaje         : IDENTIFICADOR PARENT_APERTURA lista_parametros PARENT_CIERRE LLAVE_APERTURA listado_cuerpo LLAVE_CIERRE
                         {{
                             $$ = {
                                 tipo: 'LLAMADA_FUNCION',
@@ -341,6 +346,19 @@ cuerpo_lenguaje         : IDENTIFICADOR PARENT_APERTURA lista_parametros PARENT_
                                 linea: @1.first_line,
                                 columna: @1.first_column + 1
                             };
+                        }}
+                        ;
+
+/*-----=====-----Produccion principal de todo lo que puede tener un componente dentro-----=====-----*/
+
+listado_cuerpo          : listado_cuerpo cuerpo_componentes
+                        {{
+                            $1.push($2);
+                            $$  = $1;
+                        }}
+                        | cuerpo_componentes
+                        {{
+                            $$ = [$1];
                         }}
                         ;
 
@@ -469,54 +487,48 @@ caso_def                        : CASE expresion_interior LLAVE_APERTURA conteni
 
 /*-----=====-----Produccion que permite representar un condicional if dentro del componente-----=====-----*/
 
-condicional_if_def              : IF PARENT_APERTURA expresion_interior PARENT_CIERRE LLAVE_APERTURA contenido_bloque LLAVE_CIERRE lista_else
-                                {{
-                                    $$ = {
-                                        tipo: 'ESTRUCTURA_IF',
-                                        condicion: $3,    
-                                        cuerpo: $6,      
-                                        bloques_else: $8,  
-                                        linea: @1.first_line,
-                                        columna: @1.first_column + 1
-                                    };
-                                }}
-                                ;
+condicional_if_def :        IF PARENT_APERTURA expresion_interior PARENT_CIERRE LLAVE_APERTURA contenido_bloque LLAVE_CIERRE opciones_else
+                            {{
+                                $$ = {
+                                    tipo: 'ESTRUCTURA_IF',
+                                    condicion: $3,    
+                                    cuerpo: $6,      
+                                    continuacion: $8, 
+                                    linea: @1.first_line,
+                                    columna: @1.first_column + 1
+                                };
+                            }}
+                            ;
 
-/*-----=====-----Produccion que permite reconocer si el if tiene else y en que listado-----=====-----*/
 
-lista_else                      : lista_else bloque_else
-                                {{
-                                    $1.push($2);
-                                    $$ = $1;
-                                }}
-                                | /* vacio*/
-                                {{
-                                    $$ = [];
-                                }}
-                                ;
+/*-----=====-----Produccion que permite representar un condicional else-if encadenado con un if-----=====-----*/
 
-/*-----=====-----Produccion que permite reconocer si el if tiene algun tipo de else encadenado-----=====-----*/
+opciones_else :         ELSE IF PARENT_APERTURA expresion_interior PARENT_CIERRE LLAVE_APERTURA contenido_bloque LLAVE_CIERRE opciones_else
+                        {{
+                            $$ = {
+                                tipo: 'ELSE_IF',
+                                condicion: $4,
+                                cuerpo: $7,
+                                continuacion: $9,
+                                linea: @1.first_line,
+                                columna: @1.first_column + 1
+                            };
+                        }}
+                        | ELSE LLAVE_APERTURA contenido_bloque LLAVE_CIERRE
+                        {{
+                            $$ = {
+                                tipo: 'ELSE_FINAL',
+                                cuerpo: $3,
+                                linea: @1.first_line,
+                                columna: @1.first_column + 1
+                            };
+                        }}
+                        | /* vacio */
+                        {{
+                            $$ = null;
+                        }}
+                        ;
 
-bloque_else                     : ELSE PARENT_APERTURA expresion_interior PARENT_CIERRE LLAVE_APERTURA contenido_bloque LLAVE_CIERRE
-                                {{
-                                    $$ = {
-                                        tipo: 'ELSE_CONDICIONAL',
-                                        condicion: $3,
-                                        cuerpo: $6,
-                                        linea: @1.first_line,
-                                        columna: @1.first_column + 1
-                                    };
-                                }}
-                                | ELSE LLAVE_APERTURA contenido_bloque LLAVE_CIERRE
-                                {{
-                                    $$ = {
-                                        tipo: 'ELSE_DEFECTO',
-                                        cuerpo: $3,
-                                        linea: @1.first_line,
-                                        columna: @1.first_column + 1
-                                    };
-                                }}
-                                ;
 
 /*-----=====-----Produccion que permite representar un ciclo for dentro del componente-----=====-----*/
 
@@ -989,7 +1001,7 @@ text_def                    : TEXT estilos_opcionales PARENT_APERTURA cadena_int
 
 /*-----=====-----Produccion de la definicion de la tabla-----=====-----*/
 
-tablas_def              : estilos_obligatorios CORCHETE_DOBLE_APERTURA lista_filas CORCHETE_DOBLE_CIERRE
+tablas_def              : estilos_opcionales CORCHETE_DOBLE_APERTURA lista_filas CORCHETE_DOBLE_CIERRE
                         {{
                             $$ = { 
                                 tipo: 'TABLA', 
@@ -1029,7 +1041,7 @@ lista_filas                 : lista_filas fila_def
 
 /*-----=====-----Produccion que permite reconocer filas-----=====-----*/
 
-fila_def                : estilos_obligatorios CORCHETE_DOBLE_APERTURA lista_celdas CORCHETE_DOBLE_CIERRE
+fila_def                : estilos_opcionales CORCHETE_DOBLE_APERTURA lista_celdas CORCHETE_DOBLE_CIERRE
                         {{
                             $$ = { 
                                 tipo: 'FILA', 
@@ -1066,7 +1078,7 @@ lista_celdas                : lista_celdas celda_def
 
 /*-----=====-----Produccion que permite reconocer celdas-----=====-----*/
 
-celda_def               : estilos_obligatorios CORCHETE_DOBLE_APERTURA contenido_celda CORCHETE_DOBLE_CIERRE
+celda_def               : estilos_opcionales CORCHETE_DOBLE_APERTURA contenido_celda CORCHETE_DOBLE_CIERRE
                         {{
                             $$ = { 
                                 tipo: 'CELDA', 
@@ -1101,7 +1113,7 @@ contenido_celda             : contenido_celda cuerpo_componentes
 
 /*-----=====-----Produccion que permite representar a las secciones -----=====-----*/
 
-secciones_def           : estilos_obligatorios CORCHETE_APERTURA contenido_seccion CORCHETE_CIERRE
+secciones_def           : estilos_opcionales CORCHETE_APERTURA contenido_seccion CORCHETE_CIERRE
                         {{
                             $$ = { 
                                 tipo: 'SECCION', 
@@ -1139,9 +1151,13 @@ contenido_seccion           : contenido_seccion cuerpo_componentes
 
 /*-----=====-----Produccion que permite representar a los estilos que puede tener un componente-----=====-----*/
 
-estilos_obligatorios            : MENOR lista_estilos_nombres MAYOR    
+estilos_opcionales            : MENOR lista_estilos_nombres MAYOR    
                                 {{ 
                                     $$ = $2; 
+                                }}
+                                | /* vacio */
+                                {{
+                                    $$ = null;
                                 }}
                                 ;
 

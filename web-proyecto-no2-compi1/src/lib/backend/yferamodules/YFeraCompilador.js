@@ -8,6 +8,8 @@ import { RecursoImportado } from "../semanticsyfera/RecursoImportado";
 
 import { ValidadorSemanticoStyles } from "../stylesmodules/ValidadorSemanticoStyles";
 
+import { ValidadorSemanticoComponentes } from "../componentsmodules/ValidadorSemanticoComponentes";
+
 /*Clase Delegada para manejar toda la logica principal para poder generar el analisis sintactico del lenguaje orquestador*/
 export class YFeraCompilador {
 
@@ -30,6 +32,7 @@ export class YFeraCompilador {
         this.frontState.notificarErrores([]);
 
         /*Primera fase de compilacion : Busqueda de la raiz*/
+
         const mainFile = await this.buscarArchivoRaiz();
 
         if (!mainFile) {
@@ -40,15 +43,8 @@ export class YFeraCompilador {
 
         this.frontState.systemLog(`> Archivo raiz detectado: ${mainFile.name}`);
 
-        this.arbolEjecucion = await this.procesarModuloY(mainFile);
-
         /*Segunda fase de compilacion: Busqueda de imports y loads (ENCADENAMIENTO) */
-
-        if (this.erroresGlobales.length > 0) {
-            this.frontState.notificarErrores(this.erroresGlobales);
-            this.frontState.systemLog('> Compilacion abortada por errores en el main.');
-            return;
-        }
+        this.arbolEjecucion = await this.procesarModuloY(mainFile);
 
         /*Tercera fase de compilacion: Donde se compilan y se evaluan todos los archivos .styles */
         const validadorStyles = new ValidadorSemanticoStyles(this, this.manejadorDatabase);
@@ -59,6 +55,17 @@ export class YFeraCompilador {
             this.frontState.systemLog('> Compilacion abortada por errores en estilos.');
             return;
         }
+
+        /*Cuarta fase de compilacion: Donde se compilan todos los componentes a html y funciones javaScript */
+        const validadorComponentes = new ValidadorSemanticoComponentes(this, this.manejadorDatabase);
+
+        await validadorComponentes.validarComponentes(this.arbolEjecucion);
+        if (this.erroresGlobales.length > 0) {
+            this.frontState.notificarErrores(this.erroresGlobales);
+            this.frontState.systemLog('> Compilación abortada por errores en componentes.');
+            return;
+        }
+
     }
 
     /* Busca un archivo .y el primero que se atraviesa para poder usarlo como orquestador */

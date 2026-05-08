@@ -172,11 +172,14 @@
 
 [0-9]+\b                        return 'ENTERO';
 
-"$"[a-zA-Z_][a-zA-Z0-9_]*       return 'VARIABLE_DOLAR';
+"$"[a-zA-Z_][a-zA-Z0-9_]* return 'VARIABLE_DOLAR';
 
-[a-zA-Z][a-zA-Z0-9_]*           return 'IDENTIFICADOR';
+"@"[a-zA-Z][a-zA-Z0-9_]* return 'ARROBA_VAR';
 
-"@"[a-zA-Z][a-zA-Z0-9_]*        return 'ARROBA_VAR';
+
+[a-zA-Z][a-zA-Z0-9_-]*[a-zA-Z0-9] return 'IDENTIFICADOR';
+
+[a-zA-Z]                          return 'IDENTIFICADOR';
 
 
 .                               return 'ERROR_LEXICO';
