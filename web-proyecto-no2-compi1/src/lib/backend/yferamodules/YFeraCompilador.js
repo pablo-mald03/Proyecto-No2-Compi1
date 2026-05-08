@@ -50,6 +50,7 @@ export class YFeraCompilador {
             return;
         }
 
+        /*Tercera fase de compilacion: Donde se compilan y se evaluan todos los archivos .styles */
         const validadorStyles = new ValidadorSemanticoStyles(this, this.manejadorDatabase);
         await validadorStyles.validarEstilos(this.arbolEjecucion);
 

@@ -18,6 +18,11 @@ export class ModuloYFera {
             estilos: []
         };
 
+        this.recursosCompilados = {
+            compiledComponentes: "",
+            compiledStyles:""
+        };
+
 
         this.tablaSimbolos = new TablaSimbolos();
         this.tablaSimbolosComponentes = new TablaSimbolos();

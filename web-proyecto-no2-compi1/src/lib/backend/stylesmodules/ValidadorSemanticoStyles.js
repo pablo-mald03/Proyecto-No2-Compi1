@@ -21,6 +21,9 @@ export class ValidadorSemanticoStyles {
             );
         }
 
+        /*Ultima fase de compilacion */
+        this.compilarCSS(moduloYFera);
+
         for (const hijo of moduloYFera.modulosHijos) {
             await this.validarEstilos(hijo);
         }
@@ -29,13 +32,10 @@ export class ValidadorSemanticoStyles {
     /*Metodo que analiza un bloque de CSS mergeado y construye su tabla de símbolos */
     async analizarBloqueStyles(recursoEstilo, tablaSimbolosEstilos) {
         try {
-            // Limpiar errores previos del parser
             parserStyles.yy.errores = [];
 
-            // Parsear el contenido del archivo .styles
             const astStyles = parserStyles.parse(recursoEstilo.contenido);
 
-            // Verificar errores de sintaxis del parser
             if (parserStyles.yy && parserStyles.yy.errores && parserStyles.yy.errores.length > 0) {
                 const reporte = parserStyles.yy.errores.map(err => ({
                     origen: recursoEstilo.nombreArchivo,
@@ -50,7 +50,7 @@ export class ValidadorSemanticoStyles {
             }
 
             if (!astStyles || !Array.isArray(astStyles)) {
-                return; // Archivo vacío o sin reglas
+                return; 
             }
 
             /* PRIMERA FASE: Registrar clases normales */
@@ -68,6 +68,12 @@ export class ValidadorSemanticoStyles {
                 await this.ejecutarTerceraPasada(nodo, recursoEstilo, tablaSimbolosEstilos);
             }
 
+            /*CUARTA FASE SUBFASE ALFA: Ejecucion de herencias*/
+            await this.ejecutarCuartaFaseAlfa(tablaSimbolosEstilos, recursoEstilo);
+
+            /*CUARTA FASE SUBFASE BETA: Evaluar todas las expresiones */
+            await this.ejecutarCuartaFaseBeta(tablaSimbolosEstilos, recursoEstilo);
+
         } catch (error) {
             this.compilador.agregarError(
                 recursoEstilo.nombreArchivo,
@@ -75,6 +81,116 @@ export class ValidadorSemanticoStyles {
                 'Compilacion',
                 `Error al parsear estilos: ${error.message}`
             );
+        }
+    }
+
+    /*Generacion del css compilado */
+    compilarCSS(moduloYFera) {
+        const tablaSimbolos = moduloYFera.tablaSimbolosEstilos;
+        let cssCompilado = '';
+
+        for (const [nombreSelector, simbolo] of tablaSimbolos.variables) {
+            const bloqueCSS = this.generarBloqueCSS(nombreSelector, simbolo);
+            if (bloqueCSS) {
+                cssCompilado += bloqueCSS + '\n';
+            }
+        }
+
+        moduloYFera.recursosCompilados.compiledStyles = cssCompilado;
+        console.log(cssCompilado);
+    }
+
+    /*Metodo que permite generar un bloque css */
+    generarBloqueCSS(nombreSelector, simbolo) {
+        if (!simbolo.valor || !simbolo.valor.propiedades || simbolo.valor.propiedades.length === 0) {
+            return null;
+        }
+
+        let css = `.${nombreSelector} {\n`;
+
+        for (const prop of simbolo.valor.propiedades) {
+            const lineaCSS = this.generarPropiedadCSS(prop);
+            if (lineaCSS) {
+                css += `    ${lineaCSS}\n`;
+            }
+        }
+
+        css += '}';
+
+        return css;
+    }
+
+    /*Metodo que convierte una propiedad en un estilo css*/
+    generarPropiedadCSS(prop) {
+        if (!prop || !prop.nombre) return null;
+
+        switch (prop.tipo) {
+            case 'PROPIEDAD_ESTILO':
+                return this.generarPropiedadSimpleCSS(prop);
+
+            case 'PROPIEDAD_COMPUESTA':
+                return this.generarPropiedadCompuestaCSS(prop);
+
+            default:
+                return null;
+        }
+    }
+
+    /*Generacion de css de una propiedad compuesta */
+    generarPropiedadSimpleCSS(prop) {
+        const nombreCSS = this.traducirNombrePropiedad(prop.nombre);
+        const valorCSS = this.formatearValorCSS(prop.valor);
+
+        if (valorCSS === null) return null;
+
+        return `${nombreCSS}: ${valorCSS};`;
+    }
+
+    /*Metodo que genera las propiedades compuestas del css*/
+    generarPropiedadCompuestaCSS(prop) {
+        const nombreCSS = this.traducirNombrePropiedad(prop.nombre);
+
+        const anchoCSS = this.formatearValorCSS(prop.ancho);
+        const estiloCSS = prop.estilo?.valor || 'solid';
+        const colorCSS = this.formatearValorCSS(prop.color);
+
+        if (!anchoCSS || !colorCSS) return null;
+
+        return `${nombreCSS}: ${anchoCSS} ${estiloCSS} ${colorCSS};`;
+    }
+
+    /*Metodo que permite traducir la propiedad*/
+    traducirNombrePropiedad(nombreInterno) {
+        return nombreInterno;
+    }
+
+    /*Metodo que formatea un valor a clase css*/
+    formatearValorCSS(valor) {
+        if (!valor) return null;
+
+        switch (valor.tipo) {
+            case 'VALOR_NUMERICO':
+                return valor.valorFormateado || `${valor.valor}${valor.unidad || 'px'}`;
+            case 'VALOR_LITERAL':
+                if (valor.subtipo === 'COLOR_HEX') {
+                    return valor.valor; 
+                }
+                if (valor.subtipo === 'COLOR_PRESET') {
+                    return valor.valor; 
+                }
+                return valor.valor; 
+
+            case 'COLOR_RGB':
+                return valor.valorFormateado || `rgb(${valor.r}, ${valor.g}, ${valor.b})`;
+
+            case 'VALOR':
+                return `${valor.valor}px`; 
+
+            default:
+                if (valor.valorFormateado) {
+                    return valor.valorFormateado;
+                }
+                return null;
         }
     }
 
@@ -453,6 +569,203 @@ export class ValidadorSemanticoStyles {
                 nodoDinamico.loc_linea,
                 nodoDinamico.loc_columna
             );
+        }
+    }
+
+    /*Metodo que permite ejecutar la cuarta fase en modo Alfa (Nombre inventado por mi para no poner A). Que ejecuta herencias*/
+    async ejecutarCuartaFaseAlfa(tablaSimbolosEstilos, recursoEstilo) {
+        for (const [id, simbolo] of tablaSimbolosEstilos.variables) {
+            if (simbolo.valor && simbolo.valor.parentResuelto) {
+                await this.resolverHerencia(simbolo, tablaSimbolosEstilos, recursoEstilo);
+            }
+        }
+    }
+
+    /*Metodo que permite aplicar las herencias de las propiedades a los simbolos*/
+    async resolverHerencia(simboloHijo, tablaSimbolosEstilos, recursoEstilo) {
+        const nombrePadre = simboloHijo.valor.parentResuelto;
+        const simboloPadre = tablaSimbolosEstilos.obtener(nombrePadre);
+
+        if (!simboloPadre) {
+            this.compilador.agregarError(
+                recursoEstilo.nombreArchivo,
+                nombrePadre,
+                'Semantico',
+                `No se pudo ejecutar la herencia: el padre '${nombrePadre}' no existe.`,
+                simboloHijo.linea,
+                simboloHijo.columna
+            );
+            return;
+        }
+
+        if (simboloPadre.valor.parentResuelto && !simboloPadre.valor.herenciaResuelta) {
+            await this.resolverHerencia(simboloPadre, tablaSimbolosEstilos, recursoEstilo);
+        }
+
+        const propsPadre = simboloPadre.valor.propiedades || [];
+        const propsHijo = simboloHijo.valor.propiedades || [];
+
+        const propiedadesFusionadas = this.fusionarPropiedades(propsPadre, propsHijo);
+
+        simboloHijo.valor.propiedades = propiedadesFusionadas;
+        simboloHijo.valor.herenciaResuelta = true;
+    }
+
+    /*Metodo que permite realizar las herencias de los selectores/clases */
+    fusionarPropiedades(propsPadre, propsHijo) {
+        const mapaPropiedades = new Map();
+
+        for (const prop of propsPadre) {
+            mapaPropiedades.set(prop.nombre, { ...prop, heredado: true });
+        }
+
+        for (const prop of propsHijo) {
+            mapaPropiedades.set(prop.nombre, { ...prop, heredado: false });
+        }
+
+        return Array.from(mapaPropiedades.values());
+    }
+
+
+    /*Fase Beta que permite evaluar las propiedades despues de aplicar los estilos heradados */
+    async ejecutarCuartaFaseBeta(tablaSimbolosEstilos, recursoEstilo) {
+        for (const [id, simbolo] of tablaSimbolosEstilos.variables) {
+            await this.evaluarPropiedadesSimbolo(simbolo, recursoEstilo);
+        }
+    }
+
+    /*Metodo que recorre las propiedades de cada simbolo */
+    async evaluarPropiedadesSimbolo(simbolo, recursoEstilo) {
+        if (!simbolo.valor || !simbolo.valor.propiedades) return;
+
+        const propiedadesEvaluadas = [];
+
+        for (const prop of simbolo.valor.propiedades) {
+            const propEvaluada = this.evaluarPropiedad(prop, simbolo, recursoEstilo);
+            if (propEvaluada) {
+                propiedadesEvaluadas.push(propEvaluada);
+            }
+        }
+
+        simbolo.valor.propiedades = propiedadesEvaluadas;
+        simbolo.valor.expresionesResueltas = true;
+    }
+
+    /*Metodo que permite evaluar donde si se esta evaluando un estilo normal o esta compuesto por variables del for*/
+    evaluarPropiedad(prop, simbolo, recursoEstilo) {
+        if (!prop || !prop.tipo) return prop;
+
+        switch (prop.tipo) {
+            case 'PROPIEDAD_ESTILO':
+                return this.evaluarPropiedadSimple(prop, simbolo);
+
+            case 'PROPIEDAD_COMPUESTA':
+                return this.evaluarPropiedadCompuesta(prop, simbolo);
+
+            default:
+                return prop;
+        }
+    }
+
+    /*Metodo que permite evaluar las propiedades simples sin mayores atributos*/
+    evaluarPropiedadSimple(prop, simbolo) {
+        const valorEvaluado = this.evaluarValorPropiedad(prop.valor, simbolo);
+
+        return {
+            tipo: 'PROPIEDAD_ESTILO',
+            nombre: prop.nombre,
+            valor: valorEvaluado,
+            loc_linea: prop.loc_linea,
+            loc_columna: prop.loc_columna,
+            heredado: prop.heredado || false
+        };
+    }
+
+    /*Metodo que permite evaluar las propiedades compuestas */
+    evaluarPropiedadCompuesta(prop, simbolo) {
+        const anchoEvaluado = this.evaluarValorPropiedad(prop.ancho, simbolo);
+        const estiloEvaluado = prop.estilo;
+
+        const colorEvaluado = this.evaluarValorPropiedad(prop.color, simbolo);
+
+        return {
+            tipo: 'PROPIEDAD_COMPUESTA',
+            nombre: prop.nombre,
+            ancho: anchoEvaluado,
+            estilo: estiloEvaluado,
+            color: colorEvaluado,
+            loc_linea: prop.loc_linea,
+            loc_columna: prop.loc_columna,
+            heredado: prop.heredado || false
+        };
+    }
+
+    /*Metodo que evalua las propiedades en su estado mas simplificado*/
+    evaluarValorPropiedad(valor, simbolo) {
+        if (!valor) return null;
+
+        const contexto = {};
+        if (simbolo.valor.esDinamico && simbolo.valor.variableOriginal) {
+            contexto[simbolo.valor.variableOriginal] = simbolo.valor.valorIteracion;
+        }
+
+        switch (valor.tipo) {
+            case 'VALOR_LITERAL':
+                return {
+                    tipo: 'VALOR_LITERAL',
+                    subtipo: valor.subtipo || null,
+                    valor: valor.valor
+                };
+
+            case 'EXPRESION_SIMPLE':
+            case 'EXPRESION_COMPUESTA':
+                {
+                    const resultado = this.evaluarExpresion(valor.expresion, contexto);
+                    const unidad = valor.unidad || 'px';
+                    return {
+                        tipo: 'VALOR_NUMERICO',
+                        valor: resultado,
+                        unidad: unidad,
+                        valorFormateado: `${resultado}${unidad}`
+                    };
+                }
+
+            case 'OPERACION':
+            case 'OPERACION_UNARIA':
+                {
+                    const resultado = this.evaluarExpresion(valor, contexto);
+                    return {
+                        tipo: 'VALOR_NUMERICO',
+                        valor: resultado,
+                        unidad: 'px', // Por defecto
+                        valorFormateado: `${resultado}px`
+                    };
+                }
+
+            case 'COLOR_RGB':
+                {
+                    const r = this.evaluarExpresion(valor.r, contexto);
+                    const g = this.evaluarExpresion(valor.g, contexto);
+                    const b = this.evaluarExpresion(valor.b, contexto);
+                    return {
+                        tipo: 'COLOR_RGB',
+                        r: r,
+                        g: g,
+                        b: b,
+                        valorFormateado: `rgb(${r}, ${g}, ${b})`
+                    };
+                }
+
+            case 'VALOR':
+                return {
+                    tipo: 'VALOR_NUMERICO',
+                    valor: valor.valor,
+                    unidad: 'px',
+                    valorFormateado: `${valor.valor}px`
+                };
+
+            default:
+                return valor;
         }
     }
 
