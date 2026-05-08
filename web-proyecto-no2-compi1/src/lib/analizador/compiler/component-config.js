@@ -133,14 +133,15 @@ case 6:
 break;
 case 7:
 
-                            this.$ = {
-                                tipo: 'LLAMADA_FUNCION',
-                                id: $$[$0-6],
-                                parametros: $$[$0-4],
-                                linea: _$[$0-6].first_line,
-                                columna: _$[$0-6].first_column + 1
-                            };
-                        
+                                this.$ = {
+                                    tipo: 'LLAMADA_FUNCION',
+                                    id: $$[$0-6],
+                                    parametros: $$[$0-4],
+                                    cuerpo: $$[$0-1],       
+                                    linea: _$[$0-6].first_line,
+                                    columna: _$[$0-6].first_column + 1
+                                };
+                            
 break;
 case 8:
 

@@ -337,17 +337,18 @@ definicion_lenguaje : definicion_lenguaje cuerpo_lenguaje
 
 /*-----=====-----Produccion principal de todo lo que puede tener un archivo .comp-----=====-----*/
 
-cuerpo_lenguaje         : IDENTIFICADOR PARENT_APERTURA lista_parametros PARENT_CIERRE LLAVE_APERTURA listado_cuerpo LLAVE_CIERRE
-                        {{
-                            $$ = {
-                                tipo: 'LLAMADA_FUNCION',
-                                id: $1,
-                                parametros: $3,
-                                linea: @1.first_line,
-                                columna: @1.first_column + 1
-                            };
-                        }}
-                        ;
+cuerpo_lenguaje             : IDENTIFICADOR PARENT_APERTURA lista_parametros PARENT_CIERRE LLAVE_APERTURA listado_cuerpo LLAVE_CIERRE
+                            {{
+                                $$ = {
+                                    tipo: 'LLAMADA_FUNCION',
+                                    id: $1,
+                                    parametros: $3,
+                                    cuerpo: $6,       
+                                    linea: @1.first_line,
+                                    columna: @1.first_column + 1
+                                };
+                            }}
+                            ;
 
 /*-----=====-----Produccion principal de todo lo que puede tener un componente dentro-----=====-----*/
 
