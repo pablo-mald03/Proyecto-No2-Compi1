@@ -172,14 +172,14 @@
 
 [0-9]+\b                        return 'ENTERO';
 
-"$"[a-zA-Z_][a-zA-Z0-9_]* return 'VARIABLE_DOLAR';
+"$"[a-zA-Z_][a-zA-Z0-9_]*       return 'VARIABLE_DOLAR';
 
-"@"[a-zA-Z][a-zA-Z0-9_]* return 'ARROBA_VAR';
+"@"[a-zA-Z][a-zA-Z0-9_]*        return 'ARROBA_VAR';
 
 
-[a-zA-Z][a-zA-Z0-9_-]*[a-zA-Z0-9] return 'IDENTIFICADOR';
+[a-zA-Z][a-zA-Z0-9_-]*[a-zA-Z0-9]       return 'IDENTIFICADOR';
 
-[a-zA-Z]                          return 'IDENTIFICADOR';
+[a-zA-Z]                                return 'IDENTIFICADOR';
 
 
 
@@ -258,6 +258,17 @@
             return traducidos.join(", ") + " o " + ultimo;
         }
         return traducidos[0];
+    }
+
+    /*funcion que permite retornar la variable limpia*/
+    function limpiarVariable(valor) {
+        if (!valor || typeof valor !== 'string') return valor;
+
+        if (valor.startsWith('$') || valor.startsWith('@')) {
+            return valor.substring(1);
+        }
+
+        return valor;
     }
 %}
 
@@ -582,8 +593,8 @@ ciclo_for_def                   : FOR EACH PARENT_APERTURA VARIABLE_DOLAR DOS_PU
                                 {{
                                     $$ = {
                                         tipo: 'FOR_EACH',
-                                        arreglo: $4,
-                                        iterador: $6,
+                                        arreglo: limpiarVariable($4),
+                                        iterador: limpiarVariable($6),
                                         cuerpo: $9,
                                         linea: @1.first_line,
                                         columna: @1.first_column + 1
@@ -594,7 +605,7 @@ ciclo_for_def                   : FOR EACH PARENT_APERTURA VARIABLE_DOLAR DOS_PU
                                     $$ = {
                                         tipo: 'FOR_COMPLEJO',
                                         iteradores: $3,
-                                        track: $6,
+                                        track: limpiarVariable($6),
                                         cuerpo: $8,
                                         empty: $10,
                                         linea: @1.first_line,
@@ -621,8 +632,8 @@ lista_iteradores                : lista_iteradores COMA iterador_def
 iterador_def                    : VARIABLE_DOLAR DOS_PUNTOS VARIABLE_DOLAR
                                 {{
                                     $$ = {
-                                        arreglo: $1,
-                                        iterador: $3
+                                        arreglo: limpiarVariable($1),
+                                        iterador: limpiarVariable($3)
                                     };
                                 }}
                                 ;
@@ -785,7 +796,7 @@ valor_propiedad_submit      : expresion_interior
                             {{
                                 $$ = {
                                     tipo: 'LLAMADA_FUNCION_VAR',
-                                    nombre: $1,
+                                    nombre: limpiarVariable($1),
                                     argumentos: $3,
                                     linea: @1.first_line,
                                     columna: @1.first_column + 1
@@ -820,7 +831,7 @@ argumento_llamada           : expresion_interior
                             {{ 
                                 $$ = { 
                                     tipo: 'ARROBA_VAR', 
-                                    nombre: $1, 
+                                    nombre: limpiarVariable($1), 
                                     linea: @1.first_line, 
                                     columna: @1.first_column + 1 
                                 }; 
@@ -1362,7 +1373,7 @@ fragmento_string        : TEXTO_CADENA
                         {{
                             $$ = { 
                                 tipo: 'VARIABLE', 
-                                nombre: $1,
+                                nombre: limpiarVariable($1),
                                 loc_linea: @1.first_line,
                                 loc_columna: @1.first_column + 1
                             };
@@ -1571,7 +1582,7 @@ expresion_interior      : expresion_interior MAS expresion_interior
                         {{ 
                             $$ = { 
                                 tipo: 'ACCESO_ARREGLO', 
-                                nombre: $1,
+                                nombre: limpiarVariable($1),
                                 indice: $3,
                                 loc_linea: @1.first_line, 
                                 loc_columna: @1.first_column + 1 
@@ -1581,7 +1592,7 @@ expresion_interior      : expresion_interior MAS expresion_interior
                         {{ 
                             $$ = { 
                                 tipo: 'VARIABLE', 
-                                nombre: $1,
+                                nombre: limpiarVariable($1),
                                 loc_linea: @1.first_line, 
                                 loc_columna: @1.first_column + 1 
                             };
