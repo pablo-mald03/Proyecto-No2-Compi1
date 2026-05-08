@@ -99,6 +99,20 @@
 
 "color"                             return 'COLOR';
 
+/*------***---Reconocimiento de operadores de comparacion---***------*/
+
+">="                        return 'MAYOR_IGUAL';
+
+"<="                        return 'MENOR_IGUAL';
+
+">"                         return 'MAYOR';
+
+"<"                         return 'MENOR';
+
+"=="                        return 'IGUALACION';
+
+"!="                        return 'DIFERENTE';
+
 /*------***--- Reconocimiento de caracteres especiales---***------*/
 
 ","                         return 'COMA';
@@ -129,19 +143,6 @@
 
 "%"                     return 'PORCENTAJE';
 
-/*------***---Reconocimiento de operadores de comparacion---***------*/
-
-">="                        return 'MAYOR_IGUAL';
-
-"<="                        return 'MENOR_IGUAL';
-
-">"                         return 'MAYOR';
-
-"<"                         return 'MENOR';
-
-"=="                        return 'IGUALACION';
-
-"!="                        return 'DIFERENTE';
 
 
 /*------***---Reconocimiento de operadores logicos---***------*/
@@ -1496,22 +1497,26 @@ expresion_normal        : expresion_normal MAS expresion_normal
 
 fuente_estilo       : HELVETICA
                     {{
-                        $$ = $1;
+                        $$ = "Helvetica";
                     }}
                     | SANS SERIF
                     {{
-                        $$ = $1 + " " + $2;
+                        $$ = "sans-serif";
                     }}
                     | SANS
                     {{
-                        $$ = $1;
+                        $$ = "sans-serif";
+                    }}
+                    | SERIF
+                    {{
+                        $$ = "serif";
                     }}
                     | CURSIVE
                     {{
-                        $$ = $1;
+                        $$ = "cursive";
                     }}
                     | MONO
                     {{
-                        $$ = $1;
+                        $$ = "monospace";
                     }}
                     ;

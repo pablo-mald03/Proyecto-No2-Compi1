@@ -99,6 +99,22 @@
 
 "color"                             return 'COLOR';
 
+
+/*------***---Reconocimiento de operadores de comparacion---***------*/
+
+">="                        return 'MAYOR_IGUAL';
+
+"<="                        return 'MENOR_IGUAL';
+
+">"                         return 'MAYOR';
+
+"<"                         return 'MENOR';
+
+"=="                        return 'IGUALACION';
+
+"!="                        return 'DIFERENTE';
+
+
 /*------***--- Reconocimiento de caracteres especiales---***------*/
 
 ","                         return 'COMA';
@@ -129,19 +145,6 @@
 
 "%"                     return 'PORCENTAJE';
 
-/*------***---Reconocimiento de operadores de comparacion---***------*/
-
-">="                        return 'MAYOR_IGUAL';
-
-"<="                        return 'MENOR_IGUAL';
-
-">"                         return 'MAYOR';
-
-"<"                         return 'MENOR';
-
-"=="                        return 'IGUALACION';
-
-"!="                        return 'DIFERENTE';
 
 
 /*------***---Reconocimiento de operadores logicos---***------*/

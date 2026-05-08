@@ -21,7 +21,19 @@ export class ValidadorSemanticoStyles {
             );
         }
 
-        /*Ultima fase de compilacion */
+        /*CUARTA FASE SUBFASE ALFA: Ejecucion de herencias*/
+        await this.ejecutarCuartaFaseAlfa(
+            moduloYFera.tablaSimbolosEstilos,
+            { nombreArchivo: moduloYFera.nombre }
+        );
+
+        /*CUARTA FASE SUBFASE BETA: Evaluar todas las expresiones */
+        await this.ejecutarCuartaFaseBeta(
+            moduloYFera.tablaSimbolosEstilos,
+            { nombreArchivo: moduloYFera.nombre }
+        );
+
+        /*QUINTA FASE: generacion del css*/
         this.compilarCSS(moduloYFera);
 
         for (const hijo of moduloYFera.modulosHijos) {
@@ -50,7 +62,7 @@ export class ValidadorSemanticoStyles {
             }
 
             if (!astStyles || !Array.isArray(astStyles)) {
-                return; 
+                return;
             }
 
             /* PRIMERA FASE: Registrar clases normales */
@@ -67,12 +79,6 @@ export class ValidadorSemanticoStyles {
             for (const nodo of astStyles) {
                 await this.ejecutarTerceraPasada(nodo, recursoEstilo, tablaSimbolosEstilos);
             }
-
-            /*CUARTA FASE SUBFASE ALFA: Ejecucion de herencias*/
-            await this.ejecutarCuartaFaseAlfa(tablaSimbolosEstilos, recursoEstilo);
-
-            /*CUARTA FASE SUBFASE BETA: Evaluar todas las expresiones */
-            await this.ejecutarCuartaFaseBeta(tablaSimbolosEstilos, recursoEstilo);
 
         } catch (error) {
             this.compilador.agregarError(
@@ -172,19 +178,24 @@ export class ValidadorSemanticoStyles {
             case 'VALOR_NUMERICO':
                 return valor.valorFormateado || `${valor.valor}${valor.unidad || 'px'}`;
             case 'VALOR_LITERAL':
-                if (valor.subtipo === 'COLOR_HEX') {
-                    return valor.valor; 
+                let strValor = valor.valor;
+
+                if (typeof strValor === 'string') {
+                    strValor = strValor.toLowerCase();
+
+                    if (strValor === 'line') {
+                        return 'solid';
+                    }
+                    return strValor;
                 }
-                if (valor.subtipo === 'COLOR_PRESET') {
-                    return valor.valor; 
-                }
-                return valor.valor; 
+
+                return valor.valor;
 
             case 'COLOR_RGB':
                 return valor.valorFormateado || `rgb(${valor.r}, ${valor.g}, ${valor.b})`;
 
             case 'VALOR':
-                return `${valor.valor}px`; 
+                return `${valor.valor}px`;
 
             default:
                 if (valor.valorFormateado) {
@@ -228,7 +239,8 @@ export class ValidadorSemanticoStyles {
                 propiedades: nodo.propiedades,
                 archivoOrigen: recursoEstilo.nombreArchivo,
                 rutaRelativa: recursoEstilo.rutaRelativa,
-                esDinamico: false
+                esDinamico: false,
+                expresionesResueltas: false
             },
             nodo.loc_linea,
             nodo.loc_columna
@@ -395,6 +407,7 @@ export class ValidadorSemanticoStyles {
                 archivoOrigen: recursoEstilo.nombreArchivo,
                 rutaRelativa: recursoEstilo.rutaRelativa,
                 esDinamico: true,
+                expresionesResueltas: false,
                 variableOriginal: variableFor,
                 valorIteracion: valorIteracion,
                 patronOriginal: this.obtenerPatronSelector(partes)
@@ -638,6 +651,8 @@ export class ValidadorSemanticoStyles {
     async evaluarPropiedadesSimbolo(simbolo, recursoEstilo) {
         if (!simbolo.valor || !simbolo.valor.propiedades) return;
 
+        if (simbolo.valor.expresionesResueltas) return;
+
         const propiedadesEvaluadas = [];
 
         for (const prop of simbolo.valor.propiedades) {
@@ -737,16 +752,26 @@ export class ValidadorSemanticoStyles {
                     return {
                         tipo: 'VALOR_NUMERICO',
                         valor: resultado,
-                        unidad: 'px', // Por defecto
+                        unidad: 'px',
                         valorFormateado: `${resultado}px`
                     };
                 }
 
             case 'COLOR_RGB':
                 {
+
                     const r = this.evaluarExpresion(valor.r, contexto);
                     const g = this.evaluarExpresion(valor.g, contexto);
                     const b = this.evaluarExpresion(valor.b, contexto);
+
+                    if (r === null || g === null || b === null) {
+                        return {
+                            tipo: 'COLOR_RGB',
+                            r: 0, g: 0, b: 0,
+                            valorFormateado: `rgb(0, 0, 0)`
+                        };
+                    }
+
                     return {
                         tipo: 'COLOR_RGB',
                         r: r,
@@ -754,6 +779,7 @@ export class ValidadorSemanticoStyles {
                         b: b,
                         valorFormateado: `rgb(${r}, ${g}, ${b})`
                     };
+
                 }
 
             case 'VALOR':
