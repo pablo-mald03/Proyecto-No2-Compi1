@@ -396,9 +396,13 @@ cuerpo_componentes              : secciones_def
                                 {{ 
                                     $$ = $1; 
                                 }}
-                                | switch_def
+                                | condicional_switch_def
                                 {{ 
                                     $$ = $1; 
+                                }}
+                                | componente_def
+                                {{
+                                    $$ = $1;
                                 }}
                                 | error LLAVE_CIERRE
                                 {{
@@ -433,6 +437,47 @@ cuerpo_componentes              : secciones_def
                                     $$ = { tipo: 'NODO_ERROR', linea: @1.first_line, columna: @1.first_column + 1 };
                                 }}
                                 ;
+
+/*-----=====-----Produccion que permite representar a un componente llamado por parametro-----=====-----*/
+
+componente_def              : IDENTIFICADOR PARENT_APERTURA lista_argumentos_componente PARENT_CIERRE
+                            {{
+                                $$ = {
+                                    tipo: 'COMPONENTE_PERSONALIZADO',
+                                    id: $1,
+                                    argumentos: $3,
+                                    linea: @1.first_line,
+                                    columna: @1.first_column + 1
+                                };
+                            }}
+                            ;     
+                            
+
+/*-----=====----- Lista de argumentos para componentes personalizados -----=====-----*/
+
+lista_argumentos_componente : lista_argumentos_componente COMA argumento_componente
+                            {{
+                                $1.push($3);
+                                $$ = $1;
+                            }}
+                            | argumento_componente
+                            {{
+                                $$ = [$1];
+                            }}
+                            | /* vacio */
+                            {{
+                                $$ = [];
+                            }}
+                            ;
+
+/*-----=====----- Argumentos de componentes personalizados -----=====-----*/
+
+argumento_componente        : expresion_interior
+                            {{
+                                $$ = $1;
+                            }}
+                            ;
+
 
 /*-----=====-----Produccion que permite representar un condicional switch dentro del componente-----=====-----*/
 
@@ -487,7 +532,7 @@ caso_def                        : CASE expresion_interior LLAVE_APERTURA conteni
 
 /*-----=====-----Produccion que permite representar un condicional if dentro del componente-----=====-----*/
 
-condicional_if_def :        IF PARENT_APERTURA expresion_interior PARENT_CIERRE LLAVE_APERTURA contenido_bloque LLAVE_CIERRE opciones_else
+condicional_if_def          : IF PARENT_APERTURA expresion_interior PARENT_CIERRE LLAVE_APERTURA contenido_bloque LLAVE_CIERRE opciones_else
                             {{
                                 $$ = {
                                     tipo: 'ESTRUCTURA_IF',
@@ -532,7 +577,7 @@ opciones_else :         ELSE IF PARENT_APERTURA expresion_interior PARENT_CIERRE
 
 /*-----=====-----Produccion que permite representar un ciclo for dentro del componente-----=====-----*/
 
-ciclo_for_def                   : FOR EACH PARENT_APERTURA VARIABLE_DOLAR DOS_PUNTOS VARIABLE_DOLAR PARENT_CIERRE LLAVE_APERTURA contenido_bloque LLAVE_CIERRE
+ciclo_for_def                   : FOR EACH PARENT_APERTURA VARIABLE_DOLAR DOS_PUNTOS VARIABLE_DOLAR PARENT_CIERRE LLAVE_APERTURA contenido_bloque LLAVE_CIERRE empty_opcional
                                 {{
                                     $$ = {
                                         tipo: 'FOR_EACH',
@@ -625,18 +670,29 @@ lista_componentes               : lista_componentes cuerpo_componentes
 
 /*-----=====-----Produccion que permite representar un formulario-----=====-----*/
 
-form_def                    : FORM estilos_opcionales LLAVE_APERTURA contenido_form LLAVE_CIERRE submit_opcional
-                            {{
-                                $$ = {
-                                    tipo: 'FORMULARIO',
-                                    estilos: $2,
-                                    contenido: $4,
-                                    submit: $6,      
-                                    linea: @1.first_line,
-                                    columna: @1.first_column + 1
-                                };
-                            }}
-                            ;
+form_def                : FORM LLAVE_APERTURA contenido_form LLAVE_CIERRE submit_opcional
+                        {{
+                            $$ = {
+                                tipo: 'FORMULARIO',
+                                estilos: [],
+                                contenido: $3,
+                                submit: $5,      
+                                linea: @1.first_line,
+                                columna: @1.first_column + 1
+                            };
+                        }}
+                        | FORM estilos_opcionales LLAVE_APERTURA contenido_form LLAVE_CIERRE submit_opcional
+                        {{
+                            $$ = {
+                                tipo: 'FORMULARIO',
+                                estilos: $2,
+                                contenido: $4,
+                                submit: $6,      
+                                linea: @1.first_line,
+                                columna: @1.first_column + 1
+                            };
+                        }}
+                        ;
 
 /*-----=====-----Produccion que permite representar el contenido de un formulario-----=====-----*/
 
@@ -653,19 +709,29 @@ contenido_form              : contenido_form cuerpo_componentes
 
 /*-----=====-----Produccion que permite representar el submit del formulario-----=====-----*/
 
-submit_opcional             : SUBMIT estilos_opcionales LLAVE_APERTURA lista_propiedades_submit LLAVE_CIERRE
+submit_opcional             : SUBMIT LLAVE_APERTURA lista_propiedades_submit LLAVE_CIERRE
                             {{
                                 $$ = {
                                     tipo: 'SUBMIT',
-                                    estilos: $2,
-                                    propiedades: $4,
+                                    estilos: [],
+                                    propiedades: $3,
                                     linea: @1.first_line,
                                     columna: @1.first_column + 1
                                 };
                             }}
-                            | /* vacío */
+                            | SUBMIT MENOR lista_estilos_nombres MAYOR LLAVE_APERTURA lista_propiedades_submit LLAVE_CIERRE
                             {{
-                                $$ = null;
+                                $$ = {
+                                    tipo: 'SUBMIT',
+                                    estilos: $3,
+                                    propiedades: $6,
+                                    linea: @1.first_line,
+                                    columna: @1.first_column + 1
+                                };
+                            }}
+                            | /* vacio */
+                            {{ 
+                                $$ = null; 
                             }}
                             ;
 
@@ -762,37 +828,67 @@ argumento_llamada           : expresion_interior
 
 /*-----=====----- Producciones de los Inputs -----=====-----*/
 
-input_def                   : INPUT_TEXT estilos_opcionales PARENT_APERTURA lista_propiedades_comunes PARENT_CIERRE
-                            {{
-                                $$ = { 
-                                    tipo: 'INPUT_TEXT', 
-                                    estilos: $2, 
-                                    propiedades: $4, 
-                                    linea: @1.first_line, 
-                                    columna: @1.first_column + 1 
-                                };
-                            }}
-                            | INPUT_NUMBER estilos_opcionales PARENT_APERTURA lista_propiedades_comunes PARENT_CIERRE
-                            {{
-                                $$ = { 
-                                    tipo: 'INPUT_NUMBER', 
-                                    estilos: $2, 
-                                    propiedades: $4, 
-                                    linea: @1.first_line, 
-                                    columna: @1.first_column + 1 
-                                };
-                            }}
-                            | INPUT_BOOL estilos_opcionales PARENT_APERTURA lista_propiedades_bool PARENT_CIERRE
-                            {{
-                                $$ = { 
-                                    tipo: 'INPUT_BOOL', 
-                                    estilos: $2, 
-                                    propiedades: $4, 
-                                    linea: @1.first_line, 
-                                    columna: @1.first_column + 1
-                                };
-                            }}
-                            ;
+input_def            : INPUT_TEXT PARENT_APERTURA lista_propiedades_comunes PARENT_CIERRE
+                     {{ 
+                        $$ = { 
+                            tipo: 'INPUT_TEXT', 
+                            estilos: [], 
+                            propiedades: $3, 
+                            linea: @1.first_line, 
+                            columna: @1.first_column + 1 
+                        };
+                     }}
+                     | INPUT_TEXT MENOR lista_estilos_nombres MAYOR PARENT_APERTURA lista_propiedades_comunes PARENT_CIERRE
+                     {{ 
+                         $$ = { 
+                             tipo: 'INPUT_TEXT', 
+                             estilos: $3, 
+                             propiedades: $6, 
+                             linea: @1.first_line, 
+                             columna: @1.first_column + 1 
+                         };
+                     }}
+                     | INPUT_NUMBER PARENT_APERTURA lista_propiedades_comunes PARENT_CIERRE
+                     {{ 
+                         $$ = { 
+                             tipo: 'INPUT_NUMBER', 
+                             estilos: [], 
+                             propiedades: $3, 
+                             linea: @1.first_line, 
+                             columna: @1.first_column + 1 
+                         };
+                     }}
+                     | INPUT_NUMBER MENOR lista_estilos_nombres MAYOR PARENT_APERTURA lista_propiedades_comunes PARENT_CIERRE
+                     {{ 
+                         $$ = { 
+                             tipo: 'INPUT_NUMBER', 
+                             estilos: $3, 
+                             propiedades: $6, 
+                             linea: @1.first_line, 
+                             columna: @1.first_column + 1 
+                         };
+                     }}
+                     | INPUT_BOOL PARENT_APERTURA lista_propiedades_bool PARENT_CIERRE
+                     {{ 
+                         $$ = { 
+                             tipo: 'INPUT_BOOL', 
+                             estilos: [], 
+                             propiedades: $3, 
+                             linea: @1.first_line, 
+                             columna: @1.first_column + 1
+                         };
+                     }}
+                     | INPUT_BOOL MENOR lista_estilos_nombres MAYOR PARENT_APERTURA lista_propiedades_bool PARENT_CIERRE
+                     {{ 
+                         $$ = { 
+                             tipo: 'INPUT_BOOL', 
+                             estilos: $3, 
+                             propiedades: $6, 
+                             linea: @1.first_line, 
+                             columna: @1.first_column + 1
+                         };
+                     }}
+                     ;
 
 
 /*-----=====----- Produccion que permite identificar las Propiedades del input booleano-----=====-----*/
@@ -842,6 +938,8 @@ propiedad_bool                 : ID DOS_PUNTOS valor_propiedad
                                 }}
                                 ;
 
+
+/*-----=====-----Produccion que permite recibir un valor booleano-----=====-----*/
 
 valor_propiedad_bool            : expresion_interior  
                                 {{ 
@@ -933,17 +1031,27 @@ valor_propiedad             : expresion_interior
 
 /*-----=====-----Produccion que permite representar el cuerpo de una imagen-----=====-----*/
 
-img_def                 : IMG estilos_opcionales PARENT_APERTURA lista_argumentos_img PARENT_CIERRE
-                        {{
-                            $$ = {
-                                tipo: 'COMPONENTE_IMG',
-                                estilos: $2,     
-                                urls: $4,         
-                                linea: @1.first_line,
-                                columna: @1.first_column + 1
-                            };
-                        }}
-                        ;
+img_def             : IMG PARENT_APERTURA lista_argumentos_img PARENT_CIERRE
+                    {{ 
+                        $$ = {
+                            tipo: 'COMPONENTE_IMG',
+                            estilos: null,     
+                            urls: $3,         
+                            linea: @1.first_line,
+                            columna: @1.first_column + 1
+                        };
+                    }}
+                    | IMG MENOR lista_estilos_nombres MAYOR PARENT_APERTURA lista_argumentos_img PARENT_CIERRE
+                    {{ 
+                        $$ = {
+                            tipo: 'COMPONENTE_IMG',
+                            estilos: $3,     
+                            urls: $6,         
+                            linea: @1.first_line,
+                            columna: @1.first_column + 1
+                        };
+                    }}
+                    ;
 
 /*-----=====----- Lista de argumentos/URLs para el componente IMG -----=====-----*/
 
@@ -960,45 +1068,36 @@ lista_argumentos_img    : lista_argumentos_img COMA argumento_img
 
 /*-----=====----- Produccion de argumentos de las imagenes-----=====-----*/
 
-argumento_img           : cadena_interpolada
+argumento_img           : expresion_interior
                         {{
                             $$ = $1; 
-                        }}
-                        | VARIABLE_DOLAR
-                        {{
-                            $$ = { 
-                                tipo: 'VARIABLE', 
-                                nombre: $1,
-                                linea: @1.first_line,
-                                columna: @1.first_column + 1
-                            };
-                        }}
-                        | VARIABLE_DOLAR CORCHETE_APERTURA expresion_interior CORCHETE_CIERRE
-                        {{
-                            $$ = { 
-                                tipo: 'ACCESO_ARREGLO', 
-                                nombre: $1,
-                                indice: $3,
-                                linea: @1.first_line,
-                                columna: @1.first_column + 1
-                            };
                         }}
                         ;
 
 /*-----=====-----Produccion que permite representar el cuerpo de un texto-----=====-----*/
 
-text_def                    : TEXT estilos_opcionales PARENT_APERTURA cadena_interpolada PARENT_CIERRE
-                            {{
-                                $$ = {
-                                    tipo: 'COMPONENTE_TEXTO',
-                                    estilos: $2,    
-                                    contenido: $4,    
-                                    linea: @1.first_line,
-                                    columna: @1.first_column + 1
-                                };
-                            }}
-                            ;
-
+text_def                : TEXT PARENT_APERTURA expresion_interior PARENT_CIERRE
+                        {{ 
+                            $$ = {
+                                tipo: 'COMPONENTE_TEXTO',
+                                estilos: [],    
+                                contenido: $3,    
+                                linea: @1.first_line,
+                                columna: @1.first_column + 1
+                            };
+                        }}
+                        | TEXT estilos_opcionales PARENT_APERTURA expresion_interior PARENT_CIERRE
+                        {{ 
+                            $$ = {
+                                tipo: 'COMPONENTE_TEXTO',
+                                estilos: $2,    
+                                contenido: $4,
+                                linea: @1.first_line,
+                                columna: @1.first_column + 1
+                            };
+                        }}
+                        ;
+                        
 /*-----=====-----Produccion de la definicion de la tabla-----=====-----*/
 
 tablas_def              : estilos_opcionales CORCHETE_DOBLE_APERTURA lista_filas CORCHETE_DOBLE_CIERRE
@@ -1154,10 +1253,6 @@ contenido_seccion           : contenido_seccion cuerpo_componentes
 estilos_opcionales            : MENOR lista_estilos_nombres MAYOR    
                                 {{ 
                                     $$ = $2; 
-                                }}
-                                | /* vacio */
-                                {{
-                                    $$ = null;
                                 }}
                                 ;
 
@@ -1453,7 +1548,7 @@ expresion_interior      : expresion_interior MAS expresion_interior
                         {{
                             $$ = $2; 
                         }}
-                        | NUMERO
+                        | ENTERO
                         {{
                             $$ = { 
                                 tipo: 'VALOR', 
@@ -1471,21 +1566,21 @@ expresion_interior      : expresion_interior MAS expresion_interior
                                 loc_columna: @1.first_column + 1  
                             };                       
                         }}
-                        | VARIABLE_DOLAR
-                        {{ 
-                            $$ = { 
-                                tipo: 'VARIABLE', 
-                                nombre: $1,
-                                loc_linea: @1.first_line, 
-                                loc_columna: @1.first_column + 1 
-                            };
-                        }}
                         | VARIABLE_DOLAR CORCHETE_APERTURA expresion_interior CORCHETE_CIERRE
                         {{ 
                             $$ = { 
                                 tipo: 'ACCESO_ARREGLO', 
                                 nombre: $1,
                                 indice: $3,
+                                loc_linea: @1.first_line, 
+                                loc_columna: @1.first_column + 1 
+                            };
+                        }}
+                        | VARIABLE_DOLAR
+                        {{ 
+                            $$ = { 
+                                tipo: 'VARIABLE', 
+                                nombre: $1,
                                 loc_linea: @1.first_line, 
                                 loc_columna: @1.first_column + 1 
                             };
