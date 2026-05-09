@@ -10,6 +10,7 @@ export class TranspiladorYFeraJS {
         this.compilador = compilador;
         this.manejadorDb = manejadorDb;
         this.contadorComponentes = 0;
+        this.sqliteBase64 = null;
     }
 
 
@@ -68,18 +69,47 @@ export class TranspiladorYFeraJS {
 
     /*Metodo que genera el HTML completo con links a CSS y JS compilados*/
     generarHTMLWrapper(moduloYfera, nodoMain, tablaSimbolos, tablaComponentes) {
-
         let html = '';
         html += `<!DOCTYPE html>\n<html lang="es">\n<head>\n`;
         html += `  <meta charset="UTF-8">\n`;
         html += `  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n`;
         html += `  <title>${moduloYfera.nombre.replace('.y', '')}</title>\n`;
 
+        html += `  <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>\n`;
+
         if (moduloYfera.recursosCompilados.compiledStyles) {
             html += `  <style>\n    ${moduloYfera.recursosCompilados.compiledStyles}\n  </style>\n`;
         }
 
         html += `</head>\n<body>\n  <div id="app"></div>\n\n`;
+        html += `  <script>\n`;
+        html += `    // __YFERA_ROUTES_PLACEHOLDER__\n`;
+        html += `  </script>\n`;
+
+        html += `  <script>\n`;
+        html += `    (async function() {\n`;
+        html += `      const SQL = await initSqlJs({ locateFile: file => 'https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.wasm' });\n`;
+
+        if (this.sqliteBase64) {
+            html += `      const dbBinary = Uint8Array.from(atob('${this.sqliteBase64}'), c => c.charCodeAt(0));\n`;
+            html += `      window.__YFERA_DB__ = new SQL.Database(dbBinary);\n`;
+        } else {
+            html += `      window.__YFERA_DB__ = new SQL.Database();\n`;
+        }
+
+        html += `      window.executeQuery = function(sql) {\n`;
+        html += `        try {\n`;
+        html += `          const results = window.__YFERA_DB__.exec(sql);\n`;
+        html += `          return results;\n`;
+        html += `        } catch (e) {\n`;
+        html += `          console.error('SQL Error:', e);\n`;
+        html += `          return [];\n`;
+        html += `        }\n`;
+        html += `      };\n`;
+        html += `      window.dispatchEvent(new Event('yfera-db-ready'));\n`;
+        html += `    })();\n`;
+        html += `  </script>\n`;
+
         html += `  <script type="module">\n`;
 
         if (moduloYfera.recursosCompilados.compiledComponentes) {
@@ -87,10 +117,10 @@ export class TranspiladorYFeraJS {
         }
 
         html += this.transpilarVariablesGlobales(moduloYfera.ast, tablaSimbolos);
-
         html += this.transpilarFunciones(moduloYfera.ast, tablaSimbolos, moduloYfera.nombre);
 
         html += `    async function main() {\n`;
+        html += `      await new Promise(resolve => window.addEventListener('yfera-db-ready', resolve, { once: true }));\n`;
         html += this.transpilarBloqueInstrucciones(nodoMain.cuerpo, tablaSimbolos, tablaComponentes, '      ');
         html += `    }\n\n`;
         html += `    document.addEventListener('DOMContentLoaded', () => {\n`;
@@ -193,10 +223,8 @@ export class TranspiladorYFeraJS {
             switch (instruccion.tipo) {
                 case 'LOAD_ARCHIVO':
                     const ruta = this.transpilarExpresion(instruccion.uri, tablaSimbolos);
-
-                    const nombreArchivo = ruta.replace(/"/g, '').replace('.y', '');
-                    codigo += `  // Navegar a: ${ruta}\n`;
-                    codigo += `  window.location.href = '${nombreArchivo}.html';\n`;
+                    const nombreArchivo = ruta.replace(/"/g, '').replace('.y', '.html');
+                    codigo += `  window.location.href = '${nombreArchivo}';\n`;
                     break;
 
                 case 'LOAD_ID':

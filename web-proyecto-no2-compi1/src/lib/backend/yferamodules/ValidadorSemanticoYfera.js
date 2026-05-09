@@ -260,7 +260,7 @@ export class ValidadorSemanticoYfera {
     }
 
     /*Metodo que permite validar si una query es valida para arreglo (solo SELECT) */
-    esQueryArreglo(queryFormatedString, simbolo, interpreteSQL) {  // ★ Recibir parámetros ★
+    esQueryArreglo(queryFormatedString, simbolo, interpreteSQL) { 
         const validacion = interpreteSQL.validarAccion(queryFormatedString);
 
         if (validacion.error) {

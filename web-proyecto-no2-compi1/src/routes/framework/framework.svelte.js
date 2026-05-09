@@ -453,20 +453,6 @@ export function createFrameworkState() {
 
             const compilador = new YFeraCompilador(db, this, dbManejador);
             await compilador.compilarProyecto();
-            const htmlCompilado = compilador.arbolEjecucion.compiledYFera;
-
-            if (!htmlCompilado) {
-                this.systemLog('> Error: No se genero código compilado.');
-                return;
-            }
-
-
-            const blob = new Blob([htmlCompilado], { type: 'text/html' });
-            const url = URL.createObjectURL(blob);
-
-            window.open(url, '_blank');
-
-            setTimeout(() => URL.revokeObjectURL(url), 5000);
 
             this.systemLog('> Proyecto abierto en nueva pestaña.');
         },

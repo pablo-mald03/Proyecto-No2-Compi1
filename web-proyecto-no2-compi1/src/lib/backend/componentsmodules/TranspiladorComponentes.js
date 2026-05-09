@@ -355,7 +355,7 @@ function ${nombreComponente}(${paramsJS}) {
         const estilos = nodo.estilos && Array.isArray(nodo.estilos) ? nodo.estilos.join(' ') : '';
         const contenido = await this.transpilarCuerpo(nodo.contenido, parametros, moduloYFera, tablaSimbolos, formVar);
         let submitJS = '';
-        
+
         if (nodo.submit) {
             submitJS = await this.transpilarSubmit(nodo.submit, parametros, moduloYFera, tablaSimbolos, formVar);
         }
@@ -379,8 +379,8 @@ function ${nombreComponente}(${paramsJS}) {
     }
 
     /* Metodo que permite transpilar los Input */
-    async transpilarInput(nodo, parametros, moduloYFera, tablaSimbolos, formVar)  {
-        
+    async transpilarInput(nodo, parametros, moduloYFera, tablaSimbolos, formVar) {
+
         const estilos = nodo.estilos && Array.isArray(nodo.estilos) ? nodo.estilos.join(' ') : '';
         let id = '', label = '', value = '';
 
@@ -444,7 +444,7 @@ function ${nombreComponente}(${paramsJS}) {
     }
 
     /* Metodo que permite transpilar los Submit */
-    async transpilarSubmit(nodo, parametros, moduloYFera, tablaSimbolos, formVar)  {
+    async transpilarSubmit(nodo, parametros, moduloYFera, tablaSimbolos, formVar) {
         const estilos = nodo.estilos && Array.isArray(nodo.estilos) ? nodo.estilos.join(' ') : '';
         let label = 'Submit';
         let funcion = '';
@@ -679,7 +679,7 @@ function ${nombreComponente}(${paramsJS}) {
                 }
                 return `${expr.nombre}(${args.join(', ')})`;
             case 'ARROBA_VAR':
-                return `document.getElementById('${expr.nombre}').value`;
+                return `(document.getElementById('${expr.nombre}')?.value || '')`;
             default:
                 return 'null';
         }

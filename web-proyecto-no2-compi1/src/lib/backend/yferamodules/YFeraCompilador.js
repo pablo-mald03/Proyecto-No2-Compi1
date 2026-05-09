@@ -27,6 +27,7 @@ export class YFeraCompilador {
         this.arbolEjecucion = null;
 
         this.manejadorDatabase = manejadorDb;
+        this.mapaRutas = null;
     }
 
     /*Metodo que permite compilar el proyecto*/
@@ -87,9 +88,66 @@ export class YFeraCompilador {
         this.frontState.systemLog('> Armando codigo compilado...');
 
         const transpilador = new TranspiladorYFeraJS(this, this.manejadorDatabase);
+
+        const dbFile = await this.buscarBaseDatos();
+        if (dbFile) {
+            const binarioBase64 = await this.fileToBase64(dbFile);
+            transpilador.sqliteBase64 = binarioBase64;
+        }
+
         await transpilador.transpilarModulo(this.arbolEjecucion);
+
+        this.mapaRutas = new Map();
+
+        const crearRutasP1 = (modulo) => {
+            if (!modulo || !modulo.compiledYFera) return;
+            const nombreHTML = modulo.nombre.replace('.y', '.html');
+            const blob = new Blob([modulo.compiledYFera], { type: 'text/html' });
+            this.mapaRutas.set(nombreHTML, URL.createObjectURL(blob));
+            for (const hijo of modulo.modulosHijos) crearRutasP1(hijo);
+        };
+        crearRutasP1(this.arbolEjecucion);
+
+        const reemplazarRutas = (modulo) => {
+            if (!modulo || !modulo.compiledYFera) return;
+            for (const [nombreHTML, url] of this.mapaRutas) {
+                modulo.compiledYFera = modulo.compiledYFera.replace(
+                    new RegExp(`'${nombreHTML}'`, 'g'), `'${url}'`
+                );
+            }
+            for (const hijo of modulo.modulosHijos) reemplazarRutas(hijo);
+        };
+        reemplazarRutas(this.arbolEjecucion);
+
+        const raizHTML = this.arbolEjecucion.nombre.replace('.y', '.html');
+        window.open(this.mapaRutas.get(raizHTML), '_blank');
+
         this.frontState.systemLog('> Compilacion completada exitosamente.');
 
+    }
+
+    /*Metodo que permite buscar la base de datos en la raiz */
+    async buscarBaseDatos() {
+        const todosLosSQLite = await this.dataBase.files
+            .filter(f => f.type === 'file' && f.name.endsWith('.sqlite'))
+            .toArray();
+
+        if (todosLosSQLite.length === 0) return null;
+
+        const conProfundidad = await Promise.all(todosLosSQLite.map(async (file) => {
+            let profundidad = 0;
+            let actualParentId = file.parentId;
+            while (actualParentId !== null) {
+                const folder = await this.dataBase.files.get(actualParentId);
+                if (!folder) break;
+                actualParentId = folder.parentId;
+                profundidad++;
+            }
+            return { file, profundidad };
+        }));
+
+        conProfundidad.sort((a, b) => a.profundidad - b.profundidad);
+        return conProfundidad[0]?.file || null;
     }
 
     /* Busca un archivo .y el primero que se atraviesa para poder usarlo como orquestador */
@@ -275,5 +333,25 @@ export class YFeraCompilador {
     /*Metodo que permite ir agregando los errores*/
     agregarErrores(nuevos) {
         this.erroresGlobales = [...this.erroresGlobales, ...nuevos];
+    }
+
+    /*Metodo que permite convertir a base 64 la informacion de la db */
+    async fileToBase64(file) {
+        if (file.content instanceof ArrayBuffer) {
+            return this.arrayBufferToBase64(file.content);
+        }
+        const encoder = new TextEncoder();
+        const bytes = encoder.encode(file.content);
+        return this.arrayBufferToBase64(bytes.buffer);
+    }
+
+    /*Buffer de la base de datos */
+    arrayBufferToBase64(buffer) {
+        const bytes = new Uint8Array(buffer);
+        let binary = '';
+        for (let i = 0; i < bytes.byteLength; i++) {
+            binary += String.fromCharCode(bytes[i]);
+        }
+        return btoa(binary);
     }
 }
