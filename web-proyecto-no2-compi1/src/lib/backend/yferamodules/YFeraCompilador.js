@@ -10,6 +10,8 @@ import { ValidadorSemanticoStyles } from "../stylesmodules/ValidadorSemanticoSty
 
 import { ValidadorSemanticoComponentes } from "../componentsmodules/ValidadorSemanticoComponentes";
 
+import { ValidadorCuerpoMain } from "./ValidadorCuerpoMain";
+
 /*Clase Delegada para manejar toda la logica principal para poder generar el analisis sintactico del lenguaje orquestador*/
 export class YFeraCompilador {
 
@@ -67,6 +69,19 @@ export class YFeraCompilador {
             this.frontState.notificarErrores(this.erroresGlobales);
             return;
         }
+
+        /*Cuarta fase de compilacion: Validacion semantica del cuerpo main y llamadas */
+
+        const validadorCuerpo = new ValidadorCuerpoMain(this, this.manejadorDatabase);
+        await validadorCuerpo.validarCuerpoMain(this.arbolEjecucion);
+
+        if (this.erroresGlobales.length > 0) {
+            this.frontState.notificarErrores(this.erroresGlobales);
+            return;
+        }
+
+
+        this.frontState.systemLog('> Compilacion completada exitosamente.');
 
     }
 

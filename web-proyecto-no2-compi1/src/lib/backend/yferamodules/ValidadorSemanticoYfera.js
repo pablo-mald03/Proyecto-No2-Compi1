@@ -296,7 +296,6 @@ export class ValidadorSemanticoYfera {
         return true;
     }
 
-
     /*Metodo que permite generar la primera pasada de validacion global */
     async pasadaDeclaracionGlobal(nodos, entorno) {
         if (!nodos || !Array.isArray(nodos)) return;
@@ -397,7 +396,7 @@ export class ValidadorSemanticoYfera {
                             const simboloParam = new Simbolo(
                                 param.id,
                                 param.tipado,
-                                null,  
+                                null,
                                 param.linea,
                                 param.columna,
                                 param.tipo === 'PARAMETRO_DEF_ARREGLO'
@@ -461,8 +460,6 @@ export class ValidadorSemanticoYfera {
     async recolectarLoadsDeFuncion(cuerpo, entorno) {
         if (!cuerpo || !Array.isArray(cuerpo)) return;
 
-        const entornoFuncion = new TablaSimbolos(entorno);
-
         for (const instruccion of cuerpo) {
             if (!instruccion) continue;
 
@@ -471,12 +468,12 @@ export class ValidadorSemanticoYfera {
                 case 'LOAD_ID':
                     this.loadsEnInicializacion.push({
                         nodo: instruccion,
-                        entorno: entornoFuncion
+                        entorno: entorno
                     });
                     break;
 
                 case 'DATABASE_QUERY':
-                    await this.validarQueryEnFuncion(instruccion, entornoFuncion);
+                    this.validarVariablesInterpoladas(instruccion.query, entorno);
                     break;
 
                 default:
@@ -485,54 +482,35 @@ export class ValidadorSemanticoYfera {
         }
     }
 
-    /*Metodo que permite validar una query en una funcion*/
-    async validarQueryEnFuncion(nodoQuery, entorno) {
-
-        const queryStr = this.resolverQueryTemplate(nodoQuery.query, entorno);
-
-        if (!queryStr) {
-            this.compilador.agregarError(
-                this.modulo.nombre,
-                nodoQuery.query,
-                'Semantico ',
-                `No se pudo armar query parametros sin valor`,
-                nodoQuery.linea,
-                nodoQuery.columna
-            );
+    /*Metodo que valida que las variables interpoladas en una query existan */
+    validarVariablesInterpoladas(nodoQuery, entorno) {
+        if (!nodoQuery || !nodoQuery.fragmentos || !Array.isArray(nodoQuery.fragmentos)) {
             return;
         }
 
-        try {
-            const parserDatabase = parserData;
+        for (const fragmento of nodoQuery.fragmentos) {
+            if (fragmento.tipo === 'VAR_INTERPOLADA') {
+                const nombreVar = fragmento.id;
 
-            if (parserDatabase) {
-                parserDatabase.yy.errores = [];
-                parserDatabase.parse(queryStr);
+                let variable = entorno.getVariable(nombreVar);
+                if (!variable) {
+                    variable = this.modulo.tablaSimbolos.getVariable(nombreVar);
+                }
 
-                if (parserDatabase.yy.errores && parserDatabase.yy.errores.length > 0) {
-                    for (const err of parserDatabase.yy.errores) {
-                        this.compilador.agregarError(
-                            this.modulo.nombre,
-                            queryStr,
-                            'Semantico SQL',
-                            `Error en query: ${err.descripcion || 'Error de sintaxis'}`,
-                            nodoQuery.linea,
-                            nodoQuery.columna
-                        );
-                    }
+                if (!variable) {
+                    this.compilador.agregarError(
+                        this.modulo.nombre,
+                        fragmento.id,
+                        'Semantico SQL',
+                        `Variable interpolada '${fragmento.id}' no ha sido declarada en ningun ambito.`,
+                        fragmento.linea,
+                        fragmento.columna
+                    );
                 }
             }
-        } catch (error) {
-            this.compilador.agregarError(
-                this.modulo.nombre,
-                queryStr,
-                'Semantico SQL',
-                `Error de sintaxis SQL: ${error.message}`,
-                nodoQuery.linea,
-                nodoQuery.columna
-            );
         }
     }
+
 
     /*Metodo que inicializa las variables simples */
     async inicializarVariableSimple(nodo, entorno) {
@@ -864,7 +842,6 @@ export class ValidadorSemanticoYfera {
 
     /*Metodo que permite validar las expresiones dentro del load*/
     async validarLoad(nodo, entornoActual) {
-
         const esAmbitoGlobal = (entornoActual === this.modulo.tablaSimbolos);
 
         if (nodo.tipo === 'LOAD_ARCHIVO') {
@@ -872,7 +849,6 @@ export class ValidadorSemanticoYfera {
                 const infoRuta = await this.resolverExpresionSimple(nodo.uri, entornoActual);
 
                 if (!infoRuta) {
-                    // Ya se reportó error en resolverExpresionSimple
                     return;
                 }
 

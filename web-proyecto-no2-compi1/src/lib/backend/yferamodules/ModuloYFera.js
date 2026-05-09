@@ -9,7 +9,6 @@ export class ModuloYFera {
         this.nombre = archivoRaiz.name;
         this.ast = ast;
 
-        // Aquí guardaremos los hijos (los archivos cargados por LOAD estáticos)
         this.modulosHijos = [];
 
         this.importsVisitados = new Set();
