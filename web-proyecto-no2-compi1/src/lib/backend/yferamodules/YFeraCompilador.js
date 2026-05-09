@@ -32,19 +32,24 @@ export class YFeraCompilador {
         this.frontState.notificarErrores([]);
 
         /*Primera fase de compilacion : Busqueda de la raiz*/
-
         const mainFile = await this.buscarArchivoRaiz();
 
         if (!mainFile) {
-            this.agregarError('Compilacion', 'error', 'Estructural', 'No se encontro un archivo .y en la raiz del proyecto.');
+            this.agregarError('Compilacion', 'error', 'Compilacion', 'No se encontro un archivo .y en la raiz del proyecto.');
             this.frontState.notificarErrores(this.erroresGlobales);
             return;
         }
 
         this.frontState.systemLog(`> Archivo raiz detectado: ${mainFile.name}`);
 
-        /*Segunda fase de compilacion: Busqueda de imports y loads (ENCADENAMIENTO) */
+        /*Segunda fase de compilacion: Busqueda de imports y loads */
         this.arbolEjecucion = await this.procesarModuloY(mainFile);
+
+        if (!this.arbolEjecucion) {
+            this.agregarError('Compilacion', 'error', 'Compilacion', 'No se pudo construir el árbol de ejecución.');
+            this.frontState.notificarErrores(this.erroresGlobales);
+            return;
+        }
 
         /*Tercera fase de compilacion: Donde se compilan y se evaluan todos los archivos .styles */
         const validadorStyles = new ValidadorSemanticoStyles(this, this.manejadorDatabase);
@@ -52,17 +57,14 @@ export class YFeraCompilador {
 
         if (this.erroresGlobales.length > 0) {
             this.frontState.notificarErrores(this.erroresGlobales);
-            this.frontState.systemLog('> Compilacion abortada por errores en estilos.');
             return;
         }
 
-        /*Cuarta fase de compilacion: Donde se compilan todos los componentes a html y funciones javaScript */
         const validadorComponentes = new ValidadorSemanticoComponentes(this, this.manejadorDatabase);
-
         await validadorComponentes.validarComponentes(this.arbolEjecucion);
+
         if (this.erroresGlobales.length > 0) {
             this.frontState.notificarErrores(this.erroresGlobales);
-            this.frontState.systemLog('> Compilación abortada por errores en componentes.');
             return;
         }
 
@@ -122,11 +124,12 @@ export class YFeraCompilador {
                     descripcion: err.descripcion
                 }));
                 this.agregarErrores(reporte);
-                return null;
+                const moduloError = new ModuloYFera(archivoY, []);
+                this.modulosCache.set(archivoY.id, moduloError);
+                return moduloError;
             }
 
             const moduloActual = new ModuloYFera(archivoY, ast);
-
             this.modulosCache.set(archivoY.id, moduloActual);
 
             const nodosImport = ast.filter(n => n.tipo === 'INSTRUCCION_IMPORT');
@@ -196,7 +199,9 @@ export class YFeraCompilador {
 
         } catch (error) {
             this.agregarError(archivoY.name, 'N/A', 'Compilacion', error.message);
-            return null;
+            const moduloError = new ModuloYFera(archivoY, []);
+            this.modulosCache.set(archivoY.id, moduloError);
+            return moduloError;
         }
     }
 

@@ -263,6 +263,17 @@
         }
         return traducidos[0];
     }
+
+    /*funcion que permite retornar la variable limpia*/
+    function limpiarVariable(valor) {
+        if (!valor || typeof valor !== 'string') return valor;
+
+        if (valor.startsWith('$') || valor.startsWith('@')) {
+            return valor.substring(1);
+        }
+
+        return valor;
+    }
 %}
 
 
@@ -440,6 +451,15 @@ bloque_instrucciones
                                 {{
                                     $$ = [];
                                 }}
+                                | error LLAVE_CIERRE
+                                {{
+                                    reportarError(yy, {
+                                        descripcion: 'Error en bloque de instrucciones, recuperando en cierre de llave.',
+                                        loc: @1,
+                                        texto: yytext
+                                    });
+                                    $$ = [];  
+                                }}
                                 ;
 
 
@@ -459,73 +479,78 @@ lista_instrucciones            : lista_instrucciones instruccion
 
 /*-----=====-----Produccion que permite representar cada posible instruccion que puede tener el main dentro-----=====-----*/
 
-instruccion                 : ARROBA_VAR PARENT_APERTURA lista_argumentos PARENT_CIERRE PUNTO_COMA
-                            {{
-                                $$ = {
-                                    tipo: 'LLAMADA_ARROBA_VAR',
-                                    argumentos: $3,
-                                    linea: @1.first_line,
-                                    columna: @1.first_column + 1
-                                };
-                            }}
-                            | WHILE PARENT_APERTURA expresion_logica PARENT_CIERRE LLAVE_APERTURA bloque_instrucciones LLAVE_CIERRE
-                            {{
-                                $$ = {
-                                    tipo: 'CICLO_WHILE',
-                                    condicion: $3,
-                                    cuerpo: $6,
-                                    linea: @1.first_line,
-                                    columna: @1.first_column + 1
-                                };
-                            }}
-                            | estructura_for
-                            {{
-                                $$ = $1;
-                            }}
-                            | DO LLAVE_APERTURA bloque_instrucciones LLAVE_CIERRE WHILE PARENT_APERTURA expresion_logica PARENT_CIERRE
-                            {{
-                                $$ = {
-                                    tipo: 'CICLO_DO_WHILE',
-                                    cuerpo: $3,
-                                    condicion: $7,
-                                    linea: @1.first_line,
-                                    columna: @1.first_column + 1
-                                };
-                            }}
-                            | operaciones_basicas
-                            {{
-                                $$ = $1;
-                            }}
-                            | sentencia_if
-                            {{
-                                $$ = $1;
-                            }}
-                            | BREAK PUNTO_COMA
-                            {{
-                                $$ = {
-                                    tipo: 'BREAK',
-                                    linea: @1.first_line,
-                                    columna: @1.first_column + 1
-                                };
-                            }}
-                            | CONTINUE PUNTO_COMA
-                            {{
-                                $$ = {
-                                    tipo: 'CONTINUE',
-                                    linea: @1.first_line,
-                                    columna: @1.first_column + 1
-                                };
-                            }}
-                            | error PUNTO_COMA
-                            {{
-                                reportarError(yy, {
-                                    descripcion: 'Se esperaba una instrucción valida antes del punto y coma.',
-                                    loc: @1,
-                                    texto: yytext
-                                });
-                                $$ = null;
-                            }}
-                            ;
+instruccion             : ARROBA_VAR PARENT_APERTURA lista_argumentos PARENT_CIERRE PUNTO_COMA
+                        {{
+                            $$ = {
+                                tipo: 'LLAMADA_COMPONENTE',
+                                nombre: limpiarVariable($1),
+                                argumentos: $3,
+                                linea: @1.first_line,
+                                columna: @1.first_column + 1
+                            };
+                        }}
+                        | WHILE PARENT_APERTURA expresion_logica PARENT_CIERRE LLAVE_APERTURA bloque_instrucciones LLAVE_CIERRE
+                        {{
+                            $$ = {
+                                tipo: 'CICLO_WHILE',
+                                condicion: $3,
+                                cuerpo: $6,
+                                linea: @1.first_line,
+                                columna: @1.first_column + 1
+                            };
+                        }}
+                        | estructura_for
+                        {{
+                            $$ = $1;
+                        }}
+                        | DO LLAVE_APERTURA bloque_instrucciones LLAVE_CIERRE WHILE PARENT_APERTURA expresion_logica PARENT_CIERRE
+                        {{
+                            $$ = {
+                                tipo: 'CICLO_DO_WHILE',
+                                cuerpo: $3,
+                                condicion: $7,
+                                linea: @1.first_line,
+                                columna: @1.first_column + 1
+                            };
+                        }}
+                        | operaciones_basicas
+                        {{
+                            $$ = $1;
+                        }}
+                        | sentencia_if
+                        {{
+                            $$ = $1;
+                        }}
+                        | sentencia_switch
+                        {{
+                            $$ = $1;
+                        }}
+                        | BREAK PUNTO_COMA
+                        {{
+                            $$ = {
+                                tipo: 'BREAK',
+                                linea: @1.first_line,
+                                columna: @1.first_column + 1
+                            };
+                        }}
+                        | CONTINUE PUNTO_COMA
+                        {{
+                            $$ = {
+                                tipo: 'CONTINUE',
+                                linea: @1.first_line,
+                                columna: @1.first_column + 1
+                            };
+                        }}
+                        | error PUNTO_COMA
+                        {{
+                            reportarError(yy, {
+                                descripcion: 'Se esperaba una instrucción valida antes del punto y coma.',
+                                loc: @1,
+                                texto: yytext
+                            });
+                            $$ = null;
+                        }}
+                        ;
 
 /*-----=====-----Produccion que permite definir la produccion de la estructura del for-----=====-----*/
 
@@ -590,10 +615,6 @@ lista_casos                 : lista_casos caso
                             {{
                                 $$ = [$1];
                             }}
-                            | /* vacio*/
-                            {{
-                                $$ = [];
-                            }}
                             ;
 
 /*-----=====---*****--Produccion que permite definir los casos y el cuerpo de los casos--*****---=====-----*/
@@ -613,6 +634,20 @@ caso                        : CASE expresion_logica DOS_PUNTOS bloque_instruccio
                                 $$ = {
                                     tipo: 'DEFAULT',
                                     instrucciones: $3,
+                                    linea: @1.first_line,
+                                    columna: @1.first_column + 1
+                                };
+                            }}
+                            | CASE error DOS_PUNTOS bloque_instrucciones
+                            {{
+                                reportarError(yy, {
+                                    descripcion: 'Expresión invalida en un caso del switch.',
+                                    loc: @2,
+                                    texto: yytext
+                                });
+                                $$ = {
+                                    tipo: 'CASO_ERROR',
+                                    instrucciones: $4,
                                     linea: @1.first_line,
                                     columna: @1.first_column + 1
                                 };
@@ -764,6 +799,15 @@ cuerpo_funciones        : cuerpo_funciones instruccion_funcion
                         | instruccion_funcion
                         {{
                             $$ = [$1]; 
+                        }}
+                        | error PUNTO_COMA
+                        {{
+                            reportarError(yy, {
+                                descripcion: 'Error en instrucción de funcion.',
+                                loc: @1,
+                                texto: yytext
+                            });
+                            $$ = [];
                         }}
                         ;
 

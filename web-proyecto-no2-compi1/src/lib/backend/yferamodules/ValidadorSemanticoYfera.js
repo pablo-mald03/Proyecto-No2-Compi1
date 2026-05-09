@@ -98,19 +98,44 @@ export class ValidadorSemanticoYfera {
             }
             else if (fragmento.tipo === 'VAR_INTERPOLADA') {
                 const nombreVar = fragmento.id.replace('$', '').trim();
+                let variable = entorno.getVariable(nombreVar);
 
-                const variable = entorno.getVariable(nombreVar);
+                if (!variable) {
+                    variable = this.modulo.tablaSimbolos.getVariable(nombreVar);
+                }
 
                 if (!variable) {
                     this.compilador.agregarError(
                         this.modulo.nombre,
                         fragmento.id,
                         'Semantico SQL',
-                        `Variable interpolada '${fragmento.id}' no ha sido declarada.`,
+                        `Variable interpolada '${fragmento.id}' no ha sido declarada en ningún ámbito.`,
                         fragmento.linea,
                         fragmento.columna
                     );
                     return null;
+                }
+
+                const esAmbitoGlobal = (entorno === this.modulo.tablaSimbolos);
+
+                if (!esAmbitoGlobal) {
+                    if (variable.tipoDato !== 'ENTERA' &&
+                        variable.tipoDato !== 'FLOAT' &&
+                        variable.tipoDato !== 'CADENA' &&
+                        variable.tipoDato !== 'BOOLEANA' &&
+                        variable.tipoDato !== 'CARACTER') {
+                        this.compilador.agregarError(
+                            this.modulo.nombre,
+                            fragmento.id,
+                            'Semantico SQL',
+                            `Variable interpolada '${fragmento.id}' tiene tipo no interpolable: ${variable.tipoDato}.`,
+                            fragmento.linea,
+                            fragmento.columna
+                        );
+                        return null;
+                    }
+                    queryArmada += `\${${nombreVar}}`;
+                    continue;
                 }
 
                 if (variable.valor === null || variable.valor === undefined) {
@@ -135,7 +160,6 @@ export class ValidadorSemanticoYfera {
                 queryArmada += valorStr;
             }
         }
-
         return queryArmada;
     }
 
@@ -344,7 +368,6 @@ export class ValidadorSemanticoYfera {
                         );
                         continue;
                     }
-
                     const simboloFunc = new Simbolo(
                         nodo.id,
                         'FUNCION',
@@ -355,7 +378,35 @@ export class ValidadorSemanticoYfera {
                     );
                     entorno.setVariable(simboloFunc);
 
-                    await this.recolectarLoadsDeFuncion(nodo.cuerpo, entorno);
+                    const entornoFuncion = new TablaSimbolos(entorno);
+
+                    if (nodo.parametros && Array.isArray(nodo.parametros)) {
+                        for (const param of nodo.parametros) {
+                            if (entornoFuncion.existeLocal(param.id)) {
+                                this.compilador.agregarError(
+                                    this.modulo.nombre,
+                                    param.id,
+                                    'Semantico',
+                                    `Parámetro duplicado '${param.id}' en función '${nodo.id}'.`,
+                                    param.linea,
+                                    param.columna
+                                );
+                                continue;
+                            }
+
+                            const simboloParam = new Simbolo(
+                                param.id,
+                                param.tipado,
+                                null,  
+                                param.linea,
+                                param.columna,
+                                param.tipo === 'PARAMETRO_DEF_ARREGLO'
+                            );
+                            entornoFuncion.setVariable(simboloParam);
+                        }
+                    }
+
+                    await this.recolectarLoadsDeFuncion(nodo.cuerpo, entornoFuncion);
                     break;
 
                 case 'FUNCION_MAIN':
@@ -410,6 +461,8 @@ export class ValidadorSemanticoYfera {
     async recolectarLoadsDeFuncion(cuerpo, entorno) {
         if (!cuerpo || !Array.isArray(cuerpo)) return;
 
+        const entornoFuncion = new TablaSimbolos(entorno);
+
         for (const instruccion of cuerpo) {
             if (!instruccion) continue;
 
@@ -418,12 +471,12 @@ export class ValidadorSemanticoYfera {
                 case 'LOAD_ID':
                     this.loadsEnInicializacion.push({
                         nodo: instruccion,
-                        entorno: entorno
+                        entorno: entornoFuncion
                     });
                     break;
 
                 case 'DATABASE_QUERY':
-                    await this.validarQueryEnFuncion(instruccion, entorno);
+                    await this.validarQueryEnFuncion(instruccion, entornoFuncion);
                     break;
 
                 default:
@@ -811,46 +864,93 @@ export class ValidadorSemanticoYfera {
 
     /*Metodo que permite validar las expresiones dentro del load*/
     async validarLoad(nodo, entornoActual) {
-        let infoRuta = null;
+
+        const esAmbitoGlobal = (entornoActual === this.modulo.tablaSimbolos);
 
         if (nodo.tipo === 'LOAD_ARCHIVO') {
-            infoRuta = await this.resolverExpresionSimple(nodo.uri, entornoActual);
+            if (esAmbitoGlobal) {
+                const infoRuta = await this.resolverExpresionSimple(nodo.uri, entornoActual);
+
+                if (!infoRuta) {
+                    // Ya se reportó error en resolverExpresionSimple
+                    return;
+                }
+
+                if (infoRuta.tipo !== 'CADENA' || !infoRuta.valor) {
+                    this.compilador.agregarError(
+                        this.modulo.nombre,
+                        "load",
+                        'Semantico',
+                        `El LOAD requiere una ruta tipo STRING.`,
+                        nodo.linea,
+                        nodo.columna
+                    );
+                    return;
+                }
+
+                this.loadsDetectados.push({
+                    ruta: infoRuta.valor.trim(),
+                    linea: nodo.linea,
+                    columna: nodo.columna
+                });
+            } else {
+                const tipoExpresion = await this.obtenerTipoExpresion(nodo.uri, entornoActual);
+
+                if (!tipoExpresion) {
+                    return;
+                }
+
+                if (tipoExpresion !== 'CADENA') {
+                    this.compilador.agregarError(
+                        this.modulo.nombre,
+                        "load",
+                        'Semantico',
+                        `El LOAD requiere una expresión tipo STRING, pero se encontró '${tipoExpresion}'.`,
+                        nodo.linea,
+                        nodo.columna
+                    );
+                }
+            }
         }
         else if (nodo.tipo === 'LOAD_ID') {
-            const variable = entornoActual.getVariable(nodo.id);
+            let variable = entornoActual.getVariable(nodo.id);
+
+            if (!variable) {
+                variable = this.modulo.tablaSimbolos.getVariable(nodo.id);
+            }
 
             if (!variable) {
                 this.compilador.agregarError(
                     this.modulo.nombre,
                     nodo.id,
                     'Semantico',
-                    `Variable '${nodo.id}' no definida.`,
+                    `Variable '${nodo.id}' usada en LOAD no está definida en ningún ámbito.`,
                     nodo.linea,
                     nodo.columna
                 );
                 return;
             }
 
-            infoRuta = { valor: variable.valor, tipo: variable.tipoDato };
-        }
+            if (variable.tipoDato !== 'CADENA') {
+                this.compilador.agregarError(
+                    this.modulo.nombre,
+                    nodo.id,
+                    'Semantico',
+                    `LOAD requiere una variable tipo STRING, pero '${nodo.id}' es de tipo ${variable.tipoDato}.`,
+                    nodo.linea,
+                    nodo.columna
+                );
+                return;
+            }
 
-        if (!infoRuta || infoRuta.tipo !== 'CADENA' || !infoRuta.valor) {
-            this.compilador.agregarError(
-                this.modulo.nombre,
-                "load",
-                'Semantico',
-                `El LOAD requiere una ruta tipo STRING.`,
-                nodo.linea,
-                nodo.columna
-            );
-            return;
+            if (esAmbitoGlobal && variable.valor !== null && variable.valor !== undefined) {
+                this.loadsDetectados.push({
+                    ruta: variable.valor.trim(),
+                    linea: nodo.linea,
+                    columna: nodo.columna
+                });
+            }
         }
-
-        this.loadsDetectados.push({
-            ruta: infoRuta.valor.trim(),
-            linea: nodo.linea,
-            columna: nodo.columna
-        });
     }
 
     /*Metodo que permite procesar todos los loads pendientes*/
@@ -869,6 +969,102 @@ export class ValidadorSemanticoYfera {
             case 'CHAR': return 'CARACTER';
             case 'STRING': return 'CADENA';
             default: return 'DESCONOCIDO';
+        }
+    }
+
+    /*Metodo que permite obtener SOLO el tipo de una expresión sin resolver su valor */
+    async obtenerTipoExpresion(nodo, entorno) {
+        if (!nodo) return null;
+
+        switch (nodo.tipo) {
+            case 'INT':
+                return 'ENTERA';
+            case 'FLOAT':
+                return 'FLOAT';
+            case 'VALOR_CADENA':
+                return 'CADENA';
+            case 'CHAR':
+                return 'CARACTER';
+            case 'BOOL':
+                return 'BOOLEANA';
+
+            case 'ID':
+                let variable = entorno.getVariable(nodo.valor);
+                if (!variable) {
+                    variable = this.modulo.tablaSimbolos.getVariable(nodo.valor);
+                }
+
+                if (!variable) {
+                    this.compilador.agregarError(
+                        this.modulo.nombre,
+                        nodo.valor,
+                        'Semantico',
+                        `Variable '${nodo.valor}' no definida.`,
+                        nodo.linea,
+                        nodo.columna
+                    );
+                    return null;
+                }
+
+                return variable.tipoDato;
+
+            case 'ACCESO_ARREGLO':
+                let arreglo = entorno.getVariable(nodo.valor || nodo.id);
+                if (!arreglo) {
+                    arreglo = this.modulo.tablaSimbolos.getVariable(nodo.valor || nodo.id);
+                }
+
+                if (!arreglo) {
+                    this.compilador.agregarError(
+                        this.modulo.nombre,
+                        nodo.valor || nodo.id,
+                        'Semantico',
+                        `Variable '${nodo.valor || nodo.id}' no definida.`,
+                        nodo.linea,
+                        nodo.columna
+                    );
+                    return null;
+                }
+
+                if (!arreglo.esArreglo) {
+                    this.compilador.agregarError(
+                        this.modulo.nombre,
+                        nodo.valor || nodo.id,
+                        'Semantico',
+                        `'${nodo.valor || nodo.id}' no es un arreglo.`,
+                        nodo.linea,
+                        nodo.columna
+                    );
+                    return null;
+                }
+
+                return arreglo.tipoDato;
+
+            case 'ARITMETICA':
+                const tipoIzq = await this.obtenerTipoExpresion(nodo.izq, entorno);
+                const tipoDer = await this.obtenerTipoExpresion(nodo.der, entorno);
+
+                if (!tipoIzq || !tipoDer) return null;
+
+                if (tipoIzq === 'FLOAT' || tipoDer === 'FLOAT') return 'FLOAT';
+                if (tipoIzq === 'CADENA' || tipoDer === 'CADENA') return 'CADENA';
+                return 'ENTERA';
+
+            case 'UNARIA':
+                if (nodo.op === 'NEGATIVO') {
+                    return await this.obtenerTipoExpresion(nodo.der, entorno);
+                }
+                if (nodo.op === 'NOT') {
+                    return 'BOOLEANA';
+                }
+                return null;
+
+            case 'RELACIONAL':
+            case 'LOGICA':
+                return 'BOOLEANA';
+
+            default:
+                return null;
         }
     }
 
