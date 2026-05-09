@@ -37,6 +37,14 @@ export class ValidadorSemanticoComponentes {
 
     /*Metodo que permite analizar los bloques de componentes */
     async analizarBloqueComponente(recursoComponente, moduloYFera) {
+
+        const tabla = moduloYFera.tablaSimbolosComponentes;
+        for (const [, simbolo] of tabla.variables) {
+            if (simbolo.valor?.archivoOrigen === recursoComponente.nombreArchivo) {
+                return; 
+            }
+        }
+
         try {
             const tablaSimbolosComponentes = moduloYFera.tablaSimbolosComponentes;
             const tablaSimbolosEstilos = moduloYFera.tablaSimbolosEstilos;

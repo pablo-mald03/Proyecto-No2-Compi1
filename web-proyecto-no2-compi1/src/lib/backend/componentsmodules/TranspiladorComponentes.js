@@ -470,12 +470,7 @@ function ${nombreComponente}(${paramsJS}) {
     
     ${formVar}.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const formData = new FormData(${formVar});
-        const data = {};
-        for (let [key, val] of formData.entries()) {
-            data[key] = val;
-        }
-        ${funcion}(data);
+        ${funcion};
     });
 `;
         } else {
@@ -488,7 +483,6 @@ function ${nombreComponente}(${paramsJS}) {
 `;
         }
     }
-
     /* For Each */
     async transpilarForEach(nodo, parametros, moduloYFera, tablaSimbolos) {
         const arreglo = nodo.arreglo;

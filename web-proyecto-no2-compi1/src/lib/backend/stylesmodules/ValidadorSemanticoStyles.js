@@ -14,12 +14,11 @@ export class ValidadorSemanticoStyles {
 
     /*Metodo que permite validar recursivamente los estilos de cada modulo*/
     async validarEstilos(moduloYFera) {
+
         for (const recursoEstilo of moduloYFera.recursos.estilos) {
-            await this.analizarBloqueStyles(
-                recursoEstilo,
-                moduloYFera.tablaSimbolosEstilos
-            );
+            await this.analizarBloqueStyles(recursoEstilo, moduloYFera.tablaSimbolosEstilos);
         }
+        this.compilarCSS(moduloYFera);
 
         /*CUARTA FASE SUBFASE ALFA: Ejecucion de herencias*/
         await this.ejecutarCuartaFaseAlfa(
@@ -43,6 +42,18 @@ export class ValidadorSemanticoStyles {
 
     /*Metodo que analiza un bloque de CSS mergeado y construye su tabla de símbolos */
     async analizarBloqueStyles(recursoEstilo, tablaSimbolosEstilos) {
+
+        for (const [, simbolo] of tablaSimbolosEstilos.variables) {
+            if (simbolo.valor?.archivoOrigen === recursoEstilo.nombreArchivo) {
+                return; 
+            }
+        }
+
+        for (const [nombre, simbolo] of tablaSimbolosEstilos.variables) {
+            if (simbolo.valor && simbolo.valor.archivoOrigen === recursoEstilo.nombreArchivo) {
+                return;
+            }
+        }
         try {
             parserStyles.yy.errores = [];
 

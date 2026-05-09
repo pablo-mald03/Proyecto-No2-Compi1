@@ -260,7 +260,7 @@ export class ValidadorSemanticoYfera {
     }
 
     /*Metodo que permite validar si una query es valida para arreglo (solo SELECT) */
-    esQueryArreglo(queryFormatedString, simbolo, interpreteSQL) { 
+    esQueryArreglo(queryFormatedString, simbolo, interpreteSQL) {
         const validacion = interpreteSQL.validarAccion(queryFormatedString);
 
         if (validacion.error) {
@@ -870,20 +870,21 @@ export class ValidadorSemanticoYfera {
                     columna: nodo.columna
                 });
             } else {
-                const tipoExpresion = await this.obtenerTipoExpresion(nodo.uri, entornoActual);
-
-                if (!tipoExpresion) {
-                    return;
+                if (nodo.uri && nodo.uri.tipo === 'VALOR_CADENA') {
+                    this.loadsDetectados.push({
+                        ruta: nodo.uri.valor.trim(),
+                        linea: nodo.linea,
+                        columna: nodo.columna
+                    });
                 }
-
+                
+                const tipoExpresion = await this.obtenerTipoExpresion(nodo.uri, entornoActual);
+                if (!tipoExpresion) return;
                 if (tipoExpresion !== 'CADENA') {
                     this.compilador.agregarError(
-                        this.modulo.nombre,
-                        "load",
-                        'Semantico',
+                        this.modulo.nombre, "load", 'Semantico',
                         `El LOAD requiere una expresión tipo STRING, pero se encontró '${tipoExpresion}'.`,
-                        nodo.linea,
-                        nodo.columna
+                        nodo.linea, nodo.columna
                     );
                 }
             }

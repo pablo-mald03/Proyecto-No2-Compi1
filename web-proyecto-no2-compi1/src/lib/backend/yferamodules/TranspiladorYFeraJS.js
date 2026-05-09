@@ -222,9 +222,9 @@ export class TranspiladorYFeraJS {
 
             switch (instruccion.tipo) {
                 case 'LOAD_ARCHIVO':
-                    const ruta = this.transpilarExpresion(instruccion.uri, tablaSimbolos);
-                    const nombreArchivo = ruta.replace(/"/g, '').replace('.y', '.html');
-                    codigo += `  window.location.href = '${nombreArchivo}';\n`;
+                    let ruta = this.transpilarExpresion(instruccion.uri, tablaSimbolos);
+                    ruta = ruta.replace(/"/g, '').replace('.y', '.html').replace(/^\.\//, '');
+                    codigo += `  window.location.href = '${ruta}';\n`;
                     break;
 
                 case 'LOAD_ID':
