@@ -12,7 +12,6 @@ export class ValidadorCuerpoMain {
     async validarCuerpoMain(moduloYfera) {
         if (!moduloYfera || !moduloYfera.ast) return;
 
-
         const nodoMain = moduloYfera.ast.find(nodo => nodo.tipo === 'FUNCION_MAIN');
 
         if (!nodoMain) {
@@ -25,7 +24,6 @@ export class ValidadorCuerpoMain {
             moduloYfera.tablaSimbolosComponentes,
             moduloYfera.nombre
         );
-
 
         for (const moduloHijo of moduloYfera.modulosHijos) {
             await this.validarCuerpoMain(moduloHijo);
@@ -41,7 +39,7 @@ export class ValidadorCuerpoMain {
 
             switch (instruccion.tipo) {
                 case 'LLAMADA_COMPONENTE':
-                    await this.validarLlamadaComponente(instruccion, tablaComponentes, nombreArchivo);
+                    await this.validarLlamadaComponente(instruccion, tablaComponentes, tablaSimbolos, nombreArchivo);
                     break;
 
                 case 'ESTRUCTURA_IF':
@@ -123,8 +121,55 @@ export class ValidadorCuerpoMain {
         }
     }
 
+    /*Metodo que obtiene informacion completa de un argumento */
+    obtenerInfoArgumento(nodo, tablaSimbolos) {
+        if (!nodo) return null;
+
+        switch (nodo.tipo) {
+            case 'INT':
+                return { tipoBase: 'ENTERA', esArreglo: false };
+            case 'FLOAT':
+                return { tipoBase: 'FLOAT', esArreglo: false };
+            case 'VALOR_CADENA':
+                return { tipoBase: 'CADENA', esArreglo: false };
+            case 'CHAR':
+                return { tipoBase: 'CARACTER', esArreglo: false };
+            case 'BOOL':
+                return { tipoBase: 'BOOLEANA', esArreglo: false };
+
+            case 'ACCESO_ARREGLO':
+
+                const simboloArr = tablaSimbolos.getVariable(nodo.valor || nodo.id);
+                if (!simboloArr) {
+                    return { tipoBase: 'VARIABLE', esArreglo: false };
+                }
+                return {
+                    tipoBase: simboloArr.tipoDato,
+                    esArreglo: false
+                };
+
+            case 'ID':
+                const simbolo = tablaSimbolos.getVariable(nodo.valor);
+                if (!simbolo) {
+                    return { tipoBase: 'VARIABLE', esArreglo: false };
+                }
+
+                if (simbolo.tipoDato === 'FUNCTION') {
+                    return { tipoBase: 'FUNCTION', esArreglo: false };
+                }
+
+                return {
+                    tipoBase: simbolo.tipoDato,
+                    esArreglo: simbolo.esArreglo
+                };
+
+            default:
+                return null;
+        }
+    }
+
     /*Metodo que valida una llamada a componente */
-    async validarLlamadaComponente(nodo, tablaComponentes, nombreArchivo) {
+    async validarLlamadaComponente(nodo, tablaComponentes, tablaSimbolos, nombreArchivo) {
         const nombreComponente = nodo.nombre;
 
         const simboloComponente = tablaComponentes.getVariable(nombreComponente);
@@ -161,64 +206,65 @@ export class ValidadorCuerpoMain {
             const paramEsperado = parametrosEsperados[i];
             const argRecibido = argumentosRecibidos[i];
 
-            if (argRecibido && argRecibido.tipo) {
-                const tipoArg = this.obtenerTipoArgumento(argRecibido);
+            if (!argRecibido || !argRecibido.tipo) continue;
 
-                if (tipoArg && tipoArg !== 'VARIABLE' && !this.sonTiposCompatibles(paramEsperado.tipo, tipoArg)) {
-                    this.compilador.agregarError(
-                        nombreArchivo,
-                        nombreComponente,
-                        'Semantico',
-                        `Parámetro '${paramEsperado.nombre}' (${i + 1}) espera tipo ${paramEsperado.tipo}, ` +
-                        `pero se envió tipo ${tipoArg}.`,
-                        nodo.linea,
-                        nodo.columna
-                    );
-                }
+            const infoArg = this.obtenerInfoArgumento(argRecibido, tablaSimbolos);
 
-                // Validar si se espera arreglo pero se envió otra cosa
-                if (paramEsperado.esArreglo &&
-                    tipoArg !== 'VARIABLE' &&
-                    argRecibido.tipo !== 'ACCESO_ARREGLO' &&
-                    argRecibido.tipo !== 'ARREGLO_INICIALIZADO' &&
-                    argRecibido.tipo !== 'ARREGLO_VACIO' &&
-                    argRecibido.tipo !== 'ID') {
-                    this.compilador.agregarError(
-                        nombreArchivo,
-                        nombreComponente,
-                        'Semantico',
-                        `Parámetro '${paramEsperado.nombre}' (${i + 1}) espera un arreglo.`,
-                        nodo.linea,
-                        nodo.columna
-                    );
-                }
+            if (!infoArg) continue;
+
+            if (infoArg.tipoBase === 'VARIABLE') continue;
+
+            if (!this.sonTiposCompatibles(paramEsperado.tipo, infoArg.tipoBase)) {
+                this.compilador.agregarError(
+                    nombreArchivo,
+                    nombreComponente,
+                    'Semantico',
+                    `Parámetro '${paramEsperado.nombre}' (${i + 1}) espera tipo ${paramEsperado.tipo}, ` +
+                    `pero se envió tipo ${infoArg.tipoBase}.`,
+                    nodo.linea,
+                    nodo.columna
+                );
             }
-        }
-    }
 
-    /*Metodo auxiliar para obtener el tipo de un argumento */
-    obtenerTipoArgumento(nodo) {
-        if (!nodo) return null;
+            if (paramEsperado.esArreglo && !infoArg.esArreglo) {
+                this.compilador.agregarError(
+                    nombreArchivo,
+                    nombreComponente,
+                    'Semantico',
+                    `Parámetro '${paramEsperado.nombre}' (${i + 1}) espera un arreglo, ` +
+                    `pero se envió un valor simple.`,
+                    nodo.linea,
+                    nodo.columna
+                );
+            }
 
-        switch (nodo.tipo) {
-            case 'INT': return 'ENTERA';
-            case 'FLOAT': return 'FLOAT';
-            case 'VALOR_CADENA': return 'CADENA';
-            case 'CHAR': return 'CARACTER';
-            case 'BOOL': return 'BOOLEANA';
-            case 'ID': return 'VARIABLE';
-            case 'ACCESO_ARREGLO': return 'ARREGLO';
-            default: return null;
+            if (!paramEsperado.esArreglo && infoArg.esArreglo) {
+                this.compilador.agregarError(
+                    nombreArchivo,
+                    nombreComponente,
+                    'Semantico',
+                    `Parámetro '${paramEsperado.nombre}' (${i + 1}) no espera un arreglo, ` +
+                    `pero se envió el arreglo completo. ¿Quizás quisiste usar un índice?`,
+                    nodo.linea,
+                    nodo.columna
+                );
+            }
         }
     }
 
     /*Metodo que compara tipos compatibles */
     sonTiposCompatibles(tipoDestino, tipoValor) {
         if (tipoDestino === tipoValor) return true;
+
+        if (tipoDestino === 'FUNCTION' && tipoValor === 'FUNCTION') return true;
+
         if (tipoDestino === 'FLOAT' && tipoValor === 'ENTERA') return true;
         if (tipoDestino === 'ENTERA' && tipoValor === 'CARACTER') return true;
         if (tipoDestino === 'CARACTER' && tipoValor === 'ENTERA') return true;
         if (tipoDestino === 'ENTERA' && tipoValor === 'BOOLEANA') return true;
+
+        if (tipoDestino === 'ARREGLO' && tipoValor === 'ARREGLO') return true;
+
         return false;
     }
 }

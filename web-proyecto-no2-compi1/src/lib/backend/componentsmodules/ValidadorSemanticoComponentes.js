@@ -97,8 +97,6 @@ export class ValidadorSemanticoComponentes {
 
             moduloYFera.recursosCompilados.compiledComponentes = codigoModulo;
 
-            console.log(moduloYFera.recursosCompilados.compiledComponentes);
-
         } catch (error) {
             this.compilador.agregarError(
                 recursoComponente.nombreArchivo,

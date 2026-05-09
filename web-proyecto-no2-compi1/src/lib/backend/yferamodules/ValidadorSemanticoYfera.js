@@ -369,7 +369,7 @@ export class ValidadorSemanticoYfera {
                     }
                     const simboloFunc = new Simbolo(
                         nodo.id,
-                        'FUNCION',
+                        'FUNCTION',
                         nodo,
                         nodo.linea,
                         nodo.columna,
