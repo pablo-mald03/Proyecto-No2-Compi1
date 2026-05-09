@@ -88,20 +88,7 @@ export class YFeraCompilador {
 
         const transpilador = new TranspiladorYFeraJS(this, this.manejadorDatabase);
         await transpilador.transpilarModulo(this.arbolEjecucion);
-
-        //console.log('Codigo JavaScript generado:\n', this.arbolEjecucion.compiledYFera);
-
         this.frontState.systemLog('> Compilacion completada exitosamente.');
-
-        // También en hijos
-        for (const hijo of this.arbolEjecucion.modulosHijos) {
-            console.log(`--- Hijo: ${hijo.nombre} ---`);
-            console.log('Estilos:', hijo.recursosCompilados.compiledStyles);
-            console.log('Componentes:', hijo.recursosCompilados.compiledComponentes);
-        }
-
-        console.log('=== HTML FINAL ===');
-        console.log(this.arbolEjecucion.compiledYFera);
 
     }
 

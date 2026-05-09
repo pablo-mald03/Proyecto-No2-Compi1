@@ -335,7 +335,7 @@
 
 			<button
 				class="btn-preview fw-bold px-3"
-				onclick={() => fs.triggerMenuAction('Iniciando Preview')}
+				onclick={() => fs.triggerMenuAction('Preview')}
 				title="Cargar preview"
 			>
 				<i class="bi bi-play-fill"></i> PREVIEW

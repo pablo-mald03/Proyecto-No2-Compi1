@@ -344,12 +344,17 @@ export function createFrameworkState() {
         async triggerMenuAction(action) {
             this.showConsole = true;
 
-
             if (action == 'Compilando') {
                 await this.saveAllFiles();
 
                 /*Delegacion al backend PATRON EXPERTO */
                 await this.compilerProyecto();
+            }
+            else if (action == 'Preview') {
+                await this.saveAllFiles();
+
+                /*Delegacion al backend PATRON EXPERTO */
+                await this.previewProyecto();
             }
             else if (action === 'Nuevo_Proyecto') {
                 this.createNewProject();
@@ -411,7 +416,7 @@ export function createFrameworkState() {
                     return;
                 }
 
-                await Promise.all(archivos.map(archivo => 
+                await Promise.all(archivos.map(archivo =>
                     db.files.update(archivo.id, { content: archivo.content })
                 ));
 
@@ -426,6 +431,44 @@ export function createFrameworkState() {
 
             const compilador = new YFeraCompilador(db, this, dbManejador);
             await compilador.compilarProyecto();
+            const htmlCompilado = compilador.arbolEjecucion.compiledYFera;
+
+            if (!htmlCompilado) {
+                this.systemLog('> Error: No se genero código compilado.');
+                return;
+            }
+
+            const blob = new Blob([htmlCompilado], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = compilador.arbolEjecucion.nombre.replace('.y', '.html');
+            a.click();
+            URL.revokeObjectURL(url);
+
+            this.systemLog('> Proyecto descargado.');
+        },
+        /*Metodo que permite generar toda la comunicacion con el backend para que se reciba la preview y compilacion del proyecto */
+        async previewProyecto() {
+
+            const compilador = new YFeraCompilador(db, this, dbManejador);
+            await compilador.compilarProyecto();
+            const htmlCompilado = compilador.arbolEjecucion.compiledYFera;
+
+            if (!htmlCompilado) {
+                this.systemLog('> Error: No se genero código compilado.');
+                return;
+            }
+
+
+            const blob = new Blob([htmlCompilado], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+
+            window.open(url, '_blank');
+
+            setTimeout(() => URL.revokeObjectURL(url), 5000);
+
+            this.systemLog('> Proyecto abierto en nueva pestaña.');
         },
         /*Metodo que permite ejecutar un comando en la consola*/
         async handleCommand(event) {

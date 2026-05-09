@@ -50,33 +50,33 @@ function ${nombreComponente}(${paramsJS}) {
     }
 
     /* Transpila el cuerpo a codigo JS que construye DOM */
-    async transpilarCuerpo(nodo, parametros, moduloYFera, tablaSimbolos) {
+    async transpilarCuerpo(nodo, parametros, moduloYFera, tablaSimbolos, contextoVar = null) {
         if (!nodo) return '';
 
         let codigo = '';
         if (Array.isArray(nodo)) {
             for (const elemento of nodo) {
-                codigo += await this.transpilarNodo(elemento, parametros, moduloYFera, tablaSimbolos);
+                codigo += await this.transpilarNodo(elemento, parametros, moduloYFera, tablaSimbolos, contextoVar);
             }
         } else if (typeof nodo === 'object') {
-            codigo += await this.transpilarNodo(nodo, parametros, moduloYFera, tablaSimbolos);
+            codigo += await this.transpilarNodo(nodo, parametros, moduloYFera, tablaSimbolos, contextoVar);
         }
         return codigo;
     }
 
     /* Transpila cada nodo del AST */
-    async transpilarNodo(nodo, parametros, moduloYFera, tablaSimbolos) {
+    async transpilarNodo(nodo, parametros, moduloYFera, tablaSimbolos, contextoVar = null) {
         if (!nodo) return '';
 
         switch (nodo.tipo) {
+            case 'FILA':
+                return await this.transpilarFila(nodo, parametros, moduloYFera, tablaSimbolos, contextoVar);
+            case 'CELDA':
+                return await this.transpilarCelda(nodo, parametros, moduloYFera, tablaSimbolos, contextoVar);
             case 'SECCION':
                 return await this.transpilarSeccion(nodo, parametros, moduloYFera, tablaSimbolos);
             case 'TABLA':
                 return await this.transpilarTabla(nodo, parametros, moduloYFera, tablaSimbolos);
-            case 'FILA':
-                return await this.transpilarFila(nodo, parametros, moduloYFera, tablaSimbolos);
-            case 'CELDA':
-                return await this.transpilarCelda(nodo, parametros, moduloYFera, tablaSimbolos);
             case 'COMPONENTE_TEXTO':
                 return await this.transpilarTexto(nodo, parametros, moduloYFera, tablaSimbolos);
             case 'COMPONENTE_IMG':
@@ -86,7 +86,7 @@ function ${nombreComponente}(${paramsJS}) {
             case 'INPUT_TEXT':
             case 'INPUT_NUMBER':
             case 'INPUT_BOOL':
-                return await this.transpilarInput(nodo, parametros, moduloYFera, tablaSimbolos);
+                return await this.transpilarInput(nodo, parametros, moduloYFera, tablaSimbolos, contextoVar);
             case 'FOR_EACH':
                 return await this.transpilarForEach(nodo, parametros, moduloYFera, tablaSimbolos);
             case 'FOR_COMPLEJO':
@@ -101,13 +101,13 @@ function ${nombreComponente}(${paramsJS}) {
             case 'COMPONENTE_PERSONALIZADO':
                 return await this.transpilarInvocacionComponente(nodo, parametros, moduloYFera, tablaSimbolos);
             case 'SUBMIT':
-                return await this.transpilarSubmit(nodo, parametros, moduloYFera, tablaSimbolos);
+                return await this.transpilarSubmit(nodo, parametros, moduloYFera, tablaSimbolos, contextoVar);
             default:
                 return '';
         }
     }
 
-    /* Seccion - genera div contenedor */
+    /* Metodo que permite transpilar el contenedor de seccion*/
     async transpilarSeccion(nodo, parametros, moduloYFera, tablaSimbolos) {
         const estilos = nodo.estilos && Array.isArray(nodo.estilos) ? nodo.estilos.join(' ') : '';
         const contenido = await this.transpilarCuerpo(nodo.contenido, parametros, moduloYFera, tablaSimbolos);
@@ -124,11 +124,11 @@ function ${nombreComponente}(${paramsJS}) {
         return contenido;
     }
 
-    /* Tabla */
+    /* Metodo que permite transpilar a una Tabla */
     async transpilarTabla(nodo, parametros, moduloYFera, tablaSimbolos) {
         const estilos = nodo.estilos && Array.isArray(nodo.estilos) ? nodo.estilos.join(' ') : '';
-        const filas = await this.transpilarCuerpo(nodo.filas, parametros, moduloYFera, tablaSimbolos);
         const tableVar = this._uid('table');
+        const filas = await this.transpilarCuerpo(nodo.filas, parametros, moduloYFera, tablaSimbolos, tableVar);
 
         if (estilos) {
             return `
@@ -146,32 +146,32 @@ function ${nombreComponente}(${paramsJS}) {
         }
     }
 
-    /* Fila */
-    async transpilarFila(nodo, parametros, moduloYFera, tablaSimbolos) {
-        const estilos = nodo.estilos && Array.isArray(nodo.estilos) ? nodo.estilos.join(' ') : '';
-        const celdas = await this.transpilarCuerpo(nodo.celdas, parametros, moduloYFera, tablaSimbolos);
+    /* Metodo que permite transpilar una Fila */
+    async transpilarFila(nodo, parametros, moduloYFera, tablaSimbolos, tableVar) {
         const rowVar = this._uid('row');
+        const celdas = await this.transpilarCuerpo(nodo.celdas, parametros, moduloYFera, tablaSimbolos, rowVar);
+        const estilos = nodo.estilos && Array.isArray(nodo.estilos) ? nodo.estilos.join(' ') : '';
 
         if (estilos) {
             return `
     const ${rowVar} = document.createElement('tr');
     ${rowVar}.className = '${estilos}';
     ${celdas}
-    _table.appendChild(${rowVar});
+    ${tableVar}.appendChild(${rowVar});
 `;
         } else {
             return `
     const ${rowVar} = document.createElement('tr');
     ${celdas}
-    _table.appendChild(${rowVar});
+    ${tableVar}.appendChild(${rowVar});
 `;
         }
     }
 
-    /* Celda */
-    async transpilarCelda(nodo, parametros, moduloYFera, tablaSimbolos) {
+    /* Metodo que permite transpilar una Celda */
+    async transpilarCelda(nodo, parametros, moduloYFera, tablaSimbolos, rowVar) {
         const estilos = nodo.estilos && Array.isArray(nodo.estilos) ? nodo.estilos.join(' ') : '';
-        const contenido = await this.transpilarCuerpo(nodo.contenido, parametros, moduloYFera, tablaSimbolos);
+        const contenido = await this.transpilarCuerpo(nodo.contenido, parametros, moduloYFera, tablaSimbolos, rowVar);
         const cellVar = this._uid('cell');
 
         if (estilos) {
@@ -179,13 +179,13 @@ function ${nombreComponente}(${paramsJS}) {
     const ${cellVar} = document.createElement('td');
     ${cellVar}.className = '${estilos}';
     ${contenido}
-    _row.appendChild(${cellVar});
+    ${rowVar}.appendChild(${cellVar});
 `;
         } else {
             return `
     const ${cellVar} = document.createElement('td');
     ${contenido}
-    _row.appendChild(${cellVar});
+    ${rowVar}.appendChild(${cellVar});
 `;
         }
     }
@@ -349,15 +349,15 @@ function ${nombreComponente}(${paramsJS}) {
 `;
     }
 
-    /* Formulario */
+    /* Metodo que permite transpilar un Formulario */
     async transpilarFormulario(nodo, parametros, moduloYFera, tablaSimbolos) {
-        const estilos = nodo.estilos && Array.isArray(nodo.estilos) ? nodo.estilos.join(' ') : '';
-        const contenido = await this.transpilarCuerpo(nodo.contenido, parametros, moduloYFera, tablaSimbolos);
-        let submitJS = '';
         const formVar = this._uid('form');
-
+        const estilos = nodo.estilos && Array.isArray(nodo.estilos) ? nodo.estilos.join(' ') : '';
+        const contenido = await this.transpilarCuerpo(nodo.contenido, parametros, moduloYFera, tablaSimbolos, formVar);
+        let submitJS = '';
+        
         if (nodo.submit) {
-            submitJS = await this.transpilarSubmit(nodo.submit, parametros, moduloYFera, tablaSimbolos);
+            submitJS = await this.transpilarSubmit(nodo.submit, parametros, moduloYFera, tablaSimbolos, formVar);
         }
 
         if (estilos) {
@@ -378,8 +378,9 @@ function ${nombreComponente}(${paramsJS}) {
         }
     }
 
-    /* Input */
-    async transpilarInput(nodo, parametros, moduloYFera, tablaSimbolos) {
+    /* Metodo que permite transpilar los Input */
+    async transpilarInput(nodo, parametros, moduloYFera, tablaSimbolos, formVar)  {
+        
         const estilos = nodo.estilos && Array.isArray(nodo.estilos) ? nodo.estilos.join(' ') : '';
         let id = '', label = '', value = '';
 
@@ -417,7 +418,7 @@ function ${nombreComponente}(${paramsJS}) {
     
     ${inputGroupVar}.appendChild(${labelVar});
     ${inputGroupVar}.appendChild(${inputVar});
-    _form.appendChild(${inputGroupVar});
+    ${formVar}.appendChild(${inputGroupVar});
 `;
         } else {
             return `
@@ -437,13 +438,13 @@ function ${nombreComponente}(${paramsJS}) {
     
     ${inputGroupVar}.appendChild(${labelVar});
     ${inputGroupVar}.appendChild(${inputVar});
-    _form.appendChild(${inputGroupVar});
+    ${formVar}.appendChild(${inputGroupVar});
 `;
         }
     }
 
-    /* Submit */
-    async transpilarSubmit(nodo, parametros, moduloYFera, tablaSimbolos) {
+    /* Metodo que permite transpilar los Submit */
+    async transpilarSubmit(nodo, parametros, moduloYFera, tablaSimbolos, formVar)  {
         const estilos = nodo.estilos && Array.isArray(nodo.estilos) ? nodo.estilos.join(' ') : '';
         let label = 'Submit';
         let funcion = '';
@@ -465,11 +466,11 @@ function ${nombreComponente}(${paramsJS}) {
     ${submitVar}.type = 'submit';
     ${submitVar}.textContent = ${label};
     ${estilosAttr}
-    _form.appendChild(${submitVar});
+    ${formVar}.appendChild(${submitVar});
     
-    _form.addEventListener('submit', async (e) => {
+    ${formVar}.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const formData = new FormData(_form);
+        const formData = new FormData(${formVar});
         const data = {};
         for (let [key, val] of formData.entries()) {
             data[key] = val;
@@ -483,7 +484,7 @@ function ${nombreComponente}(${paramsJS}) {
     ${submitVar}.type = 'submit';
     ${submitVar}.textContent = ${label};
     ${estilosAttr}
-    _form.appendChild(${submitVar});
+    ${formVar}.appendChild(${submitVar});
 `;
         }
     }
