@@ -12,6 +12,8 @@ import { ValidadorSemanticoComponentes } from "../componentsmodules/ValidadorSem
 
 import { ValidadorCuerpoMain } from "./ValidadorCuerpoMain";
 
+import { TranspiladorYFeraJS } from "./TranspiladorYFeraJS";
+
 /*Clase Delegada para manejar toda la logica principal para poder generar el analisis sintactico del lenguaje orquestador*/
 export class YFeraCompilador {
 
@@ -80,6 +82,14 @@ export class YFeraCompilador {
             return;
         }
 
+
+        /*Quinta fase de compilacion: Transpilacion a JavaScript */
+        this.frontState.systemLog('> Armando codigo compilado...');
+
+        const transpilador = new TranspiladorYFeraJS(this, this.manejadorDatabase);
+        await transpilador.transpilarModulo(this.arbolEjecucion);
+
+        console.log('Codigo JavaScript generado:\n', this.arbolEjecucion.compiledYFera);
 
         this.frontState.systemLog('> Compilacion completada exitosamente.');
 

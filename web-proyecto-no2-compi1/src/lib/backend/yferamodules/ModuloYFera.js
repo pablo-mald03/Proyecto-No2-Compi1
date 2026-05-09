@@ -17,6 +17,8 @@ export class ModuloYFera {
             estilos: []
         };
 
+        this.compiledYFera = "",
+
         this.recursosCompilados = {
             compiledComponentes: "",
             compiledStyles:""
