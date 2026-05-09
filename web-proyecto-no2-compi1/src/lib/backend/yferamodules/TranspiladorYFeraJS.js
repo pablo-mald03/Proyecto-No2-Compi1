@@ -3,7 +3,6 @@ import { TablaSimbolos } from "../semanticsyfera/TablaSimbolos";
 import { InterpreteSqlCodigo } from "$lib/databasemodules/InterpreteSqlCodigo";
 
 /*Clase delegada para poder generar el codigo compilado del archivo .y */
-
 export class TranspiladorYFeraJS {
 
     constructor(compilador, manejadorDb) {
@@ -82,8 +81,17 @@ export class TranspiladorYFeraJS {
         }
 
         html += `</head>\n<body>\n  <div id="app"></div>\n\n`;
+
         html += `  <script>\n`;
-        html += `    // __YFERA_ROUTES_PLACEHOLDER__\n`;
+        html += `    // __YFERA_ROUTES_DICT__\n`;
+        html += `    function navegar(ruta) {\n`;
+        html += `      const url = window.__YFERA_ROUTES__[ruta];\n`;
+        html += `      if (url) {\n`;
+        html += `        window.location.href = url;\n`;
+        html += `      } else {\n`;
+        html += `        console.error('Ruta no encontrada:', ruta);\n`;
+        html += `      }\n`;
+        html += `    }\n`;
         html += `  </script>\n`;
 
         html += `  <script>\n`;
@@ -150,8 +158,7 @@ export class TranspiladorYFeraJS {
         return `${indent}/* Componente no encontrado: ${nombreComponente}*/\n`;
     }
 
-
-
+    /*Metodo que permite transpilar las variables globales */
     transpilarVariablesGlobales(ast, tablaSimbolos) {
         let codigo = '/* === Codigo Compilado ===*/\n';
 
@@ -224,12 +231,11 @@ export class TranspiladorYFeraJS {
                 case 'LOAD_ARCHIVO':
                     let ruta = this.transpilarExpresion(instruccion.uri, tablaSimbolos);
                     ruta = ruta.replace(/"/g, '').replace('.y', '.html').replace(/^\.\//, '');
-                    codigo += `  window.location.href = '${ruta}';\n`;
+                    codigo += `  navegar('${ruta}');\n`;
                     break;
 
                 case 'LOAD_ID':
-                    codigo += `  // Navegar a: ${instruccion.id}\n`;
-                    codigo += `  window.location.href = ${instruccion.id}.replace('.y', '.html');\n`;
+                    codigo += `  navegar(${instruccion.id}.replace('.y', '.html'));\n`;
                     break;
 
                 case 'DATABASE_QUERY':

@@ -105,49 +105,59 @@ export class YFeraCompilador {
         await transpilador.transpilarModulo(this.arbolEjecucion);
 
         this.mapaRutas = new Map();
+        const rutasModulos = new Map();
 
-        const crearRutasP1 = (modulo) => {
+        const recolectarRutas = async (modulo) => {
             if (!modulo || !modulo.compiledYFera) return;
-            let nombreHTML = modulo.nombre.replace('.y', '.html').replace(/^\.\//, '');
+            const rutaCompleta = await this.obtenerRutaRelativaCompleta(modulo.id);
+            console.log(`  RUTA COMPLETA para ${modulo.nombre}: "${rutaCompleta}"`);
+            const nombreHTML = rutaCompleta.replace(/\.y$/, '.html');
+            rutasModulos.set(modulo, nombreHTML);
+            for (const hijo of modulo.modulosHijos) {
+                await recolectarRutas(hijo);
+            }
+        };
+        await recolectarRutas(this.arbolEjecucion);
+
+        for (const [modulo, nombreHTML] of rutasModulos) {
             const blob = new Blob([modulo.compiledYFera], { type: 'text/html' });
             this.mapaRutas.set(nombreHTML, URL.createObjectURL(blob));
-            for (const hijo of modulo.modulosHijos) crearRutasP1(hijo);
-        };
-        crearRutasP1(this.arbolEjecucion);
+        }
 
-        const reemplazarRutas = (modulo) => {
+        const routesDict = JSON.stringify(Object.fromEntries(this.mapaRutas));
+
+        const reemplazarYActualizar = (modulo) => {
             if (!modulo || !modulo.compiledYFera) return;
-            for (const [nombreHTML, url] of this.mapaRutas) {
-                const escaped = nombreHTML.replace(/[.*+?^${}()|[\]\\\/]/g, '\\$&');
-                modulo.compiledYFera = modulo.compiledYFera.replace(
-                    new RegExp(`'${escaped}'`, 'g'), `'${url}'`
-                );
-                modulo.compiledYFera = modulo.compiledYFera.replace(
-                    new RegExp(`'\\.\\/${escaped}'`, 'g'), `'${url}'`
-                );
+            modulo.compiledYFera = modulo.compiledYFera.replace(
+                '// __YFERA_ROUTES_DICT__',
+                `window.__YFERA_ROUTES__ = ${routesDict};`
+            );
+            const nombreHTML = rutasModulos.get(modulo);
+            if (nombreHTML) {
+                const blob = new Blob([modulo.compiledYFera], { type: 'text/html' });
+                this.mapaRutas.set(nombreHTML, URL.createObjectURL(blob));
             }
-            for (const hijo of modulo.modulosHijos) reemplazarRutas(hijo);
+            for (const hijo of modulo.modulosHijos) reemplazarYActualizar(hijo);
         };
-        reemplazarRutas(this.arbolEjecucion);
+        reemplazarYActualizar(this.arbolEjecucion);
 
-        console.log('=== MAPA DE RUTAS ===');
-        for (const [key, value] of this.mapaRutas) {
-            console.log(`  ${key} -> ${value}`);
+
+        console.log('=== DICCIONARIO DE RUTAS ===');
+        console.log(routesDict);
+
+        console.log('=== RUTAS DE MÓDULOS ===');
+        for (const [modulo, ruta] of rutasModulos) {
+            console.log(`  ${modulo.nombre} -> ${ruta}`);
         }
 
-        console.log('=== BUSCANDO EN HTML ===');
-        const buscar = 'hola-y.html';
-        const html = this.arbolEjecucion.compiledYFera;
-        const regex = new RegExp(`'${buscar}'`, 'g');
-        console.log(`  ¿Contiene '${buscar}'?: ${regex.test(html)}`);
-        if (html.includes(buscar)) {
-            console.log(`  Encontrado en: ${html.substring(html.indexOf(buscar) - 20, html.indexOf(buscar) + buscar.length + 20)}`);
-        }
+        console.log('=== CONTENIDO DE UN HTML (buscando navegar) ===');
+        const primerNavegar = this.arbolEjecucion.compiledYFera.match(/navegar\('[^']+'\)/g);
+        console.log('  Llamadas a navegar():', primerNavegar);
 
-        const raizHTML = this.arbolEjecucion.nombre.replace('.y', '.html').replace(/^\.\//, '');
+
+        const rutaRaiz = await this.obtenerRutaRelativaCompleta(this.arbolEjecucion.id);
+        const raizHTML = rutaRaiz.replace(/\.y$/, '.html');
         window.open(this.mapaRutas.get(raizHTML), '_blank');
-
-        this.frontState.systemLog('> Compilacion completada exitosamente.');
 
     }
 
@@ -378,5 +388,22 @@ export class YFeraCompilador {
             binary += String.fromCharCode(bytes[i]);
         }
         return btoa(binary);
+    }
+
+    async obtenerRutaRelativaCompleta(archivoId, proyectoRaizParentId = null) {
+        if (proyectoRaizParentId === null) {
+            const raiz = this.arbolEjecucion;
+            proyectoRaizParentId = raiz.parentId;
+        }
+
+        const partes = [];
+        let currentId = archivoId;
+        while (currentId !== null && currentId !== proyectoRaizParentId) {
+            const file = await this.dataBase.files.get(currentId);
+            if (!file) break;
+            partes.unshift(file.name);
+            currentId = file.parentId;
+        }
+        return partes.join('/');
     }
 }
