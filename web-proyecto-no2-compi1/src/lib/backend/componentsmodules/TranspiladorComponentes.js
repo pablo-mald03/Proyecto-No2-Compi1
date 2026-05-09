@@ -8,18 +8,32 @@ export class TranspiladorComponentes {
     constructor(compilador, manejadorDb) {
         this.compilador = compilador;
         this.manejadorDb = manejadorDb;
+        this._varCounter = 0;
+    }
+
+    /* Genera un identificador único */
+    _uid(prefix = 'v') {
+        return `${prefix}_${this._varCounter++}`;
     }
 
     /* Metodo que transpila un bloque de componente individual */
     async transpilarComponente(nodo, recursoComponente, moduloYFera) {
+        this._varCounter = 0;
+
         const nombreComponente = nodo.id;
         const parametros = this.extraerParametros(nodo.parametros);
 
-        // Generar lista de parámetros para la función JS
-        const paramsJS = parametros.map(p => p.nombre).join(', ');
+        const tablaLocal = new TablaSimbolos(moduloYFera.tablaSimbolosComponentes);
+        for (const param of parametros) {
+            tablaLocal.insertar(param.nombre, {
+                id: param.nombre,
+                tipoDato: param.tipo,
+                esArreglo: param.esArreglo
+            });
+        }
 
-        // Generar el cuerpo del componente usando el AST
-        const cuerpoJS = await this.transpilarCuerpo(nodo.cuerpo, parametros, moduloYFera);
+        const paramsJS = parametros.map(p => p.nombre).join(', ');
+        const cuerpoJS = await this.transpilarCuerpo(nodo.cuerpo, parametros, moduloYFera, tablaLocal);
 
         return `
 /**
@@ -35,248 +49,343 @@ function ${nombreComponente}(${paramsJS}) {
 `;
     }
 
-    /* Metodo que permite transpilar el cuerpo del componente */
-    async transpilarCuerpo(nodo, parametros, moduloYFera) {
+    /* Transpila el cuerpo a codigo JS que construye DOM */
+    async transpilarCuerpo(nodo, parametros, moduloYFera, tablaSimbolos) {
         if (!nodo) return '';
 
         let codigo = '';
-
         if (Array.isArray(nodo)) {
             for (const elemento of nodo) {
-                codigo += await this.transpilarNodo(elemento, parametros, moduloYFera);
+                codigo += await this.transpilarNodo(elemento, parametros, moduloYFera, tablaSimbolos);
             }
         } else if (typeof nodo === 'object') {
-            codigo += await this.transpilarNodo(nodo, parametros, moduloYFera);
+            codigo += await this.transpilarNodo(nodo, parametros, moduloYFera, tablaSimbolos);
         }
-
         return codigo;
     }
 
-    /*Metodo que permite transpilar un nodo segun el tipo de componente */
-    async transpilarNodo(nodo, parametros, moduloYFera) {
+    /* Transpila cada nodo del AST */
+    async transpilarNodo(nodo, parametros, moduloYFera, tablaSimbolos) {
         if (!nodo) return '';
 
         switch (nodo.tipo) {
             case 'SECCION':
-                return await this.transpilarSeccion(nodo, parametros, moduloYFera);
-
+                return await this.transpilarSeccion(nodo, parametros, moduloYFera, tablaSimbolos);
             case 'TABLA':
-                return await this.transpilarTabla(nodo, parametros, moduloYFera);
-
+                return await this.transpilarTabla(nodo, parametros, moduloYFera, tablaSimbolos);
             case 'FILA':
-                return await this.transpilarFila(nodo, parametros, moduloYFera);
-
+                return await this.transpilarFila(nodo, parametros, moduloYFera, tablaSimbolos);
             case 'CELDA':
-                return await this.transpilarCelda(nodo, parametros, moduloYFera);
-
+                return await this.transpilarCelda(nodo, parametros, moduloYFera, tablaSimbolos);
             case 'COMPONENTE_TEXTO':
-                return await this.transpilarTexto(nodo, parametros, moduloYFera);
-
+                return await this.transpilarTexto(nodo, parametros, moduloYFera, tablaSimbolos);
             case 'COMPONENTE_IMG':
-                return await this.transpilarImagen(nodo, parametros, moduloYFera);
-
+                return await this.transpilarImagen(nodo, parametros, moduloYFera, tablaSimbolos);
             case 'FORMULARIO':
-                return await this.transpilarFormulario(nodo, parametros, moduloYFera);
-
+                return await this.transpilarFormulario(nodo, parametros, moduloYFera, tablaSimbolos);
             case 'INPUT_TEXT':
             case 'INPUT_NUMBER':
             case 'INPUT_BOOL':
-                return await this.transpilarInput(nodo, parametros, moduloYFera);
-
+                return await this.transpilarInput(nodo, parametros, moduloYFera, tablaSimbolos);
             case 'FOR_EACH':
-                return await this.transpilarForEach(nodo, parametros, moduloYFera);
-
+                return await this.transpilarForEach(nodo, parametros, moduloYFera, tablaSimbolos);
             case 'FOR_COMPLEJO':
-                return await this.transpilarForComplejo(nodo, parametros, moduloYFera);
-
+                return await this.transpilarForComplejo(nodo, parametros, moduloYFera, tablaSimbolos);
             case 'ESTRUCTURA_IF':
-                return await this.transpilarIf(nodo, parametros, moduloYFera);
-
+                return await this.transpilarIf(nodo, parametros, moduloYFera, tablaSimbolos);
             case 'ELSE_IF':
             case 'ELSE_FINAL':
-                return await this.transpilarElseIf(nodo, parametros, moduloYFera);
-
+                return await this.transpilarElseIf(nodo, parametros, moduloYFera, tablaSimbolos);
             case 'ESTRUCTURA_SWITCH':
-                return await this.transpilarSwitch(nodo, parametros, moduloYFera);
-
+                return await this.transpilarSwitch(nodo, parametros, moduloYFera, tablaSimbolos);
             case 'COMPONENTE_PERSONALIZADO':
-                return await this.transpilarInvocacionComponente(nodo, parametros, moduloYFera);
-
+                return await this.transpilarInvocacionComponente(nodo, parametros, moduloYFera, tablaSimbolos);
             case 'SUBMIT':
-                return await this.transpilarSubmit(nodo, parametros, moduloYFera);
-
+                return await this.transpilarSubmit(nodo, parametros, moduloYFera, tablaSimbolos);
             default:
                 return '';
         }
     }
 
-    /* Metodo que permite transpilar una seccion */
-    async transpilarSeccion(nodo, parametros, moduloYFera) {
+    /* Seccion - genera div contenedor */
+    async transpilarSeccion(nodo, parametros, moduloYFera, tablaSimbolos) {
         const estilos = nodo.estilos && Array.isArray(nodo.estilos) ? nodo.estilos.join(' ') : '';
-        const contenido = await this.transpilarCuerpo(nodo.contenido, parametros, moduloYFera);
+        const contenido = await this.transpilarCuerpo(nodo.contenido, parametros, moduloYFera, tablaSimbolos);
+        const sectionVar = this._uid('section');
 
         if (estilos) {
             return `
-    const _section = document.createElement('div');
-    _section.className = '${estilos}';
-    _section.innerHTML = \`
-        ${contenido}
-    \`;
-    _container.appendChild(_section);
+    const ${sectionVar} = document.createElement('div');
+    ${sectionVar}.className = '${estilos}';
+    ${contenido}
+    _container.appendChild(${sectionVar});
 `;
-        } else {
-            return `
-    _container.innerHTML += \`
-        ${contenido}
-    \`;
-`;
-        }
-    }
-
-    /*Metodo que permite transpilar una tabla */
-    async transpilarTabla(nodo, parametros, moduloYFera) {
-        const estilos = nodo.estilos && Array.isArray(nodo.estilos) ? nodo.estilos.join(' ') : '';
-        const filas = await this.transpilarCuerpo(nodo.filas, parametros, moduloYFera);
-
-        if (estilos) {
-            return `
-    const _table = document.createElement('table');
-    _table.className = '${estilos}';
-    _table.innerHTML = \`
-        ${filas}
-    \`;
-    _container.appendChild(_table);
-`;
-        } else {
-            return `
-    const _table = document.createElement('table');
-    _table.innerHTML = \`
-        ${filas}
-    \`;
-    _container.appendChild(_table);
-`;
-        }
-    }
-
-    /*Metodo que permite transpila una fila */
-    async transpilarFila(nodo, parametros, moduloYFera) {
-        const estilos = nodo.estilos && Array.isArray(nodo.estilos) ? nodo.estilos.join(' ') : '';
-        const celdas = await this.transpilarCuerpo(nodo.celdas, parametros, moduloYFera);
-
-        if (estilos) {
-            return `<tr class="${estilos}">${celdas}</tr>`;
-        }
-        return `<tr>${celdas}</tr>`;
-    }
-
-    /*Metodo que permite transpilar una celda */
-    async transpilarCelda(nodo, parametros, moduloYFera) {
-        const estilos = nodo.estilos && Array.isArray(nodo.estilos) ? nodo.estilos.join(' ') : '';
-        const contenido = await this.transpilarCuerpo(nodo.contenido, parametros, moduloYFera);
-
-        if (estilos) {
-            return `<td class="${estilos}">${contenido}</td>`;
-        }
-        return `<td>${contenido}</table>`;
-    }
-
-    /*Metodo que permite transpilar el componente de TEXTO */
-    async transpilarTexto(nodo, parametros, moduloYFera) {
-        const estilos = nodo.estilos && Array.isArray(nodo.estilos) ? nodo.estilos.join(' ') : '';
-        const contenido = await this.transpilarExpresion(
-            nodo.contenido,
-            parametros,
-            moduloYFera.tablaSimbolosComponentes
-        );
-
-        if (estilos) {
-            return `<span class="${estilos}">${contenido}</span>`;
         }
         return contenido;
     }
 
-    /*Metodo que permite transpilar el componente de IMAGEN */
-    async transpilarImagen(nodo, parametros, moduloYFera) {
+    /* Tabla */
+    async transpilarTabla(nodo, parametros, moduloYFera, tablaSimbolos) {
+        const estilos = nodo.estilos && Array.isArray(nodo.estilos) ? nodo.estilos.join(' ') : '';
+        const filas = await this.transpilarCuerpo(nodo.filas, parametros, moduloYFera, tablaSimbolos);
+        const tableVar = this._uid('table');
+
+        if (estilos) {
+            return `
+    const ${tableVar} = document.createElement('table');
+    ${tableVar}.className = '${estilos}';
+    ${filas}
+    _container.appendChild(${tableVar});
+`;
+        } else {
+            return `
+    const ${tableVar} = document.createElement('table');
+    ${filas}
+    _container.appendChild(${tableVar});
+`;
+        }
+    }
+
+    /* Fila */
+    async transpilarFila(nodo, parametros, moduloYFera, tablaSimbolos) {
+        const estilos = nodo.estilos && Array.isArray(nodo.estilos) ? nodo.estilos.join(' ') : '';
+        const celdas = await this.transpilarCuerpo(nodo.celdas, parametros, moduloYFera, tablaSimbolos);
+        const rowVar = this._uid('row');
+
+        if (estilos) {
+            return `
+    const ${rowVar} = document.createElement('tr');
+    ${rowVar}.className = '${estilos}';
+    ${celdas}
+    _table.appendChild(${rowVar});
+`;
+        } else {
+            return `
+    const ${rowVar} = document.createElement('tr');
+    ${celdas}
+    _table.appendChild(${rowVar});
+`;
+        }
+    }
+
+    /* Celda */
+    async transpilarCelda(nodo, parametros, moduloYFera, tablaSimbolos) {
+        const estilos = nodo.estilos && Array.isArray(nodo.estilos) ? nodo.estilos.join(' ') : '';
+        const contenido = await this.transpilarCuerpo(nodo.contenido, parametros, moduloYFera, tablaSimbolos);
+        const cellVar = this._uid('cell');
+
+        if (estilos) {
+            return `
+    const ${cellVar} = document.createElement('td');
+    ${cellVar}.className = '${estilos}';
+    ${contenido}
+    _row.appendChild(${cellVar});
+`;
+        } else {
+            return `
+    const ${cellVar} = document.createElement('td');
+    ${contenido}
+    _row.appendChild(${cellVar});
+`;
+        }
+    }
+
+    /* Texto */
+    async transpilarTexto(nodo, parametros, moduloYFera, tablaSimbolos) {
+        const estilos = nodo.estilos && Array.isArray(nodo.estilos) ? nodo.estilos.join(' ') : '';
+        const contenido = await this.transpilarExpresion(nodo.contenido, parametros, tablaSimbolos);
+        const textVar = this._uid('text');
+
+        if (estilos) {
+            return `
+    const ${textVar} = document.createElement('span');
+    ${textVar}.className = '${estilos}';
+    ${textVar}.textContent = ${contenido};
+    _container.appendChild(${textVar});
+`;
+        } else {
+            return `
+    const ${textVar} = document.createTextNode(${contenido});
+    _container.appendChild(${textVar});
+`;
+        }
+    }
+
+    /* Metodo que permite transpilar una imagen*/
+    async transpilarImagen(nodo, parametros, moduloYFera, tablaSimbolos) {
         const estilos = nodo.estilos && Array.isArray(nodo.estilos) ? nodo.estilos.join(' ') : '';
         let urlsJS = [];
 
         if (nodo.urls && Array.isArray(nodo.urls)) {
             for (const url of nodo.urls) {
-                urlsJS.push(await this.transpilarExpresion(url, parametros, moduloYFera.tablaSimbolosComponentes));
+                urlsJS.push(await this.transpilarExpresion(url, parametros, tablaSimbolos));
             }
         }
 
-        const primeraUrlExpr = urlsJS.length > 0 ? urlsJS[0] : "''";
+        const imgVar = this._uid('img');
 
-        const arrayUrlsCliente = `[${urlsJS.join(', ')}]`;
+        // Si solo hay una imagen, renderizado simple
+        if (urlsJS.length === 1) {
+            if (estilos) {
+                return `
+    const ${imgVar} = document.createElement('img');
+    ${imgVar}.className = '${estilos}';
+    ${imgVar}.src = ${urlsJS[0]};
+    _container.appendChild(${imgVar});
+`;
+            } else {
+                return `
+    const ${imgVar} = document.createElement('img');
+    ${imgVar}.src = ${urlsJS[0]};
+    _container.appendChild(${imgVar});
+`;
+            }
+        }
 
-        const idUnico = `img_${nodo.linea}_${nodo.columna}`;
+        const carruselVar = this._uid('carrusel');
+        const imgDisplayVar = this._uid('imgDisplay');
+        const prevBtnVar = this._uid('prevBtn');
+        const nextBtnVar = this._uid('nextBtn');
+        const dotsContainerVar = this._uid('dotsContainer');
+
+        const arrayUrlsJS = `[${urlsJS.join(', ')}]`;
 
         return `
-    (() => {
-        const _urls = ${arrayUrlsCliente};
-        const _img = document.createElement('img');
-        _img.src = ${primeraUrlExpr};
-        _img.className = '${estilos}';
-        
-        if (_urls.length > 1) {
-            _img.style.cursor = 'pointer';
-            _img.title = 'Click para ver siguiente imagen';
-            let _idx = 0;
-            _img.addEventListener('click', () => {
-                _idx = (_idx + 1) % _urls.length;
-                _img.src = _urls[_idx];
+    const ${carruselVar} = document.createElement('div');
+    ${carruselVar}.className = 'carrusel-container';
+    ${estilos ? `${carruselVar}.classList.add('${estilos}');` : ''}
+    
+    const ${imgDisplayVar} = document.createElement('img');
+    ${imgDisplayVar}.src = ${urlsJS[0]};
+    ${imgDisplayVar}.style.width = '100%';
+    ${imgDisplayVar}.style.borderRadius = '8px';
+    
+    const ${prevBtnVar} = document.createElement('button');
+    ${prevBtnVar}.textContent = '❮';
+    ${prevBtnVar}.style.position = 'absolute';
+    ${prevBtnVar}.style.left = '10px';
+    ${prevBtnVar}.style.top = '50%';
+    ${prevBtnVar}.style.transform = 'translateY(-50%)';
+    ${prevBtnVar}.style.backgroundColor = 'rgba(0,0,0,0.5)';
+    ${prevBtnVar}.style.color = 'white';
+    ${prevBtnVar}.style.border = 'none';
+    ${prevBtnVar}.style.padding = '10px';
+    ${prevBtnVar}.style.cursor = 'pointer';
+    ${prevBtnVar}.style.borderRadius = '50%';
+    
+    const ${nextBtnVar} = document.createElement('button');
+    ${nextBtnVar}.textContent = '❯';
+    ${nextBtnVar}.style.position = 'absolute';
+    ${nextBtnVar}.style.right = '10px';
+    ${nextBtnVar}.style.top = '50%';
+    ${nextBtnVar}.style.transform = 'translateY(-50%)';
+    ${nextBtnVar}.style.backgroundColor = 'rgba(0,0,0,0.5)';
+    ${nextBtnVar}.style.color = 'white';
+    ${nextBtnVar}.style.border = 'none';
+    ${nextBtnVar}.style.padding = '10px';
+    ${nextBtnVar}.style.cursor = 'pointer';
+    ${nextBtnVar}.style.borderRadius = '50%';
+    
+    const ${dotsContainerVar} = document.createElement('div');
+    ${dotsContainerVar}.style.textAlign = 'center';
+    ${dotsContainerVar}.style.marginTop = '10px';
+    
+    ${carruselVar}.style.position = 'relative';
+    ${carruselVar}.style.display = 'inline-block';
+    
+    let currentIndex_${this._varCounter} = 0;
+    const urls_${this._varCounter} = ${arrayUrlsJS};
+    
+    function updateImage_${this._varCounter}() {
+        ${imgDisplayVar}.src = urls_${this._varCounter}[currentIndex_${this._varCounter}];
+        const dots = ${dotsContainerVar}.querySelectorAll('.dot');
+        dots.forEach((dot, i) => {
+            if (i === currentIndex_${this._varCounter}) {
+                dot.classList.add('active');
+                dot.style.backgroundColor = '#333';
+            } else {
+                dot.classList.remove('active');
+                dot.style.backgroundColor = '#bbb';
+            }
+        });
+    }
+    
+    function createDots_${this._varCounter}() {
+        for (let i = 0; i < urls_${this._varCounter}.length; i++) {
+            const dot = document.createElement('span');
+            dot.className = 'dot';
+            dot.style.height = '15px';
+            dot.style.width = '15px';
+            dot.style.margin = '0 5px';
+            dot.style.backgroundColor = i === 0 ? '#333' : '#bbb';
+            dot.style.borderRadius = '50%';
+            dot.style.display = 'inline-block';
+            dot.style.cursor = 'pointer';
+            dot.addEventListener('click', () => {
+                currentIndex_${this._varCounter} = i;
+                updateImage_${this._varCounter}();
             });
+            ${dotsContainerVar}.appendChild(dot);
         }
-        _container.appendChild(_img);
-    })();
-    `;
+    }
+    
+    ${prevBtnVar}.addEventListener('click', () => {
+        currentIndex_${this._varCounter} = (currentIndex_${this._varCounter} - 1 + urls_${this._varCounter}.length) % urls_${this._varCounter}.length;
+        updateImage_${this._varCounter}();
+    });
+    
+    ${nextBtnVar}.addEventListener('click', () => {
+        currentIndex_${this._varCounter} = (currentIndex_${this._varCounter} + 1) % urls_${this._varCounter}.length;
+        updateImage_${this._varCounter}();
+    });
+    
+    createDots_${this._varCounter}();
+    
+    ${carruselVar}.appendChild(${imgDisplayVar});
+    ${carruselVar}.appendChild(${prevBtnVar});
+    ${carruselVar}.appendChild(${nextBtnVar});
+    ${carruselVar}.appendChild(${dotsContainerVar});
+    _container.appendChild(${carruselVar});
+`;
     }
 
-    /*Metodo que permite transpilar a un FORMULARIO */
-    async transpilarFormulario(nodo, parametros, moduloYFera) {
+    /* Formulario */
+    async transpilarFormulario(nodo, parametros, moduloYFera, tablaSimbolos) {
         const estilos = nodo.estilos && Array.isArray(nodo.estilos) ? nodo.estilos.join(' ') : '';
-        const contenido = await this.transpilarCuerpo(nodo.contenido, parametros, moduloYFera);
+        const contenido = await this.transpilarCuerpo(nodo.contenido, parametros, moduloYFera, tablaSimbolos);
         let submitJS = '';
+        const formVar = this._uid('form');
 
         if (nodo.submit) {
-            submitJS = await this.transpilarSubmit(nodo.submit, parametros, moduloYFera);
+            submitJS = await this.transpilarSubmit(nodo.submit, parametros, moduloYFera, tablaSimbolos);
         }
 
         if (estilos) {
             return `
-    const _form = document.createElement('form');
-    _form.className = '${estilos}';
-    _form.innerHTML = \`
-        ${contenido}
-    \`;
+    const ${formVar} = document.createElement('form');
+    ${formVar}.className = '${estilos}';
+    ${contenido}
     ${submitJS}
-    _container.appendChild(_form);
+    _container.appendChild(${formVar});
 `;
         } else {
             return `
-    const _form = document.createElement('form');
-    _form.innerHTML = \`
-        ${contenido}
-    \`;
+    const ${formVar} = document.createElement('form');
+    ${contenido}
     ${submitJS}
-    _container.appendChild(_form);
+    _container.appendChild(${formVar});
 `;
         }
     }
 
-    /* Metodo que permite transpilar a propiedades INPUT */
+    /* Input */
     async transpilarInput(nodo, parametros, moduloYFera, tablaSimbolos) {
         const estilos = nodo.estilos && Array.isArray(nodo.estilos) ? nodo.estilos.join(' ') : '';
         let id = '', label = '', value = '';
 
         if (nodo.propiedades) {
             for (const prop of nodo.propiedades) {
-                const valor = await this.transpilarExpresion(
-                    prop.valor,
-                    parametros,
-                    tablaSimbolos
-                );
+                const valor = await this.transpilarExpresion(prop.valor, parametros, tablaSimbolos);
                 if (prop.clave === 'id') id = valor;
                 if (prop.clave === 'label') label = valor;
                 if (prop.clave === 'value') value = valor;
@@ -284,36 +393,56 @@ function ${nombreComponente}(${paramsJS}) {
         }
 
         const tipoInput = nodo.tipo === 'INPUT_TEXT' ? 'text' : (nodo.tipo === 'INPUT_NUMBER' ? 'number' : 'checkbox');
-
-        let valueAttr = '';
-        if (nodo.tipo === 'INPUT_BOOL') {
-            valueAttr = `\${${value} ? 'checked' : ''}`;
-        } else {
-            if (typeof value === 'string' && !value.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/)) {
-                valueAttr = `value="${value}"`;
-            } else if (value) {
-                valueAttr = `value="\${${value}}"`;
-            }
-        }
+        const checkedAttr = (nodo.tipo === 'INPUT_BOOL' && value === 'true') ? '.checked = true' : '';
+        const inputGroupVar = this._uid('inputGroup');
+        const labelVar = this._uid('label');
+        const inputVar = this._uid('input');
 
         if (estilos) {
             return `
-    <div class="input-group">
-        <label for="${id}">${label}</label>
-        <input type="${tipoInput}" id="${id}" name="${id}" class="${estilos}" ${valueAttr} />
-    </div>
+    const ${inputGroupVar} = document.createElement('div');
+    ${inputGroupVar}.className = 'input-group';
+    
+    const ${labelVar} = document.createElement('label');
+    ${labelVar}.htmlFor = '${id}';
+    ${labelVar}.textContent = ${label};
+    
+    const ${inputVar} = document.createElement('input');
+    ${inputVar}.type = '${tipoInput}';
+    ${inputVar}.id = '${id}';
+    ${inputVar}.name = '${id}';
+    ${inputVar}.className = '${estilos}';
+    if (${value}) ${inputVar}.value = ${value};
+    ${checkedAttr}
+    
+    ${inputGroupVar}.appendChild(${labelVar});
+    ${inputGroupVar}.appendChild(${inputVar});
+    _form.appendChild(${inputGroupVar});
 `;
         } else {
             return `
-    <div class="input-group">
-        <label for="${id}">${label}</label>
-        <input type="${tipoInput}" id="${id}" name="${id}" ${valueAttr} />
-    </div>
+    const ${inputGroupVar} = document.createElement('div');
+    ${inputGroupVar}.className = 'input-group';
+    
+    const ${labelVar} = document.createElement('label');
+    ${labelVar}.htmlFor = '${id}';
+    ${labelVar}.textContent = ${label};
+    
+    const ${inputVar} = document.createElement('input');
+    ${inputVar}.type = '${tipoInput}';
+    ${inputVar}.id = '${id}';
+    ${inputVar}.name = '${id}';
+    if (${value}) ${inputVar}.value = ${value};
+    ${checkedAttr}
+    
+    ${inputGroupVar}.appendChild(${labelVar});
+    ${inputGroupVar}.appendChild(${inputVar});
+    _form.appendChild(${inputGroupVar});
 `;
         }
     }
 
-    /* Metodo que permite transpilar a los botones SUBMIT */
+    /* Submit */
     async transpilarSubmit(nodo, parametros, moduloYFera, tablaSimbolos) {
         const estilos = nodo.estilos && Array.isArray(nodo.estilos) ? nodo.estilos.join(' ') : '';
         let label = 'Submit';
@@ -321,25 +450,22 @@ function ${nombreComponente}(${paramsJS}) {
 
         if (nodo.propiedades) {
             for (const prop of nodo.propiedades) {
-                const valor = await this.transpilarExpresion(
-                    prop.valor,
-                    parametros,
-                    tablaSimbolos
-                );
+                const valor = await this.transpilarExpresion(prop.valor, parametros, tablaSimbolos);
                 if (prop.clave === 'label') label = valor;
                 if (prop.clave === 'function') funcion = valor;
             }
         }
 
-        const estilosAttr = estilos ? `_submit.className = '${estilos}';` : '';
+        const submitVar = this._uid('submit');
+        const estilosAttr = estilos ? `${submitVar}.className = '${estilos}';` : '';
 
         if (funcion) {
             return `
-    const _submit = document.createElement('button');
-    _submit.type = 'submit';
-    _submit.textContent = ${label};
+    const ${submitVar} = document.createElement('button');
+    ${submitVar}.type = 'submit';
+    ${submitVar}.textContent = ${label};
     ${estilosAttr}
-    _form.appendChild(_submit);
+    _form.appendChild(${submitVar});
     
     _form.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -348,29 +474,29 @@ function ${nombreComponente}(${paramsJS}) {
         for (let [key, val] of formData.entries()) {
             data[key] = val;
         }
-        await ${funcion};
+        ${funcion}(data);
     });
 `;
         } else {
             return `
-    const _submit = document.createElement('button');
-    _submit.type = 'submit';
-    _submit.textContent = ${label};
+    const ${submitVar} = document.createElement('button');
+    ${submitVar}.type = 'submit';
+    ${submitVar}.textContent = ${label};
     ${estilosAttr}
-    _form.appendChild(_submit);
+    _form.appendChild(${submitVar});
 `;
         }
     }
 
-    /* Metodo que permite transpilar el ciclo FOR_EACH */
-    async transpilarForEach(nodo, parametros, moduloYFera) {
+    /* For Each */
+    async transpilarForEach(nodo, parametros, moduloYFera, tablaSimbolos) {
         const arreglo = nodo.arreglo;
         const iterador = nodo.iterador;
-        const cuerpo = await this.transpilarCuerpo(nodo.cuerpo, parametros, moduloYFera);
+        const cuerpo = await this.transpilarCuerpo(nodo.cuerpo, parametros, moduloYFera, tablaSimbolos);
         let emptyJS = '';
 
         if (nodo.empty && nodo.empty.cuerpo) {
-            emptyJS = await this.transpilarCuerpo(nodo.empty.cuerpo, parametros, moduloYFera);
+            emptyJS = await this.transpilarCuerpo(nodo.empty.cuerpo, parametros, moduloYFera, tablaSimbolos);
         }
 
         return `
@@ -384,42 +510,52 @@ function ${nombreComponente}(${paramsJS}) {
 `;
     }
 
-    /* Metodo que permite transpilar el ciclo FOR_COMPLEJO */
-    async transpilarForComplejo(nodo, parametros, moduloYFera) {
-        let iteradoresJS = '';
+    /* Metodo que permite transpilar un for complejo*/
+    async transpilarForComplejo(nodo, parametros, moduloYFera, tablaSimbolos) {
+        const trackVar = nodo.track || '__index';
+        let emptyJS = '';
 
-        if (nodo.iteradores && nodo.iteradores.length > 0) {
-            const primerIterador = nodo.iteradores[0];
-            iteradoresJS = `for (let ${primerIterador.iterador} of ${primerIterador.arreglo}) {`;
-
-            for (let i = 1; i < nodo.iteradores.length; i++) {
-                const iter = nodo.iteradores[i];
-                iteradoresJS += `\n    for (let ${iter.iterador} of ${iter.arreglo}) {`;
-            }
-
-            const cuerpo = await this.transpilarCuerpo(nodo.cuerpo, parametros, moduloYFera);
-            iteradoresJS += `\n    ${cuerpo}`;
-
-            for (let i = 0; i < nodo.iteradores.length; i++) {
-                iteradoresJS += '\n    }';
-            }
+        if (nodo.empty && nodo.empty.cuerpo) {
+            emptyJS = await this.transpilarCuerpo(nodo.empty.cuerpo, parametros, moduloYFera, tablaSimbolos);
         }
 
-        return iteradoresJS;
+        if (!nodo.iteradores || nodo.iteradores.length === 0) {
+            return '';
+        }
+
+        const arreglos = nodo.iteradores.map(iter => iter.arreglo);
+        const iteradores = nodo.iteradores.map(iter => iter.iterador);
+
+        const condicionExistencia = arreglos.map(arr => `${arr} !== null && ${arr} !== undefined`).join(' && ');
+        const condicionLongitud = arreglos.map(arr => `${arr}.length > 0`).join(' && ');
+
+        const minLengthCode = `Math.min(${arreglos.map(arr => `${arr}.length`).join(', ')})`;
+
+        const cuerpo = await this.transpilarCuerpo(nodo.cuerpo, parametros, moduloYFera, tablaSimbolos);
+
+        const iterationVar = this._uid('maxIter');
+
+        return `
+    if (${condicionExistencia} && ${condicionLongitud}) {
+        const ${iterationVar} = ${minLengthCode};
+        for (let ${trackVar} = 0; ${trackVar} < ${iterationVar}; ${trackVar}++) {
+            ${iteradores.map((it, idx) => `const ${it} = ${arreglos[idx]}[${trackVar}];`).join('\n            ')}
+            ${cuerpo}
+        }
+    } else {
+        ${emptyJS}
+    }
+`;
     }
 
-    /* Metodo que permite transpilar a la ESTRUCTURA_IF */
-    async transpilarIf(nodo, parametros, moduloYFera) {
-        const condicion = await this.transpilarExpresion(
-            nodo.condicion,
-            parametros,
-            moduloYFera.tablaSimbolosComponentes
-        );
-        const cuerpo = await this.transpilarCuerpo(nodo.cuerpo, parametros, moduloYFera);
+    /*Metodo que permite transpilar un if */
+    async transpilarIf(nodo, parametros, moduloYFera, tablaSimbolos) {
+        const condicion = await this.transpilarExpresion(nodo.condicion, parametros, tablaSimbolos);
+        const cuerpo = await this.transpilarCuerpo(nodo.cuerpo, parametros, moduloYFera, tablaSimbolos);
         let continuacionJS = '';
 
         if (nodo.continuacion) {
-            continuacionJS = await this.transpilarNodo(nodo.continuacion, parametros, moduloYFera);
+            continuacionJS = await this.transpilarElseIf(nodo.continuacion, parametros, moduloYFera, tablaSimbolos);
         }
 
         return `
@@ -429,26 +565,22 @@ function ${nombreComponente}(${paramsJS}) {
 `;
     }
 
-    /* Metodo que permite transpilar a los ELSE_IF y ELSE_FINAL */
-    async transpilarElseIf(nodo, parametros, moduloYFera) {
+    /* Metodo que permite transpilar las instrucciones Else If y Else */
+    async transpilarElseIf(nodo, parametros, moduloYFera, tablaSimbolos) {
         if (nodo.tipo === 'ELSE_IF') {
-            const condicion = await this.transpilarExpresion(
-                nodo.condicion,
-                parametros,
-                moduloYFera.tablaSimbolosComponentes
-            );
-            const cuerpo = await this.transpilarCuerpo(nodo.cuerpo, parametros, moduloYFera);
+            const condicion = await this.transpilarExpresion(nodo.condicion, parametros, tablaSimbolos);
+            const cuerpo = await this.transpilarCuerpo(nodo.cuerpo, parametros, moduloYFera, tablaSimbolos);
             let continuacionJS = '';
 
             if (nodo.continuacion) {
-                continuacionJS = await this.transpilarNodo(nodo.continuacion, parametros, moduloYFera);
+                continuacionJS = await this.transpilarElseIf(nodo.continuacion, parametros, moduloYFera, tablaSimbolos);
             }
 
             return `else if (${condicion}) {
         ${cuerpo}
     } ${continuacionJS}`;
         } else if (nodo.tipo === 'ELSE_FINAL') {
-            const cuerpo = await this.transpilarCuerpo(nodo.cuerpo, parametros, moduloYFera);
+            const cuerpo = await this.transpilarCuerpo(nodo.cuerpo, parametros, moduloYFera, tablaSimbolos);
             return `else {
         ${cuerpo}
     }`;
@@ -456,30 +588,28 @@ function ${nombreComponente}(${paramsJS}) {
         return '';
     }
 
-    /* Metodos que permiten transpilar a la ESTRUCTURA_SWITCH */
-    async transpilarSwitch(nodo, parametros, moduloYFera) {
-        const evalua = await this.transpilarExpresion(
-            nodo.evalua,
-            parametros,
-            moduloYFera.tablaSimbolosComponentes
-        );
+    /* Metodo que permite transpilar un Switch */
+    async transpilarSwitch(nodo, parametros, moduloYFera, tablaSimbolos) {
+        const evalua = await this.transpilarExpresion(nodo.evalua, parametros, tablaSimbolos);
         let casosJS = '';
 
         if (nodo.casos && Array.isArray(nodo.casos)) {
             for (const caso of nodo.casos) {
                 if (caso.tipo === 'CASO_SWITCH') {
-                    const valor = await this.transpilarExpresion(caso.valor_comparacion, parametros, moduloYFera.tablaSimbolosComponentes);
-                    const cuerpo = await this.transpilarCuerpo(caso.cuerpo, parametros, moduloYFera);
+                    const valor = await this.transpilarExpresion(caso.valor_comparacion, parametros, tablaSimbolos);
+                    const cuerpo = await this.transpilarCuerpo(caso.cuerpo, parametros, moduloYFera, tablaSimbolos);
                     casosJS += `
-        case ${valor}:
+        case ${valor}: {
             ${cuerpo}
-            break;`;
+            break;
+        }`;
                 } else if (caso.tipo === 'DEFAULT_SWITCH') {
-                    const cuerpo = await this.transpilarCuerpo(caso.cuerpo, parametros, moduloYFera);
+                    const cuerpo = await this.transpilarCuerpo(caso.cuerpo, parametros, moduloYFera, tablaSimbolos);
                     casosJS += `
-        default:
+        default: {
             ${cuerpo}
-            break;`;
+            break;
+        }`;
                 }
             }
         }
@@ -490,68 +620,55 @@ function ${nombreComponente}(${paramsJS}) {
 `;
     }
 
-    /* Metodo que permite transpilar a la invocacion de componente */
-    async transpilarInvocacionComponente(nodo, parametros, moduloYFera) {
+    /* Metodo que permite transpilar una Invocacion de componente */
+    async transpilarInvocacionComponente(nodo, parametros, moduloYFera, tablaSimbolos) {
         const nombreComponente = nodo.id;
         let argumentosJS = '';
+        const componentVar = this._uid('comp');
 
         if (nodo.argumentos && Array.isArray(nodo.argumentos)) {
             const args = [];
             for (const arg of nodo.argumentos) {
-                args.push(await this.transpilarExpresion(
-                    arg,
-                    parametros,
-                    moduloYFera.tablaSimbolosComponentes
-                ));
+                args.push(await this.transpilarExpresion(arg, parametros, tablaSimbolos));
             }
             argumentosJS = args.join(', ');
         }
 
         return `
-    const _${nombreComponente.toLowerCase()} = ${nombreComponente}(${argumentosJS});
-    _container.appendChild(_${nombreComponente.toLowerCase()});
+    const ${componentVar} = ${nombreComponente}(${argumentosJS});
+    _container.appendChild(${componentVar});
 `;
     }
 
-    /* Metodo que permite transpilar una expresion a JavaScript */
+    /* Metodo que permite transpilar Expresiones */
     async transpilarExpresion(expr, parametros, tablaSimbolos) {
         if (!expr) return 'null';
 
         switch (expr.tipo) {
             case 'VALOR':
-                if (typeof expr.valor === 'number') {
-                    return expr.valor;
-                }
+                if (typeof expr.valor === 'number') return expr.valor;
                 return `'${expr.valor}'`;
-
             case 'VALOR_TRUE':
                 return 'true';
-
             case 'VALOR_FALSE':
                 return 'false';
-
             case 'CADENA_INTERPOLADA':
                 return await this.transpilarCadenaInterpolada(expr, parametros, tablaSimbolos);
-
             case 'VARIABLE':
                 return expr.nombre;
-
             case 'ACCESO_ARREGLO':
                 const indice = await this.transpilarExpresion(expr.indice, parametros, tablaSimbolos);
                 return `${expr.nombre}[${indice}]`;
-
             case 'OPERACION':
                 const izq = await this.transpilarExpresion(expr.izq, parametros, tablaSimbolos);
                 const der = await this.transpilarExpresion(expr.der, parametros, tablaSimbolos);
                 const operador = this.mapearOperador(expr.operador);
                 return `(${izq} ${operador} ${der})`;
-
             case 'OPERACION_UNARIA':
                 const valor = await this.transpilarExpresion(expr.valor, parametros, tablaSimbolos);
                 if (expr.operador === 'NOT') return `(!${valor})`;
                 if (expr.operador === 'MENOS_UNARIO') return `(-${valor})`;
                 return valor;
-
             case 'LLAMADA_FUNCION_VAR':
                 const args = [];
                 if (expr.argumentos) {
@@ -560,16 +677,14 @@ function ${nombreComponente}(${paramsJS}) {
                     }
                 }
                 return `${expr.nombre}(${args.join(', ')})`;
-
             case 'ARROBA_VAR':
                 return `document.getElementById('${expr.nombre}').value`;
-
             default:
                 return 'null';
         }
     }
 
-    /* Metodo que permite transpilar a una cadena interpolada con backticks */
+    /* Metodo que permite transpilar una Cadena interpolada */
     async transpilarCadenaInterpolada(expr, parametros, tablaSimbolos) {
         if (!expr.fragmentos || expr.fragmentos.length === 0) return "''";
 
@@ -591,45 +706,26 @@ function ${nombreComponente}(${paramsJS}) {
         return resultado;
     }
 
-    /* Metodo que permite mapear los operadores del parser a JS */
+    /*Metodo que permite mapear operadores */
     mapearOperador(operador) {
         const mapa = {
-            'SUMA': '+',
-            'RESTA': '-',
-            'MULTIPLICACION': '*',
-            'DIVISION': '/',
-            'MODULO': '%',
-            'MAYOR': '>',
-            'MENOR': '<',
-            'MAYOR_IGUAL': '>=',
-            'MENOR_IGUAL': '<=',
-            'IGUALACION': '===',
-            'DIFERENCIA': '!==',
-            'AND': '&&',
-            'OR': '||'
+            'SUMA': '+', 'RESTA': '-', 'MULTIPLICACION': '*', 'DIVISION': '/',
+            'MODULO': '%', 'MAYOR': '>', 'MENOR': '<', 'MAYOR_IGUAL': '>=',
+            'MENOR_IGUAL': '<=', 'IGUALACION': '===', 'DIFERENCIA': '!==',
+            'AND': '&&', 'OR': '||'
         };
         return mapa[operador] || operador;
     }
 
-    /* Metodo que permite extraer los parametros del AST */
+    /* MEtodo que permite extaer los parametros de un componente */
     extraerParametros(parametrosAST) {
-        if (!parametrosAST || !Array.isArray(parametrosAST)) {
-            return [];
-        }
+        if (!parametrosAST || !Array.isArray(parametrosAST)) return [];
 
         return parametrosAST.map(param => {
             if (param.tipo === 'PARAMETRO_DEF') {
-                return {
-                    nombre: param.id,
-                    tipo: param.tipado,
-                    esArreglo: false
-                };
+                return { nombre: param.id, tipo: param.tipado, esArreglo: false };
             } else if (param.tipo === 'PARAMETRO_DEF_ARREGLO') {
-                return {
-                    nombre: param.id,
-                    tipo: param.tipado,
-                    esArreglo: true
-                };
+                return { nombre: param.id, tipo: param.tipado, esArreglo: true };
             }
             return null;
         }).filter(p => p !== null);
