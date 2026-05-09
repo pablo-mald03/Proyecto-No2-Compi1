@@ -371,17 +371,12 @@ export class TranspiladorYFeraJS {
             comandoCompleto += ';';
         }
 
-        console.log('Comando con:', comandoCompleto);
-
         const interprete = new InterpreteSqlCodigo(this.manejadorDb);
         const resultado = interprete.traducirSqlComando(comandoCompleto);
 
-        if (resultado.exito && resultado.sql && resultado.sql.length > 0) {
-            const sqlFinal = resultado.sql.join('; ');
-            console.log('SQL final:', sqlFinal);
-            return sqlFinal;
+        if (resultado.exito && resultado.sql.length > 0) {
+            return '`' + resultado.sql.join('; ') + '`';
         } else {
-            console.log('ERROR al traducir:', resultado.errores);
             return '""';
         }
     }

@@ -5,7 +5,6 @@ export class TranspiladorSql {
     constructor() {
     }
 
-    /*Metodo que permite generar la transpilacion del codigo parseado */
     transpilarAst(ast) {
         const sentenciasSql = [];
         for (const nodo of ast) {
@@ -16,30 +15,23 @@ export class TranspiladorSql {
         return sentenciasSql;
     }
 
-    /*Metodo que permite determinar a cual sentencia se va a transpilar el codigo*/
-     transpilarNodo(nodo) {
+    transpilarNodo(nodo) {
         switch (nodo.accion) {
             case 'CREATE':
                 return this.transpilarCreate(nodo);
-
             case 'SELECT_COL':
                 return this.transpilarSelectCol(nodo);
-
             case 'INSERT':
                 return this.transpilarInsert(nodo);
-
             case 'UPDATE':
                 return this.transpilarUpdate(nodo);
-
             case 'DELETE':
                 return this.transpilarDelete(nodo);
-
             default:
                 throw new Error(`Acción no reconocida en transpilación: ${nodo.accion}`);
         }
     }
 
-    /*Metodo que permite crear la sentencia sql de create database*/
     transpilarCreate(nodo) {
         const definiciones = nodo.columnas
             .map(col => `${col.id} ${col.tipo}`)
@@ -47,12 +39,10 @@ export class TranspiladorSql {
         return `CREATE TABLE IF NOT EXISTS ${nodo.tabla} (id INTEGER PRIMARY KEY AUTOINCREMENT, ${definiciones});`;
     }
 
-    /*Metodo que permite crear la sentencia de selecionar una columna*/
     transpilarSelectCol(nodo) {
         return `SELECT ${nodo.columna} FROM ${nodo.tabla};`;
     }
 
-    /*Metodo que permite transpilar el codigo a un insert*/
     transpilarInsert(nodo) {
         const columnas = nodo.valores.map(v => v.col).join(', ');
         const valoresJs = nodo.valores
@@ -61,7 +51,6 @@ export class TranspiladorSql {
         return `INSERT INTO ${nodo.tabla} (${columnas}) VALUES (${valoresJs});`;
     }
 
-    /*Metodo que permite transpilar el codigo a un update*/
     transpilarUpdate(nodo) {
         const asignaciones = nodo.valores
             .map(v => `${v.col} = ${this.transpilarExpresionJavaScript(v.valor)}`)
@@ -70,13 +59,12 @@ export class TranspiladorSql {
         return `UPDATE ${nodo.tabla} SET ${asignaciones} WHERE id = ${condicionId};`;
     }
 
-    /*Metodo que permie transpilar el codigo a un delete*/
     transpilarDelete(nodo) {
         const condicionId = this.transpilarExpresionJavaScript(nodo.id);
         return `DELETE FROM ${nodo.tabla} WHERE id = ${condicionId};`;
     }
 
-    /*Metodo delegado para poder transpilar las expresiones a codigo javascript*/
+    /* LO IMPORTANTE: transpilar las expresiones a código JavaScript para template strings */
     transpilarExpresionJavaScript(expr) {
         if (!expr || typeof expr !== 'object') {
             return String(expr);
@@ -84,12 +72,15 @@ export class TranspiladorSql {
 
         switch (expr.tipo) {
             case 'VALOR':
+                // Valores literales se ponen directamente
                 return this.transpilarValor(expr);
 
             case 'ID':
+                // Variables se ponen como ${variable} para que JS las evalúe
                 return this.transpilarIdentificador(expr);
 
             case 'OPERACION':
+                // Operaciones matemáticas se dejan como expresión JS
                 return this.transpilarOperacionBinaria(expr);
 
             case 'OPERACION_UNARIA':
@@ -100,7 +91,6 @@ export class TranspiladorSql {
         }
     }
 
-    /*Metodo que permite convertir un valor a sql*/
     transpilarValor(valor) {
         switch (valor.tipo_dato) {
             case 'STRING':
@@ -113,40 +103,40 @@ export class TranspiladorSql {
                 return `'${stringLimpio}'`;
 
             case 'NUMERO':
-                return Number(valor.valor).toString();
+                return String(valor.valor);
 
             default:
                 return String(valor.valor);
         }
     }
 
-    /*Metodo que permite transpilar un identificador para poderlo agregar  a expreiones*/
+    /* Metodo que permite retornar un identificador fomateado*/
     transpilarIdentificador(expr) {
         let nombreVariable = expr.valor;
         if (nombreVariable.startsWith('$')) {
             nombreVariable = nombreVariable.substring(1);
         }
-        return nombreVariable;
+        return `\$\{${nombreVariable}\}`;
     }
 
-    /*Metodo que permite transpilar expresiones matematicas*/
+    /*Metodo que permite mapear una operacion binaria en el codigo compilado */
     transpilarOperacionBinaria(expr) {
         const izq = this.transpilarExpresionJavaScript(expr.izq);
         const der = this.transpilarExpresionJavaScript(expr.der);
         const operadorJs = this.mapearOperadorJavaScript(expr.operador);
 
-        // Solo poner paréntesis si es necesario para mantener la precedencia
-        return `(${izq} ${operadorJs} ${der})`;
+        // Devolver como template string: ${(expresion)}
+        return `\$\{(${izq} ${operadorJs} ${der})\}`;
     }
-    /*Metodo que permite transpilar valores unarios*/
+
+    /*Metodo que permite mapear una operacion unaraia en el codigo compilado */
     transpilarOperacionUnaria(expr) {
         const valor = this.transpilarExpresionJavaScript(expr.valor || expr.operando);
         const operadorJs = this.mapearOperadorUnarioJavaScript(expr.operador);
-        return `${operadorJs}(${valor})`;
+        return `\$\{${operadorJs}(${valor})\}`;
     }
 
-
-    /*Metodo que permite mapear el operador matematico correspondiente*/
+    /*Metodo que permite mapear un operador en el codigo compilado */
     mapearOperadorJavaScript(operador) {
         const mapa = {
             'MAS': '+',
@@ -166,8 +156,6 @@ export class TranspiladorSql {
         return mapa[operador] || operador;
     }
 
-
-    /*Metodo que mapea el operador unario*/
     mapearOperadorUnarioJavaScript(operador) {
         const mapa = {
             'MENOS_UNARIO': '-',
