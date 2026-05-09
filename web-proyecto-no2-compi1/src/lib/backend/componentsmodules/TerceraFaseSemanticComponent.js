@@ -186,6 +186,17 @@ export class TerceraFaseSemanticComponent {
                 if (!variable) return 'DESCONOCIDO';
 
                 if (variable.esArreglo) {
+                    const linea = expresion.loc_linea || expresion.linea;
+                    const columna = expresion.loc_columna || expresion.columna;
+
+                    expresion.tipo = 'ACCESO_ARREGLO';
+                    expresion.indice = {
+                        tipo: 'VALOR',
+                        valor: 0,
+                        loc_linea: linea,
+                        loc_columna: columna
+                    };
+
                     return variable.tipoDato;
                 }
 
@@ -408,17 +419,32 @@ export class TerceraFaseSemanticComponent {
 
     /* Valida cadena interpolada con caracteres dentro*/
     async validarCadenaInterpolada(nodo, recursoComponente, tablaSimbolos, nombreComponente) {
-        if (nodo.fragmentos && Array.isArray(nodo.fragmentos)) {
-            for (const fragmento of nodo.fragmentos) {
-                if (fragmento.tipo === 'VARIABLE') {
+    if (nodo.fragmentos && Array.isArray(nodo.fragmentos)) {
+        for (const fragmento of nodo.fragmentos) {
+            if (fragmento.tipo === 'VARIABLE') {
+                const simbolo = tablaSimbolos.obtener(fragmento.nombre);
+
+                if (simbolo && simbolo.esArreglo) {
+                    const linea = fragmento.loc_linea || fragmento.linea;
+                    const columna = fragmento.loc_columna || fragmento.columna;
+                    
+                    fragmento.tipo = 'ACCESO_ARREGLO';
+                    fragmento.indice = {
+                        tipo: 'VALOR',
+                        valor: 0,
+                        loc_linea: linea,
+                        loc_columna: columna
+                    };
+                } else {
                     await this.validarVariable(fragmento, recursoComponente, tablaSimbolos, nombreComponente);
-                } else if (fragmento.tipo === 'EXPRESION_INTERPOLADA' && fragmento.expresion) {
-                    await this.validarTiposEnNodo(fragmento.expresion, recursoComponente, tablaSimbolos, nombreComponente);
                 }
+
+            } else if (fragmento.tipo === 'EXPRESION_INTERPOLADA' && fragmento.expresion) {
+                await this.validarTiposEnNodo(fragmento.expresion, recursoComponente, tablaSimbolos, nombreComponente);
             }
         }
     }
-
+}
     /* Metodo recursivo que permite ir validando en todos los hijos los tipos */
     async validarTiposEnHijos(nodo, recursoComponente, tablaSimbolos, nombreComponente) {
         const propiedadesHijo = ['contenido', 'cuerpo', 'parametros', 'argumentos', 'valor', 'izq', 'der', 'valor_comparacion', 'casos', 'filas', 'celdas', 'condicion', 'continuacion', 'evaluacion'];
