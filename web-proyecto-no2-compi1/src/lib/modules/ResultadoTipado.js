@@ -10,6 +10,7 @@ export class ResultadoTipado {
         this.columna = null;           
     }
 
+    /*Metodo helper que permite deducir o inferir el tipo de dato */
     deducirTipo(arreglo) {
         if (!arreglo || arreglo.length === 0) return 'STRING';
         const valorMuestra = arreglo.find(v => v !== null && v !== undefined);

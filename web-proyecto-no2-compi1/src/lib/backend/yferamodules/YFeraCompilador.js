@@ -110,7 +110,6 @@ export class YFeraCompilador {
         const recolectarRutas = async (modulo) => {
             if (!modulo || !modulo.compiledYFera) return;
             const rutaCompleta = await this.obtenerRutaRelativaCompleta(modulo.id);
-            console.log(`  RUTA COMPLETA para ${modulo.nombre}: "${rutaCompleta}"`);
             const nombreHTML = rutaCompleta.replace(/\.y$/, '.html');
             rutasModulos.set(modulo, nombreHTML);
             for (const hijo of modulo.modulosHijos) {
@@ -140,20 +139,6 @@ export class YFeraCompilador {
             for (const hijo of modulo.modulosHijos) reemplazarYActualizar(hijo);
         };
         reemplazarYActualizar(this.arbolEjecucion);
-
-
-        console.log('=== DICCIONARIO DE RUTAS ===');
-        console.log(routesDict);
-
-        console.log('=== RUTAS DE MÓDULOS ===');
-        for (const [modulo, ruta] of rutasModulos) {
-            console.log(`  ${modulo.nombre} -> ${ruta}`);
-        }
-
-        console.log('=== CONTENIDO DE UN HTML (buscando navegar) ===');
-        const primerNavegar = this.arbolEjecucion.compiledYFera.match(/navegar\('[^']+'\)/g);
-        console.log('  Llamadas a navegar():', primerNavegar);
-
 
         const rutaRaiz = await this.obtenerRutaRelativaCompleta(this.arbolEjecucion.id);
         const raizHTML = rutaRaiz.replace(/\.y$/, '.html');
