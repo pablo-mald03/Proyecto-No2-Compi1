@@ -9,6 +9,7 @@ export class TranspiladorYFeraJS {
     constructor(compilador, manejadorDb) {
         this.compilador = compilador;
         this.manejadorDb = manejadorDb;
+        this.contadorComponentes = 0;
     }
 
 
@@ -16,13 +17,21 @@ export class TranspiladorYFeraJS {
     async transpilarModulo(moduloYfera) {
         if (!moduloYfera || !moduloYfera.ast) return;
 
+        const esModuloRaiz = moduloYfera.recursos.componentes.length > 0 ||
+            moduloYfera.recursos.estilos.length > 0;
+
         let codigoJS = '';
 
-        codigoJS += this.transpilarVariablesGlobales(moduloYfera.ast, moduloYfera.tablaSimbolos);
-
-        codigoJS += this.transpilarFunciones(moduloYfera.ast, moduloYfera.tablaSimbolos, moduloYfera.nombre);
-
-        codigoJS += this.transpilarMain(moduloYfera.ast, moduloYfera.tablaSimbolos, moduloYfera.tablaSimbolosComponentes, moduloYfera.nombre);
+        if (esModuloRaiz) {
+            codigoJS += this.generarHTMLWrapper(moduloYfera,
+                moduloYfera.ast.find(n => n.tipo === 'FUNCION_MAIN'),
+                moduloYfera.tablaSimbolos,
+                moduloYfera.tablaSimbolosComponentes);
+        } else {
+            codigoJS += this.transpilarVariablesGlobales(moduloYfera.ast, moduloYfera.tablaSimbolos);
+            codigoJS += this.transpilarFunciones(moduloYfera.ast, moduloYfera.tablaSimbolos, moduloYfera.nombre);
+            codigoJS += this.transpilarMain(moduloYfera.ast, moduloYfera.tablaSimbolos, moduloYfera.tablaSimbolosComponentes, moduloYfera);
+        }
 
         moduloYfera.compiledYFera = codigoJS;
 
@@ -30,6 +39,88 @@ export class TranspiladorYFeraJS {
             await this.transpilarModulo(moduloHijo);
         }
     }
+
+    /*Metodo que permite transpilar la funcion main y generar el HTML completo*/
+    transpilarMain(ast, tablaSimbolos, tablaComponentes, moduloYfera) {
+        let codigo = '';
+
+        const nodoMain = ast.find(n => n.tipo === 'FUNCION_MAIN');
+        if (!nodoMain) return codigo;
+
+        const esModuloRaiz = moduloYfera.recursos.componentes.length > 0 ||
+            moduloYfera.recursos.estilos.length > 0;
+
+        if (esModuloRaiz) {
+            codigo += this.generarHTMLWrapper(moduloYfera, nodoMain, tablaSimbolos, tablaComponentes);
+        } else {
+            codigo += '/* === Funcion main ===*/\n';
+            codigo += `async function main() {\n`;
+            codigo += this.transpilarBloqueInstrucciones(nodoMain.cuerpo, tablaSimbolos, tablaComponentes, '  ');
+            codigo += `}\n\n`;
+
+            codigo += `document.addEventListener('DOMContentLoaded', () => {\n`;
+            codigo += `  main().catch(error => console.error('Error en main:', error));\n`;
+            codigo += `});\n\n`;
+        }
+
+        return codigo;
+    }
+
+    /*Metodo que genera el HTML completo con links a CSS y JS compilados*/
+    generarHTMLWrapper(moduloYfera, nodoMain, tablaSimbolos, tablaComponentes) {
+
+        let html = '';
+        html += `<!DOCTYPE html>\n<html lang="es">\n<head>\n`;
+        html += `  <meta charset="UTF-8">\n`;
+        html += `  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n`;
+        html += `  <title>${moduloYfera.nombre.replace('.y', '')}</title>\n`;
+
+        if (moduloYfera.recursosCompilados.compiledStyles) {
+            html += `  <style>\n    ${moduloYfera.recursosCompilados.compiledStyles}\n  </style>\n`;
+        }
+
+        html += `</head>\n<body>\n  <div id="app"></div>\n\n`;
+        html += `  <script type="module">\n`;
+
+        if (moduloYfera.recursosCompilados.compiledComponentes) {
+            html += `    ${moduloYfera.recursosCompilados.compiledComponentes}\n\n`;
+        }
+
+        html += this.transpilarVariablesGlobales(moduloYfera.ast, tablaSimbolos);
+
+        html += this.transpilarFunciones(moduloYfera.ast, tablaSimbolos, moduloYfera.nombre);
+
+        html += `    async function main() {\n`;
+        html += this.transpilarBloqueInstrucciones(nodoMain.cuerpo, tablaSimbolos, tablaComponentes, '      ');
+        html += `    }\n\n`;
+        html += `    document.addEventListener('DOMContentLoaded', () => {\n`;
+        html += `      main().catch(error => console.error('Error en main:', error));\n`;
+        html += `    });\n`;
+
+        html += `  </script>\n</body>\n</html>`;
+        return html;
+    }
+
+
+    /*Metodo que permitr antraspilar la llamada a un componente*/
+    transpilarLlamadaComponente(nodo, tablaComponentes, indent) {
+        const nombreComponente = nodo.nombre;
+        const args = (nodo.argumentos || []).map(a => this.transpilarExpresion(a)).join(', ');
+        this.contadorComponentes++;
+        const idUnico = `${nombreComponente}_${this.contadorComponentes}`;
+
+        const simbolo = tablaComponentes.getVariable(nombreComponente);
+
+        if (simbolo && simbolo.valor && simbolo.valor.cuerpo) {
+            return `${indent}/* Renderizar componente: ${nombreComponente}*/\n` +
+                `${indent}const ${idUnico}_html = ${nombreComponente}(${args});\n` +
+                `${indent}document.getElementById('app').appendChild(${idUnico}_html);\n`;
+        }
+
+        return `${indent}/* Componente no encontrado: ${nombreComponente}*/\n`;
+    }
+
+
 
     transpilarVariablesGlobales(ast, tablaSimbolos) {
         let codigo = '/* === Codigo Compilado ===*/\n';
@@ -91,7 +182,7 @@ export class TranspiladorYFeraJS {
     }
 
     /*Metodo que permite transpilar los loads y los excecutes*/
-    transpilarCuerpoFuncion(cuerpo, tablaSimbolos) {
+    transpilarCuerpoFuncion(cuerpo, tablaSimbolos, moduloYfera) {
         if (!cuerpo || !Array.isArray(cuerpo)) return '';
 
         let codigo = '';
@@ -102,42 +193,23 @@ export class TranspiladorYFeraJS {
             switch (instruccion.tipo) {
                 case 'LOAD_ARCHIVO':
                     const ruta = this.transpilarExpresion(instruccion.uri, tablaSimbolos);
-                    codigo += `  // LOAD: ${ruta} (se resuelve en compilación)\n`;
+
+                    const nombreArchivo = ruta.replace(/"/g, '').replace('.y', '');
+                    codigo += `  // Navegar a: ${ruta}\n`;
+                    codigo += `  window.location.href = '${nombreArchivo}.html';\n`;
                     break;
 
                 case 'LOAD_ID':
-                    codigo += `  // LOAD: ${instruccion.id} (se resuelve en tiempo de ejecución)\n`;
-                    codigo += `  await loadModule(${instruccion.id});\n`;
+                    codigo += `  // Navegar a: ${instruccion.id}\n`;
+                    codigo += `  window.location.href = ${instruccion.id}.replace('.y', '.html');\n`;
                     break;
 
                 case 'DATABASE_QUERY':
                     const queryCode = this.transpilarQueryTemplate(instruccion.query, tablaSimbolos);
-                    codigo += `  // EXECUTE query\n`;
                     codigo += `  await executeQuery(${queryCode});\n`;
                     break;
             }
         }
-
-        return codigo;
-    }
-
-    /**
-     * Transpila la función MAIN
-     */
-    transpilarMain(ast, tablaSimbolos, tablaComponentes) {
-        let codigo = '/* === Funcion main ===*/\n';
-
-        const nodoMain = ast.find(n => n.tipo === 'FUNCION_MAIN');
-        if (!nodoMain) return codigo + '// No se encontró funcion MAIN\n';
-
-        codigo += `async function main() {\n`;
-        codigo += this.transpilarBloqueInstrucciones(nodoMain.cuerpo, tablaSimbolos, tablaComponentes, '  ');
-        codigo += `}\n\n`;
-
-        codigo += `/*Metodo que permite ejecutar al cargar la pagia*/\n`;
-        codigo += `document.addEventListener('DOMContentLoaded', () => {\n`;
-        codigo += `  main().catch(error => console.error('Error en main:', error));\n`;
-        codigo += `});\n\n`;
 
         return codigo;
     }
@@ -202,16 +274,6 @@ export class TranspiladorYFeraJS {
         }
 
         return codigo;
-    }
-
-    /*Metodo que permitr antraspilar la llamada a un componente*/
-    transpilarLlamadaComponente(nodo, tablaComponentes, indent) {
-        const nombreComponente = nodo.nombre;
-        const args = (nodo.argumentos || []).map(a => this.transpilarExpresion(a)).join(', ');
-
-        // Los componentes se renderizan como funciones que retornan HTML
-        return `${indent}/*Componente: ${nombreComponente}*/\n` +
-            `${indent}await renderComponent('${nombreComponente}', [${args}]);\n`;
     }
 
     /*Metodo que permite transpilar la estructura if*/
