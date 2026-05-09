@@ -2,6 +2,10 @@ import { SimboloComponente } from "../semanticsyfera/SimboloComponente";
 import parserComponent from "$lib/analizador/compiler/component-config";
 import { TablaSimbolos } from "../semanticsyfera/TablaSimbolos";
 
+import { PrimeraFaseSemanticComponent } from "./PrimeraFaseSemanticComponent";
+
+import { SegundaFaseSemanticComponent } from "./SegundaFaseSemanticComponent";
+
 /*Clase delegada para llevar la logica de la validacion semantica de los componentes */
 export class ValidadorSemanticoComponentes {
 
@@ -54,13 +58,16 @@ export class ValidadorSemanticoComponentes {
 
 
             /* Primera Fase: Registrar componentes y detectar duplicados*/
+            const primeraFase = new PrimeraFaseSemanticComponent(this.compilador,this.manejadorDb);
+
             for (const nodo of astComponentes) {
-                await this.ejecutarPrimeraPasada(nodo, recursoComponente, tablaSimbolosComponentes);
+                await primeraFase.ejecutarPrimeraPasada(nodo, recursoComponente, tablaSimbolosComponentes);
             }
 
             /* Segunda Fase: Validar estilos referenciados*/
+            const segundaFase = new SegundaFaseSemanticComponent(this.compilador,this.manejadorDb);
             for (const nodo of astComponentes) {
-                await this.ejecutarSegundaPasada(nodo, recursoComponente, tablaSimbolosEstilos);
+                await segundaFase.ejecutarSegundaPasada(nodo, recursoComponente, tablaSimbolosEstilos);
             }
 
             /* Tercera Fase: Validar tipos y compatibilidad */
@@ -78,350 +85,6 @@ export class ValidadorSemanticoComponentes {
         }
     }
 
-    /*Metodo que permite ejecutar la primera fase de la validacion de componentes */
-    async ejecutarPrimeraPasada(nodo, recursoComponente, tablaSimbolosComponentes) {
-        if (nodo.tipo === 'LLAMADA_FUNCION') {
-            await this.registrarComponente(nodo, recursoComponente, tablaSimbolosComponentes);
-        }
-    }
-
-    /*Metodo que permite registrar un componente en la tabla de simbolos */
-    async registrarComponente(nodo, recursoComponente, tablaSimbolosComponentes) {
-        const nombreComponente = nodo.id;
-
-        if (tablaSimbolosComponentes.existeLocal(nombreComponente)) {
-            const simboloExistente = tablaSimbolosComponentes.obtener(nombreComponente);
-
-            this.compilador.agregarError(
-                recursoComponente.nombreArchivo,
-                nombreComponente,
-                'Semantico',
-                `El componente: '${nombreComponente}' ya fue definido ` +
-                `en la linea ${simboloExistente.linea} del archivo ${simboloExistente.valor.archivoOrigen}`,
-                nodo.linea,
-                nodo.columna
-            );
-            return;
-        }
-
-        const parametros = this.extraerParametros(nodo.parametros);
-
-        const simbolo = new SimboloComponente(
-            nombreComponente,
-            parametros,
-            {
-                cuerpo: nodo,
-                archivoOrigen: recursoComponente.nombreArchivo,
-                rutaRelativa: recursoComponente.rutaRelativa,
-                estilosUsados: []
-            },
-            nodo.linea,
-            nodo.columna
-        );
-
-        tablaSimbolosComponentes.insertar(nombreComponente, simbolo);
-
-    }
-
-    /*Metodo que permite ejecutar la segunda fase de analisis semantico*/
-    async ejecutarSegundaPasada(nodo, recursoComponente, tablaSimbolosEstilos) {
-        if (nodo.tipo === 'LLAMADA_FUNCION') {
-            await this.validarEstilosComponente(nodo, recursoComponente, tablaSimbolosEstilos);
-        }
-    }
-
-    /*Metodo que permite validar los estilos del componente con todos los elementos que tenga dentro*/
-    async validarEstilosComponente(nodoComponente, recursoComponente, tablaSimbolosEstilos) {
-        if (!nodoComponente.parametros) return;
-
-        await this.recorrerCuerpoValidandoEstilos(
-            nodoComponente,
-            nodoComponente.id,
-            recursoComponente,
-            tablaSimbolosEstilos
-        );
-    }
-
-    /*Metodo que recorre recursivamente todos los nodos de los elementos para ir validando estilos*/
-    async recorrerCuerpoValidandoEstilos(nodo, nombreComponente, recursoComponente, tablaSimbolosEstilos) {
-        if (!nodo) return;
-
-        if (Array.isArray(nodo)) {
-            for (const elemento of nodo) {
-                await this.recorrerCuerpoValidandoEstilos(
-                    elemento,
-                    nombreComponente,
-                    recursoComponente,
-                    tablaSimbolosEstilos
-                );
-            }
-            return;
-        }
-
-        if (typeof nodo !== 'object') return;
-
-        await this.validarEstilosEnNodo(nodo, nombreComponente, recursoComponente, tablaSimbolosEstilos);
-
-        await this.recorrerHijosNodo(nodo, nombreComponente, recursoComponente, tablaSimbolosEstilos);
-    }
-
-    /*Metodo que valida los estilos en cada nodo */
-    async validarEstilosEnNodo(nodo, nombreComponente, recursoComponente, tablaSimbolosEstilos) {
-        let estilosArray = null;
-
-        if (nodo.estilos && Array.isArray(nodo.estilos)) {
-            estilosArray = nodo.estilos;
-        }
-
-        if (estilosArray && estilosArray.length > 0) {
-            for (const estilo of estilosArray) {
-                this.validarEstiloIndividual(
-                    estilo,
-                    nombreComponente,
-                    nodo.tipo,
-                    nodo.linea || 0,
-                    nodo.columna || 0,
-                    recursoComponente,
-                    tablaSimbolosEstilos
-                );
-            }
-        }
-    }
-
-    /*Metodo que permite validar por individual cada estilo */
-    validarEstiloIndividual(estilo, nombreComponente, tipoNodo, linea, columna, recursoComponente, tablaSimbolosEstilos) {
-        let nombreEstilo = '';
-
-        if (typeof estilo === 'string') {
-            nombreEstilo = estilo;
-        } else if (estilo && typeof estilo === 'object') {
-            nombreEstilo = estilo.valor || estilo.nombre || estilo.id;
-            if (!nombreEstilo && estilo.tipo === 'IDENTIFICADOR') {
-                nombreEstilo = estilo.valor;
-            }
-        }
-
-        if (!nombreEstilo) return;
-
-        nombreEstilo = nombreEstilo.replace(/^["']|["']$/g, '');
-
-        if (!tablaSimbolosEstilos.existeLocal(nombreEstilo)) {
-            this.compilador.agregarError(
-                recursoComponente.nombreArchivo,
-                nombreEstilo,
-                'Semantico',
-                `El estilo '${nombreEstilo}' no existe. Referenciado en el componente '${nombreComponente}' (${tipoNodo})`,
-                linea,
-                columna
-            );
-        }
-    }
-
-    /*Metodo que recorre los nodos hijos */
-    async recorrerHijosNodo(nodo, nombreComponente, recursoComponente, tablaSimbolosEstilos) {
-        if (!nodo) return;
-
-        switch (nodo.tipo) {
-            case 'LLAMADA_FUNCION':
-                if (nodo.cuerpo) {
-                    await this.recorrerCuerpoValidandoEstilos(
-                        nodo.cuerpo,
-                        nombreComponente,
-                        recursoComponente,
-                        tablaSimbolosEstilos
-                    );
-                }
-
-                for (const key in nodo) {
-                    if (key !== 'tipo' && key !== 'id' && key !== 'parametros' &&
-                        key !== 'cuerpo' && key !== 'linea' && key !== 'columna' &&
-                        typeof nodo[key] === 'object') {
-                        await this.recorrerCuerpoValidandoEstilos(
-                            nodo[key],
-                            nombreComponente,
-                            recursoComponente,
-                            tablaSimbolosEstilos
-                        );
-                    }
-                }
-                break;
-
-            case 'SECCION':
-                if (nodo.contenido) {
-                    await this.recorrerCuerpoValidandoEstilos(
-                        nodo.contenido, nombreComponente, recursoComponente, tablaSimbolosEstilos
-                    );
-                }
-                break;
-
-            case 'TABLA':
-                if (nodo.filas) {
-                    await this.recorrerCuerpoValidandoEstilos(
-                        nodo.filas, nombreComponente, recursoComponente, tablaSimbolosEstilos
-                    );
-                }
-                break;
-
-            case 'FILA':
-                if (nodo.celdas) {
-                    await this.recorrerCuerpoValidandoEstilos(
-                        nodo.celdas, nombreComponente, recursoComponente, tablaSimbolosEstilos
-                    );
-                }
-                break;
-
-            case 'CELDA':
-                if (nodo.contenido) {
-                    await this.recorrerCuerpoValidandoEstilos(
-                        nodo.contenido, nombreComponente, recursoComponente, tablaSimbolosEstilos
-                    );
-                }
-                break;
-
-            case 'FORMULARIO':
-                if (nodo.contenido) {
-                    await this.recorrerCuerpoValidandoEstilos(
-                        nodo.contenido, nombreComponente, recursoComponente, tablaSimbolosEstilos
-                    );
-                }
-                if (nodo.submit) {
-                    await this.recorrerCuerpoValidandoEstilos(
-                        nodo.submit, nombreComponente, recursoComponente, tablaSimbolosEstilos
-                    );
-                }
-                break;
-
-            case 'SUBMIT':
-                break;
-
-            case 'COMPONENTE_TEXTO':
-            case 'COMPONENTE_IMG':
-            case 'INPUT_TEXT':
-            case 'INPUT_NUMBER':
-            case 'INPUT_BOOL':
-                break;
-
-            case 'FOR_EACH':
-                if (nodo.cuerpo) {
-                    await this.recorrerCuerpoValidandoEstilos(
-                        nodo.cuerpo, nombreComponente, recursoComponente, tablaSimbolosEstilos
-                    );
-                }
-                if (nodo.empty && nodo.empty.cuerpo) {
-                    await this.recorrerCuerpoValidandoEstilos(
-                        nodo.empty.cuerpo, nombreComponente, recursoComponente, tablaSimbolosEstilos
-                    );
-                }
-                break;
-
-            case 'FOR_COMPLEJO':
-                if (nodo.cuerpo) {
-                    await this.recorrerCuerpoValidandoEstilos(
-                        nodo.cuerpo, nombreComponente, recursoComponente, tablaSimbolosEstilos
-                    );
-                }
-                if (nodo.empty && nodo.empty.cuerpo) {
-                    await this.recorrerCuerpoValidandoEstilos(
-                        nodo.empty.cuerpo, nombreComponente, recursoComponente, tablaSimbolosEstilos
-                    );
-                }
-                break;
-
-            case 'ESTRUCTURA_IF':
-                if (nodo.cuerpo) {
-                    await this.recorrerCuerpoValidandoEstilos(
-                        nodo.cuerpo, nombreComponente, recursoComponente, tablaSimbolosEstilos
-                    );
-                }
-                if (nodo.continuacion) {
-                    await this.recorrerCuerpoValidandoEstilos(
-                        nodo.continuacion, nombreComponente, recursoComponente, tablaSimbolosEstilos
-                    );
-                }
-                break;
-
-            case 'ELSE_IF':
-            case 'ELSE_FINAL':
-                if (nodo.cuerpo) {
-                    await this.recorrerCuerpoValidandoEstilos(
-                        nodo.cuerpo, nombreComponente, recursoComponente, tablaSimbolosEstilos
-                    );
-                }
-                if (nodo.continuacion) {
-                    await this.recorrerCuerpoValidandoEstilos(
-                        nodo.continuacion, nombreComponente, recursoComponente, tablaSimbolosEstilos
-                    );
-                }
-                break;
-
-            case 'ESTRUCTURA_SWITCH':
-                if (nodo.casos) {
-                    await this.recorrerCuerpoValidandoEstilos(
-                        nodo.casos, nombreComponente, recursoComponente, tablaSimbolosEstilos
-                    );
-                }
-                break;
-
-            case 'CASO_SWITCH':
-            case 'DEFAULT_SWITCH':
-                if (nodo.cuerpo) {
-                    await this.recorrerCuerpoValidandoEstilos(
-                        nodo.cuerpo, nombreComponente, recursoComponente, tablaSimbolosEstilos
-                    );
-                }
-                break;
-
-            case 'COMPONENTE_PERSONALIZADO':
-                if (nodo.argumentos && Array.isArray(nodo.argumentos)) {
-                    for (const arg of nodo.argumentos) {
-                        await this.recorrerCuerpoValidandoEstilos(
-                            arg, nombreComponente, recursoComponente, tablaSimbolosEstilos
-                        );
-                    }
-                }
-                break;
-
-            default:
-                if (nodo.tipo && !nodo.tipo.startsWith('VALOR_') && nodo.tipo !== 'VARIABLE') {
-                    for (const key in nodo) {
-                        if (key !== 'tipo' && key !== 'linea' && key !== 'columna' &&
-                            key !== 'id' && key !== 'parametros' && typeof nodo[key] === 'object') {
-                            await this.recorrerCuerpoValidandoEstilos(
-                                nodo[key],
-                                nombreComponente,
-                                recursoComponente,
-                                tablaSimbolosEstilos
-                            );
-                        }
-                    }
-                }
-                break;
-        }
-    }
-
-    /*Metodo que extrae y valida los parametros de un componente*/
-    extraerParametros(parametrosAST) {
-        if (!parametrosAST || !Array.isArray(parametrosAST)) {
-            return [];
-        }
-
-        return parametrosAST.map(param => {
-            if (param.tipo === 'PARAMETRO_DEF') {
-                return {
-                    nombre: param.id,
-                    tipo: param.tipado,
-                    esArreglo: false
-                };
-            } else if (param.tipo === 'PARAMETRO_DEF_ARREGLO') {
-                return {
-                    nombre: param.id,
-                    tipo: param.tipado,
-                    esArreglo: true
-                };
-            }
-            return null;
-        }).filter(p => p !== null);
-    }
 
     /* Metodo principal para ejecutar la tercera fase */
     async ejecutarTerceraPasada(nodo, recursoComponente, moduloYFera) {
@@ -434,7 +97,7 @@ export class ValidadorSemanticoComponentes {
     async validarTiposComponente(nodoComponente, recursoComponente, moduloYFera) {
         if (!nodoComponente.parametros) return;
 
-        const tablaLocal = new TablaSimbolos(moduloYFera.tablaSimbolos);
+        const tablaLocal = new TablaSimbolos(moduloYFera.tablaSimbolosComponentes);
 
         const parametros = this.extraerParametros(nodoComponente.parametros);
         for (const param of parametros) {
@@ -458,7 +121,6 @@ export class ValidadorSemanticoComponentes {
         }
     }
 
-
     /* Metodo que permite validar tipos recursivamente en el AST */
     async validarTiposEnNodo(nodo, recursoComponente, tablaSimbolos, nombreComponente) {
         if (!nodo) return;
@@ -472,15 +134,14 @@ export class ValidadorSemanticoComponentes {
 
         if (typeof nodo !== 'object') return;
 
-        // Casos especiales que crean nuevo ámbito
         switch (nodo.tipo) {
             case 'FOR_EACH':
                 await this.validarForEach(nodo, recursoComponente, tablaSimbolos, nombreComponente);
-                return; 
+                return;
 
             case 'FOR_COMPLEJO':
                 await this.validarForComplejo(nodo, recursoComponente, tablaSimbolos, nombreComponente);
-                return; 
+                return;
 
             case 'COMPONENTE_PERSONALIZADO':
                 await this.validarInvocacionComponente(nodo, recursoComponente, tablaSimbolos, nombreComponente);
@@ -515,12 +176,20 @@ export class ValidadorSemanticoComponentes {
     }
 
 
-
     /* Metodo que valida la invocacion de un componente personalizado */
     async validarInvocacionComponente(nodo, recursoComponente, tablaSimbolos, nombreComponentePadre) {
         const nombreComponente = nodo.id;
 
-        const componenteDef = tablaSimbolos.obtener(nombreComponente);
+        let componenteDef = tablaSimbolos.obtener(nombreComponente);
+
+        if (!componenteDef) {
+            let tablaActual = tablaSimbolos;
+            while (tablaActual.padre) {
+                tablaActual = tablaActual.padre;
+                componenteDef = tablaActual.obtener(nombreComponente);
+                if (componenteDef) break;
+            }
+        }
 
         if (!componenteDef) {
             this.compilador.agregarError(
@@ -861,14 +530,17 @@ export class ValidadorSemanticoComponentes {
     async validarForEach(nodo, recursoComponente, tablaSimbolos, nombreComponente) {
         const ambitoCiclo = new TablaSimbolos(tablaSimbolos);
 
-        const arregloSimbolo = tablaSimbolos.obtener(nodo.arreglo);
+        const nombreArreglo = nodo.arreglo.startsWith('$') ? nodo.arreglo.substring(1) : nodo.arreglo;
+        const nombreIterador = nodo.iterador.startsWith('$') ? nodo.iterador.substring(1) : nodo.iterador;
+
+        const arregloSimbolo = tablaSimbolos.obtener(nombreArreglo);
 
         if (!arregloSimbolo) {
             this.compilador.agregarError(
                 recursoComponente.nombreArchivo,
                 nodo.arreglo,
                 'Semantico',
-                `Arreglo '${nodo.arreglo}' no definido para iterar en componente '${nombreComponente}'`,
+                `Arreglo '${nodo.arreglo}' no definido para iterar en componente '${nombreComponente}'. Arreglos disponibles: ${Array.from(tablaSimbolos.variables.keys()).join(', ')}`,
                 nodo.linea,
                 nodo.columna
             );
@@ -888,13 +560,13 @@ export class ValidadorSemanticoComponentes {
         }
 
         const iteradorSimbolo = {
-            id: nodo.iterador,
+            id: nombreIterador,
             tipoDato: arregloSimbolo.tipoDato,
             esArreglo: false,
             linea: nodo.linea,
             columna: nodo.columna
         };
-        ambitoCiclo.insertar(nodo.iterador, iteradorSimbolo);
+        ambitoCiclo.insertar(nombreIterador, iteradorSimbolo);
 
         if (nodo.cuerpo) {
             await this.validarTiposEnNodo(nodo.cuerpo, recursoComponente, ambitoCiclo, nombreComponente);
@@ -954,5 +626,29 @@ export class ValidadorSemanticoComponentes {
         if (nodo.empty && nodo.empty.cuerpo) {
             await this.validarTiposEnNodo(nodo.empty.cuerpo, recursoComponente, ambitoCiclo, nombreComponente);
         }
+    }
+
+    /*Metodo que extrae y valida los parametros de un componente*/
+    extraerParametros(parametrosAST) {
+        if (!parametrosAST || !Array.isArray(parametrosAST)) {
+            return [];
+        }
+
+        return parametrosAST.map(param => {
+            if (param.tipo === 'PARAMETRO_DEF') {
+                return {
+                    nombre: param.id,
+                    tipo: param.tipado,
+                    esArreglo: false
+                };
+            } else if (param.tipo === 'PARAMETRO_DEF_ARREGLO') {
+                return {
+                    nombre: param.id,
+                    tipo: param.tipado,
+                    esArreglo: true
+                };
+            }
+            return null;
+        }).filter(p => p !== null);
     }
 }
