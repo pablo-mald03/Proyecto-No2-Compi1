@@ -4,12 +4,46 @@ import parserDatabase from "$lib/analizador/compiler/database-config";
 import { AnalizadorSemanticoSql } from "./AnalizadorSemanticoSql";
 
 import { ResultadoTipado } from "$lib/modules/ResultadoTipado";
+
+import { TranspiladorSql } from "./TranspiladorSql";
+
 /*Clase delegada para poderse comunicar con el parser para ejecutar los comandos SQL*/
 export class InterpreteSqlCodigo {
 
     constructor(dbManejador) {
         this.validador = new AnalizadorSemanticoSql(dbManejador);
         this.db = dbManejador;
+        this.transpilador = new TranspiladorSql();
+    }
+
+    /*Metodo que permite traducir querys a lenguaje sql */
+    traducirSqlComando(comando) {
+        parserDatabase.yy.errores = [];
+        let ast;
+
+        try {
+            ast = parserDatabase.parse(comando);
+            if (parserDatabase.yy.errores?.length > 0) {
+                return {
+                    exito: false,
+                    errores: parserDatabase.yy.errores,
+                    mensajeGeneral: "Errores sintacticos o lexicos encontrados."
+                };
+            }
+        } catch (error) {
+            return {
+                exito: false,
+                errores: [{ tipo: 'Fatal', descripcion: error.message }],
+                mensajeGeneral: "Error fatal en el análisis."
+            };
+        }
+        const queriesSql = this.transpilador.transpilarAst(ast);
+
+        return {
+            exito: true,
+            sql: queriesSql,
+            errores: []
+        };
     }
 
     /**

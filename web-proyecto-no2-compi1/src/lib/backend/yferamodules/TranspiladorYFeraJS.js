@@ -1,5 +1,7 @@
 import { TablaSimbolos } from "../semanticsyfera/TablaSimbolos";
 
+import { InterpreteSqlCodigo } from "$lib/databasemodules/InterpreteSqlCodigo";
+
 /*Clase delegada para poder generar el codigo compilado del archivo .y */
 
 export class TranspiladorYFeraJS {
@@ -29,9 +31,9 @@ export class TranspiladorYFeraJS {
         }
     }
 
-        transpilarVariablesGlobales(ast, tablaSimbolos) {
+    transpilarVariablesGlobales(ast, tablaSimbolos) {
         let codigo = '/* === Codigo Compilado ===*/\n';
-        
+
         for (const nodo of ast) {
             if (!nodo) continue;
 
@@ -73,13 +75,13 @@ export class TranspiladorYFeraJS {
     /*Metodo que permite declarar las funciones asincronicas para comunicarse con la db*/
     transpilarFunciones(ast, tablaSimbolos) {
         let codigo = '/* === Funciones ===*/\n';
-        
+
         for (const nodo of ast) {
             if (!nodo || nodo.tipo !== 'FUNCION') continue;
 
             const params = nodo.parametros.map(p => p.id).join(', ');
             const cuerpo = this.transpilarCuerpoFuncion(nodo.cuerpo, tablaSimbolos);
-            
+
             codigo += `async function ${nodo.id}(${params}) {\n`;
             codigo += cuerpo;
             codigo += `}\n\n`;
@@ -91,9 +93,9 @@ export class TranspiladorYFeraJS {
     /*Metodo que permite transpilar los loads y los excecutes*/
     transpilarCuerpoFuncion(cuerpo, tablaSimbolos) {
         if (!cuerpo || !Array.isArray(cuerpo)) return '';
-        
+
         let codigo = '';
-        
+
         for (const instruccion of cuerpo) {
             if (!instruccion) continue;
 
@@ -115,7 +117,7 @@ export class TranspiladorYFeraJS {
                     break;
             }
         }
-        
+
         return codigo;
     }
 
@@ -124,7 +126,7 @@ export class TranspiladorYFeraJS {
      */
     transpilarMain(ast, tablaSimbolos, tablaComponentes) {
         let codigo = '/* === Funcion main ===*/\n';
-        
+
         const nodoMain = ast.find(n => n.tipo === 'FUNCION_MAIN');
         if (!nodoMain) return codigo + '// No se encontró funcion MAIN\n';
 
@@ -143,9 +145,9 @@ export class TranspiladorYFeraJS {
     /*Metodo que permite transpilar el bloque de instrucciones*/
     transpilarBloqueInstrucciones(instrucciones, tablaSimbolos, tablaComponentes, indent = '') {
         if (!instrucciones || !Array.isArray(instrucciones)) return '';
-        
+
         let codigo = '';
-        
+
         for (const instruccion of instrucciones) {
             if (!instruccion) continue;
 
@@ -198,7 +200,7 @@ export class TranspiladorYFeraJS {
                     break;
             }
         }
-        
+
         return codigo;
     }
 
@@ -206,10 +208,10 @@ export class TranspiladorYFeraJS {
     transpilarLlamadaComponente(nodo, tablaComponentes, indent) {
         const nombreComponente = nodo.nombre;
         const args = (nodo.argumentos || []).map(a => this.transpilarExpresion(a)).join(', ');
-        
+
         // Los componentes se renderizan como funciones que retornan HTML
         return `${indent}/*Componente: ${nombreComponente}*/\n` +
-               `${indent}await renderComponent('${nombreComponente}', [${args}]);\n`;
+            `${indent}await renderComponent('${nombreComponente}', [${args}]);\n`;
     }
 
     /*Metodo que permite transpilar la estructura if*/
@@ -218,16 +220,16 @@ export class TranspiladorYFeraJS {
         let codigo = `${indent}if (${condicion}) {\n`;
         codigo += this.transpilarBloqueInstrucciones(nodo.instrucciones_true, tablaSimbolos, tablaComponentes, indent + '  ');
         codigo += `${indent}}`;
-        
+
         if (nodo.instrucciones_false) {
             codigo += ` else {\n`;
-            const falseBranch = Array.isArray(nodo.instrucciones_false) 
-                ? nodo.instrucciones_false 
+            const falseBranch = Array.isArray(nodo.instrucciones_false)
+                ? nodo.instrucciones_false
                 : [nodo.instrucciones_false];
             codigo += this.transpilarBloqueInstrucciones(falseBranch, tablaSimbolos, tablaComponentes, indent + '  ');
             codigo += `${indent}}`;
         }
-        
+
         codigo += `\n`;
         return codigo;
     }
@@ -255,7 +257,7 @@ export class TranspiladorYFeraJS {
         const variable = nodo.variable;
         const inicio = this.transpilarExpresion(nodo.inicio, tablaSimbolos);
         const condicion = this.transpilarExpresion(nodo.condicion, tablaSimbolos);
-        
+
         let actualizacion;
         if (nodo.actualizacion.tipo === 'INCREMENTO_SIMPLE') {
             actualizacion = `${nodo.actualizacion.id}++`;
@@ -263,7 +265,7 @@ export class TranspiladorYFeraJS {
             const valorAct = this.transpilarExpresion(nodo.actualizacion.valor, tablaSimbolos);
             actualizacion = `${nodo.actualizacion.id} = ${valorAct}`;
         }
-        
+
         let codigo = `${indent}for (let ${variable} = ${inicio}; ${condicion}; ${actualizacion}) {\n`;
         codigo += this.transpilarBloqueInstrucciones(nodo.cuerpo, tablaSimbolos, tablaComponentes, indent + '  ');
         codigo += `${indent}}\n`;
@@ -274,7 +276,7 @@ export class TranspiladorYFeraJS {
     transpilarSwitch(nodo, tablaSimbolos, tablaComponentes, indent) {
         const expresion = this.transpilarExpresion(nodo.expresion, tablaSimbolos);
         let codigo = `${indent}switch (${expresion}) {\n`;
-        
+
         if (nodo.casos && Array.isArray(nodo.casos)) {
             for (const caso of nodo.casos) {
                 if (caso.tipo === 'DEFAULT') {
@@ -287,7 +289,7 @@ export class TranspiladorYFeraJS {
                 codigo += `${indent}    break;\n`;
             }
         }
-        
+
         codigo += `${indent}}\n`;
         return codigo;
     }
@@ -307,14 +309,14 @@ export class TranspiladorYFeraJS {
                 return `"${nodo.valor.replace(/'/g, '')}"`;
             case 'BOOL':
                 return nodo.valor ? 'true' : 'false';
-            
+
             case 'ID':
                 return nodo.valor;
-            
+
             case 'ACCESO_ARREGLO':
                 const indice = this.transpilarExpresion(nodo.indice, tablaSimbolos);
                 return `${nodo.valor}[${indice}]`;
-            
+
             case 'ARITMETICA':
                 const izq = this.transpilarExpresion(nodo.izq, tablaSimbolos);
                 const der = this.transpilarExpresion(nodo.der, tablaSimbolos);
@@ -323,7 +325,7 @@ export class TranspiladorYFeraJS {
                     'DIVISION': '/', 'MODULO': '%'
                 };
                 return `(${izq} ${operadores[nodo.op] || nodo.op} ${der})`;
-            
+
             case 'RELACIONAL':
                 const izqRel = this.transpilarExpresion(nodo.izq, tablaSimbolos);
                 const derRel = this.transpilarExpresion(nodo.der, tablaSimbolos);
@@ -333,19 +335,19 @@ export class TranspiladorYFeraJS {
                     'MAYOR_IGUAL': '>=', 'MENOR_IGUAL': '<='
                 };
                 return `(${izqRel} ${opsRel[nodo.op] || nodo.op} ${derRel})`;
-            
+
             case 'LOGICA':
                 const izqLog = this.transpilarExpresion(nodo.izq, tablaSimbolos);
                 const derLog = this.transpilarExpresion(nodo.der, tablaSimbolos);
                 const opLog = nodo.op === 'OR' ? '||' : '&&';
                 return `(${izqLog} ${opLog} ${derLog})`;
-            
+
             case 'UNARIA':
                 const derUna = this.transpilarExpresion(nodo.der, tablaSimbolos);
                 if (nodo.op === 'NEGATIVO') return `(-${derUna})`;
                 if (nodo.op === 'NOT') return `(!${derUna})`;
                 return derUna;
-            
+
             default:
                 return `/* ${nodo.tipo} */`;
         }
@@ -354,18 +356,34 @@ export class TranspiladorYFeraJS {
     /*Metodo que permite transpilar la query de la base de datos sql*/
     transpilarQueryTemplate(nodoQuery, tablaSimbolos) {
         if (!nodoQuery || !nodoQuery.fragmentos) return '""';
-        
-        let partes = [];
+
+        let comandoCompleto = '';
+
         for (const fragmento of nodoQuery.fragmentos) {
             if (fragmento.tipo === 'TEXTO_QUERY') {
-                partes.push(JSON.stringify(fragmento.valor));
+                comandoCompleto += fragmento.valor;
             } else if (fragmento.tipo === 'VAR_INTERPOLADA') {
-                const nombreVar = fragmento.id.replace('$', '').trim();
-                partes.push(nombreVar);
+                comandoCompleto += fragmento.id;
             }
         }
-        
-        return '`' + partes.map(p => p.startsWith('"') ? p.slice(1, -1) : `\${${p}}`).join('') + '`';
+
+        if (!comandoCompleto.trim().endsWith(';')) {
+            comandoCompleto += ';';
+        }
+
+        console.log('Comando con:', comandoCompleto);
+
+        const interprete = new InterpreteSqlCodigo(this.manejadorDb);
+        const resultado = interprete.traducirSqlComando(comandoCompleto);
+
+        if (resultado.exito && resultado.sql && resultado.sql.length > 0) {
+            const sqlFinal = resultado.sql.join('; ');
+            console.log('SQL final:', sqlFinal);
+            return sqlFinal;
+        } else {
+            console.log('ERROR al traducir:', resultado.errores);
+            return '""';
+        }
     }
 
     /*Meotod que permite darle el vlaor default  a los tipos de datos primitivos*/

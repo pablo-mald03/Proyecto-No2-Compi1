@@ -557,6 +557,15 @@ expresion           : expresion MAS expresion
                             columna: @1.first_column + 1 
                         }; 
                     }}
+                    | IDENTIFICADOR 
+                    {{ 
+                        $$ = { 
+                            tipo: 'ID', 
+                            valor: $1,
+                            linea: @1.first_line,
+                            columna: @1.first_column + 1  
+                        }; 
+                    }}
                     | NUMERO 
                     {{
                         $$ = { 
