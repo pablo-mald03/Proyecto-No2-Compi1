@@ -8,6 +8,9 @@ import { SegundaFaseSemanticComponent } from "./SegundaFaseSemanticComponent";
 
 import { TerceraFaseSemanticComponent } from "./TerceraFaseSemanticComponent";
 
+import { TranspiladorComponentes } from "./TranspiladorComponentes";
+
+
 /*Clase delegada para llevar la logica de la validacion semantica de los componentes */
 export class ValidadorSemanticoComponentes {
 
@@ -60,23 +63,41 @@ export class ValidadorSemanticoComponentes {
 
 
             /* Primera Fase: Registrar componentes y detectar duplicados*/
-            const primeraFase = new PrimeraFaseSemanticComponent(this.compilador,this.manejadorDb);
+            const primeraFase = new PrimeraFaseSemanticComponent(this.compilador, this.manejadorDb);
 
             for (const nodo of astComponentes) {
                 await primeraFase.ejecutarPrimeraPasada(nodo, recursoComponente, tablaSimbolosComponentes);
             }
 
             /* Segunda Fase: Validar estilos referenciados*/
-            const segundaFase = new SegundaFaseSemanticComponent(this.compilador,this.manejadorDb);
+            const segundaFase = new SegundaFaseSemanticComponent(this.compilador, this.manejadorDb);
             for (const nodo of astComponentes) {
                 await segundaFase.ejecutarSegundaPasada(nodo, recursoComponente, tablaSimbolosEstilos);
             }
 
             /* Tercera Fase: Validar tipos y compatibilidad */
-            const terceraFase = new TerceraFaseSemanticComponent(this.compilador,this.manejadorDb);
+            const terceraFase = new TerceraFaseSemanticComponent(this.compilador, this.manejadorDb);
             for (const nodo of astComponentes) {
                 await terceraFase.ejecutarTerceraPasada(nodo, recursoComponente, moduloYFera);
             }
+
+            /*Cuarta fase: Transpilacion del codigo de componentes a javaScript */
+            const transpilador = new TranspiladorComponentes(this.compilador, this.manejadorDb);
+            let codigoModulo = '';
+
+            for (const nodo of astComponentes) {
+                if (nodo.tipo === 'LLAMADA_FUNCION') {
+                    codigoModulo += await transpilador.transpilarComponente(
+                        nodo,
+                        recursoComponente,
+                        moduloYFera
+                    );
+                }
+            }
+
+            moduloYFera.recursosCompilados.compiledComponentes = codigoModulo;
+
+            console.log(moduloYFera.recursosCompilados.compiledComponentes);
 
         } catch (error) {
             this.compilador.agregarError(

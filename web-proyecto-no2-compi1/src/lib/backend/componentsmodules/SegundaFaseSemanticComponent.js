@@ -2,6 +2,7 @@ import { TablaSimbolos } from "../semanticsyfera/TablaSimbolos";
 
 import { SimboloComponente } from "../semanticsyfera/SimboloComponente";
 
+/*Clase delegada para poder realizar la segunda fase de analisis semantico de los componentes */
 export class SegundaFaseSemanticComponent {
 
     constructor(compilador, manejadorDb) {
