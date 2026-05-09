@@ -187,7 +187,15 @@ export class TranspiladorYFeraJS {
                     break;
 
                 case 'ARREGLO_QUERY':
-                    codigo += `let ${nodo.id} = [];\n`;
+                    const simQuery = tablaSimbolos.getVariable(nodo.id);
+                    if (simQuery && simQuery.valor && Array.isArray(simQuery.valor)) {
+                        const elementos = simQuery.valor
+                            .map(v => this.transpilarValorLiteral(v, simQuery.tipoDato))
+                            .join(', ');
+                        codigo += `let ${nodo.id} = [${elementos}];\n`;
+                    } else {
+                        codigo += `let ${nodo.id} = [];\n`;
+                    }
                     break;
 
                 case 'INSTRUCCION_IMPORT':
@@ -198,6 +206,19 @@ export class TranspiladorYFeraJS {
 
         codigo += '\n';
         return codigo;
+    }
+
+    /*Metodo que permite transpilar el valor literal que se le dio al arreglo con query */
+    transpilarValorLiteral(valor, tipo) {
+        if (valor === null || valor === undefined) return 'null';
+        switch (tipo) {
+            case 'ENTERA': return parseInt(valor, 10).toString();
+            case 'FLOAT': return parseFloat(valor).toString();
+            case 'BOOLEANA': return valor ? 'true' : 'false';
+            case 'CARACTER':
+            case 'CADENA': return `"${String(valor).replace(/"/g, '\\"')}"`;
+            default: return JSON.stringify(valor);
+        }
     }
 
     /*Metodo que permite declarar las funciones asincronicas para comunicarse con la db*/
